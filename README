@@ -1,0 +1,3 @@
+Main folder for C* algebra based computations on multilayer 1D or 2D incommensurate crystals. 
+
+Library source files can be found in the folder src/, and the main executable under app/src. Compile into an executable here by typing 'cmake .', or more nicely by creating an out-of-source build folder such as build/ and use the compile script './compile.sh', with an optional execution. 
