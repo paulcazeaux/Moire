@@ -52,7 +52,7 @@ struct Element<1,degree>
 	std::array<dealii::Point<1>,2>				vertices;
 	double 										jacobian;
 
-	std::array<types::global_index, dofs_per_cell> 	unit_cell_dof_index_map;
+	std::array<unsigned int, dofs_per_cell> 	unit_cell_dof_index_map;
 
 	Element(std::array<dealii::Point<1>,2> vertices);
 	Element(const Element&);
@@ -62,9 +62,8 @@ struct Element<1,degree>
 	 * For speed, we assume that the quadrature points are inside the element.
 	 * Checking this is the responsibility of the caller.
 	 */
-	void 		get_interpolation_matrix(const std::vector<dealii::Point<1>> quadrature_points, 
+	void 				get_interpolation_matrix(const std::vector<dealii::Point<1>> quadrature_points, 
 													dealii::FullMatrix<double> & matrix) const;
-	Element<1,degree> 	translate(const dealii::Point<1>& v);
 };
 
 template <int degree>
@@ -81,15 +80,6 @@ Element<1,degree>::Element(const Element<1,degree>& orig)
 	vertices(orig.vertices),
 	jacobian(orig.jacobian),
 	unit_cell_dof_index_map(orig.unit_cell_dof_index_map) {};
-
-template<int degree>
-Element<1,degree> 	Element<1,degree>::translate(const dealii::Point<1>& v)
-{
-	Element<1,degree> element (*this);
-	for (unsigned int i=0; i<vertices_per_cell; ++i)
-		element.vertices[i] = element.vertices[i] + v;
-}
-
 
 /*		Order 1
  *
@@ -187,7 +177,7 @@ struct Element<2,degree>
 	std::array<dealii::Point<2>,4>	vertices;
 	dealii::Tensor<2,2>				jacobian;
 
-	std::array<types::global_index, dofs_per_cell> 	unit_cell_dof_index_map;
+	std::array<unsigned int, dofs_per_cell> 	unit_cell_dof_index_map;
 
 	Element(std::array<dealii::Point<2>,4> vertices);
 	Element(const Element&);
@@ -199,8 +189,6 @@ struct Element<2,degree>
 	 */
 	void 		get_interpolation_matrix(const std::vector<dealii::Point<2>> quadrature_points, 
 													dealii::FullMatrix<double> & matrix) const;
-
-	Element<2,degree> 	translate(const dealii::Point<2>& v);
 };
 
 template<int degree>
@@ -222,15 +210,6 @@ Element<2,degree>::Element(const Element<2,degree>& orig)
 	vertices(orig.vertices),
 	jacobian(orig.jacobian),
 	unit_cell_dof_index_map(orig.unit_cell_dof_index_map) {};
-
-template<int degree>
-Element<2,degree> 	Element<2,degree>::translate(const dealii::Point<2>& v)
-{
-	Element<2,degree> element (*this);
-	for (unsigned int i=0; i<vertices_per_cell; ++i)
-		element.vertices[i] = element.vertices[i] + v;
-}
-
 
 /*		Order 1		
  *

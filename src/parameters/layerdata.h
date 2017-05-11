@@ -52,6 +52,7 @@ class LayerData {
         dealii::Tensor<2,dim> 					get_lattice()			const { return lattice_; }
 		std::vector<dealii::Point<dim+1> > 		get_orbital_positions()	const { return orbital_positions_; }
         std::vector<int>						get_orbital_types()		const { return orbital_types_; }
+        unsigned int                            get_num_orbitals()      const { return orbital_types_.size(); }
         int 									get_material()			const { return material_; }
 
 		double 									get_height()			const { return height_; }

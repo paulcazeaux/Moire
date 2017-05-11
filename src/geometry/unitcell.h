@@ -21,7 +21,6 @@
 
 #include "tools/types.h"
 #include "tools/grid_to_index_map.h"
-#include "tools/transformation.h"
 #include "fe/element.h"
 
 /**
@@ -65,11 +64,11 @@ public:
 
 	/* Announce to the world the refinement level, number of grid points and array basis */
 	const unsigned int						refinement_level;
-	types::global_index 		 			number_of_grid_points;
-	types::global_index 		 			number_of_interior_grid_points;
-	types::global_index 		 			number_of_boundary_grid_points;
+	unsigned int 		 					number_of_grid_points;
+	unsigned int 		 					number_of_interior_grid_points;
+	unsigned int 		 					number_of_boundary_grid_points;
 
-	types::global_index 					number_of_elements;
+	unsigned int 							number_of_elements;
 
 	const dealii::Tensor<2,dim>				basis;
 	const dealii::Tensor<2,dim>				inverse_basis;
@@ -83,29 +82,38 @@ public:
 	/* Construction of the list of finite elements paving the unit cell, with each one storing for each support point
 	 * the corresponding global index within the cell 
 	 */
-	std::vector<Element<dim,degree>>			build_subcell_list() const;
+	std::vector<Element<dim,degree>>		build_subcell_list() const;
+	unsigned int 							find_element(const dealii::Tensor<1,dim>& X) const;
 
-	/* Utilities for locating the cell-wide index of a degree of freedom from its grid index,
-	 *	or vice versa the grid index from the global index 
+	/**
+	 * Utilities for locating the cell-wide index of a degree of freedom from its grid index,
+	 * or vice versa the grid index from the global index 
 	 */
-	types::global_index 					get_grid_point_global_index(const std::array<types::grid_index, dim>& indices) const;
-	std::array<types::grid_index, dim> 		get_grid_point_grid_indices(const types::global_index& index) const;
-	dealii::Point<dim>						get_grid_point_position(const types::global_index& index) const;
+	unsigned int 							get_grid_point_global_index(const std::array<int, dim>& indices) const;
+	std::array<int, dim> 					get_grid_point_grid_indices(const unsigned int& index) const;
+	dealii::Point<dim>						get_grid_point_position(const unsigned int& index) const;
 
 
-	bool 									is_grid_point_interior(const types::global_index& index) const;
+	bool 									is_grid_point_interior(const unsigned int& index) const;
+	std::tuple<unsigned int, std::array<int, dim>>
+											map_boundary_point_interior(const unsigned int& index) const;
 
 private:
 
-		/* Array of grid point positions */
-	std::vector<dealii::Point<dim> >					grid_points_;
-	
+	/* Array of grid point positions */
+	std::vector<dealii::Point<dim> >		grid_points_;
 
-		/* Maps from global index to grid index */
-	GridToIndexMap<dim>									grid_to_index_map_;
-	std::vector<std::array<types::grid_index, dim>>		index_to_grid_map_;
+	/* Maps from global index to grid index */
+	GridToIndexMap<dim>						grid_to_index_map_;
+	std::vector<std::array<int, dim>>		index_to_grid_map_;
 
-		/* Static method for computing the bounding radius of the cell */
+	/* Map boundary grid point indexes to interior points in another cell and the corresponding lattice grid offset */
+	std::vector<std::tuple<unsigned int, std::array<int, dim>>> 	boundary_to_interior_map_;
+
+	/* Cache number of elements along one direction */
+	unsigned int 							line_element_count_;
+
+	/* Static method for computing the bounding radius of the cell */
 	static double 	compute_bounding_radius(const dealii::Tensor<2,dim>& basis);
 };
 
@@ -122,15 +130,15 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 	bounding_radius(UnitCell<dim,degree>::compute_bounding_radius(basis))
 {
 	/* Compute the number of grid points first */
-	types::global_index interior_line_count = 2 * degree;
+	unsigned int interior_line_count = 2 * degree;
 	for (unsigned int i=0; i<refinement_level; ++i) 
 		interior_line_count *= 2;
 
-	number_of_grid_points 			= dealii::Utilities::fixed_power<dim, types::global_index>(interior_line_count+1);
-	number_of_interior_grid_points 	= dealii::Utilities::fixed_power<dim, types::global_index>(interior_line_count);
+	number_of_grid_points 			= dealii::Utilities::fixed_power<dim, unsigned int>(interior_line_count+1);
+	number_of_interior_grid_points 	= dealii::Utilities::fixed_power<dim, unsigned int>(interior_line_count);
 	number_of_boundary_grid_points	= number_of_grid_points - number_of_interior_grid_points;
 	
-	number_of_elements 				= dealii::Utilities::fixed_power<dim, types::global_index>(interior_line_count/degree);
+	number_of_elements 				= dealii::Utilities::fixed_power<dim, unsigned int>(interior_line_count/degree);
 
 	/* Allocate a corresponding amount of memory for the dynamic class members */
 	grid_points_.reserve( number_of_grid_points );
@@ -139,22 +147,22 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 	/* Deduce the strides for each dimension in a corresponding flattened multi-dimensional array 
 	 * for the !! overall !! points grid 
 	 */
-	types::grid_index  strides[dim+1];
+	int  strides[dim+1];
 	strides[0] = 1;
 	for (unsigned int i = 0; i<dim; i++)
 		strides[i+1] = strides[i] * (interior_line_count+1);
 
 	/* Walk through the flattened multi-dimensional array and populate 
 	*  the index_to_grid_map_ and grid_points_ data containers */
-	std::array<types::grid_index, dim> 	indices;
+	std::array<int, dim> 	indices;
 	dealii::Point<dim> grid_point;
 
 	std::vector<dealii::Point<dim>> boundary_grid_points;
-	std::vector<std::array<types::grid_index, dim>>		boundary_index_to_grid_map;
+	std::vector<std::array<int, dim>>		boundary_index_to_grid_map;
 	boundary_grid_points.reserve( number_of_boundary_grid_points );
 	boundary_index_to_grid_map.reserve( number_of_boundary_grid_points );
 
-	for (types::global_index unrolled_index = 0; unrolled_index < number_of_grid_points; ++unrolled_index)
+	for (unsigned int unrolled_index = 0; unrolled_index < number_of_grid_points; ++unrolled_index)
 	{
 		bool is_interior = true;
 		for (unsigned int i=0; i<dim; ++i)
@@ -183,24 +191,39 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 	}
 
 	/* Initialize the grid_to_index_map_ data structure */
-	std::array<types::grid_index, dim> range_min, range_max;
+	std::array<int, dim> range_min, range_max;
 	for (unsigned int i=0; i<dim; ++i)
 	{
 		range_min[i] = - (interior_line_count/2); 
 		range_max[i] = interior_line_count/2;
 	}
 	grid_to_index_map_.reinit(index_to_grid_map_, range_min, range_max);
+
+	/* Initialize the interior index map (wrapping boundary back inside) */
+	boundary_to_interior_map_.resize(number_of_boundary_grid_points);
+	for (unsigned int j = 0; j < number_of_boundary_grid_points; ++j)
+	{
+		indices = boundary_index_to_grid_map[j];
+		std::array<int,dim> grid_offset;
+		for (unsigned int i=0; i<dim; ++i)
+			if (indices[i] == interior_line_count/2)
+			{
+				indices[i] = -indices[i];
+				grid_offset[i] = 1;
+			}
+			else
+				grid_offset[i] = 0;
+		boundary_to_interior_map_[j] = std::make_tuple(grid_to_index_map_.find(indices), grid_offset);
+	}
+
+	/* Cache the number of elements appearing in a line as it is used by the find_element_index function */
+	line_element_count_ = interior_line_count / degree;
 };
 
 template<int dim,int degree>
 std::vector<Element<dim,degree>>			
 UnitCell<dim,degree>::build_subcell_list() const
 {
-	types::global_index line_element_count = 2;
-	for (unsigned int i=0; i<refinement_level; ++i) 
-		line_element_count *= 2;
-
-
 	std::vector<Element<dim,degree>> subcells;
 	subcells.reserve(number_of_elements);
 
@@ -225,9 +248,9 @@ UnitCell<dim,degree>::build_subcell_list() const
 				for (unsigned int element_index=0; element_index<number_of_elements; ++element_index)
 				{
 					/* Find the indices of vertex 0 */
-					std::array<types::grid_index, dim> 	indices;
-					indices[0] = degree * (element_index  % line_element_count - (line_element_count/2) );
-					indices[1] = degree * (element_index  / line_element_count - (line_element_count/2) );
+					std::array<int, dim> 	indices;
+					indices[0] = degree * (element_index  % line_element_count_ - (line_element_count_/2) );
+					indices[1] = degree * (element_index  / line_element_count_ - (line_element_count_/2) );
 
 					/* First enumerate the vertices real-space coordinates */
 												vertices[0] = grid_points_.at( grid_to_index_map_.find(indices) );
@@ -256,32 +279,56 @@ UnitCell<dim,degree>::build_subcell_list() const
 	}
 };
 
+template<int dim,int degree>
+unsigned int
+UnitCell<dim,degree>::find_element(const dealii::Tensor<1,dim>& X) const
+{
+	dealii::Point<dim> Xg (inverse_basis * X);
+	bool test_in_cell = true;
+	for (unsigned int i=0; i<dim; ++i)
+		test_in_cell = test_in_cell && ( Xg(i) >= -.5) && ( Xg(i) < .5);
+	if (test_in_cell)
+		switch (dim) {
+			case 1: 
+				return static_cast<unsigned int>(std::floor(line_element_count_ * (Xg(0) + .5) ));
+			case 2:
+				return static_cast<unsigned int>(std::floor(line_element_count_ * (Xg(0) + .5) )
+						+ std::floor(line_element_count_ * (Xg(1) + .5) * line_element_count_) );
+		}
+	else 
+		return types::invalid_lattice_index;
+}
+
 /* Basic getters and setters */
 template<int dim,int degree>
-types::global_index 	
-UnitCell<dim,degree>::get_grid_point_global_index(const std::array<types::grid_index, dim>& indices) const
+unsigned int 	
+UnitCell<dim,degree>::get_grid_point_global_index(const std::array<int, dim>& indices) const
 { 
 	return grid_to_index_map_.find(indices);
 };
 
 
 template<int dim,int degree>
-std::array<types::grid_index, dim> 	
-UnitCell<dim,degree>::get_grid_point_grid_indices(const types::global_index& index) const
+std::array<int, dim> 	
+UnitCell<dim,degree>::get_grid_point_grid_indices(const unsigned int& index) const
 {	return index_to_grid_map_.at(index);	};
 
 
 template<int dim,int degree>
 dealii::Point<dim>
-UnitCell<dim,degree>::get_grid_point_position(const types::global_index& index) const
+UnitCell<dim,degree>::get_grid_point_position(const unsigned int& index) const
 {	return grid_points_.at(index);	};
 
 
 template<int dim,int degree>
 bool 
-UnitCell<dim,degree>::is_grid_point_interior(const types::global_index& index) const
+UnitCell<dim,degree>::is_grid_point_interior(const unsigned int& index) const
 {	return (index < number_of_interior_grid_points);	};
 
+template<int dim, int degree>
+std::tuple<unsigned int, std::array<int, dim>>
+UnitCell<dim,degree>::map_boundary_point_interior(const unsigned int& index) const
+{	return boundary_to_interior_map_[index]; }
 
 template<int dim,int degree>
 double 	
@@ -293,6 +340,7 @@ UnitCell<dim,degree>::compute_bounding_radius(const dealii::Tensor<2,dim>& basis
 		default: return 0; // Should never happen (dimension is 1 or 2)
 	}
 };
+
 
 
 

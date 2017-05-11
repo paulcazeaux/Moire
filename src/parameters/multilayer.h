@@ -37,8 +37,8 @@ public:
 	std::string 	job_name;
 	int 			observable_type;
 	
-	double 			intra_searchsize_radius;
-	double 			inter_searchsize_radius;
+	double 			intra_search_radius;
+	double 			inter_search_radius;
 	
 	int 			poly_degree;
 	double 			energy_rescale;
@@ -62,7 +62,7 @@ public:
 	/* constuctors and destructor ============================================================ */
     Multilayer(	std::string job_name = "UNKNOWN_JOB", 
     			int observable_type = 0,
-				double intra_searchsize_radius = 5, double inter_searchsize_radius = 5,
+				double intra_search_radius = 5, double inter_search_radius = 5,
 				int poly_degree = 20,	
 				double energy_rescale = 20,	double energy_shift = 0, 
 				bool magOn = false, 	bool elecOn = false,
@@ -83,8 +83,8 @@ public:
 			os << " | poly_degree = " 				<< ml.poly_degree 				<< std::endl;
 			os << " | cutoff_radius = "				<< ml.cutoff_radius 			<< std::endl;
 			os << " | refinement_level = "			<< ml.refinement_level 			<< std::endl;
-			os << " | intra_searchsize_radius = "	<< ml.intra_searchsize_radius	<< std::endl;
-			os << " | inter_searchsize_radius = "	<< ml.inter_searchsize_radius	<< std::endl;
+			os << " | intra_search_radius = "	<< ml.intra_search_radius	<< std::endl;
+			os << " | inter_search_radius = "	<< ml.inter_search_radius	<< std::endl;
 			os << (ml.magOn  ? " | magOn  = true \n" : " | magOn  = false \n")		<< std::endl;
 			os << (ml.elecOn ? " | elecOn = true \n" : " | elecOn = false \n")		<< std::endl;
 			
@@ -104,7 +104,7 @@ public:
 template <int dim, int num_layers>
 Multilayer<dim,num_layers>::Multilayer(	std::string job_name, 
     			int observable_type,
-				double intra_searchsize_radius, 	double inter_searchsize_radius,
+				double intra_search_radius, 	double inter_search_radius,
 				int poly_degree,	
 				double energy_rescale,				double energy_shift, 
 				bool magOn, 						bool elecOn,
@@ -112,8 +112,8 @@ Multilayer<dim,num_layers>::Multilayer(	std::string job_name,
 				double cutoff_radius)
 	:
 	job_name(job_name),		observable_type(observable_type),
-	intra_searchsize_radius(intra_searchsize_radius),	
-	inter_searchsize_radius(inter_searchsize_radius),
+	intra_search_radius(intra_search_radius),	
+	inter_search_radius(inter_search_radius),
 	poly_degree(poly_degree),						
 	energy_rescale(energy_rescale),		energy_shift(energy_shift),
 	magOn(magOn),						elecOn(elecOn),
@@ -128,8 +128,8 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 	/* Generate default values */
 	job_name = "UNKNOWN_JOB"; 
 	observable_type = 0;
-	intra_searchsize_radius = 12.5;
-	inter_searchsize_radius = 12.5;
+	intra_search_radius = 12.5;
+	inter_search_radius = 12.5;
 	poly_degree = 20;
 	energy_rescale = 20;
 	energy_shift = 0;
@@ -339,13 +339,13 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 				if (in_string == "INTRA_SEARCHSIZE"){
 					getline(in_line,in_string,' ');
 					getline(in_line,in_string,' ');
-					intra_searchsize_radius = atof(in_string.c_str());
+					intra_search_radius = atof(in_string.c_str());
 				}
 				
 				if (in_string == "INTER_SEARCHSIZE"){
 					getline(in_line,in_string,' ');
 					getline(in_line,in_string,' ');
-					inter_searchsize_radius = atof(in_string.c_str());
+					inter_search_radius = atof(in_string.c_str());
 				}
 				
 				if (in_string == "ENERGY_RESCALE"){
@@ -372,7 +372,7 @@ Multilayer<dim,num_layers>::extract_monolayer(const int layer_index) const
 {
 	Multilayer<dim,1> monolayer = Multilayer<dim,1>(
 				this->job_name,							this->observable_type,
-				this->intra_searchsize_radius,			this->inter_searchsize_radius,
+				this->intra_search_radius,			this->inter_search_radius,
 				this->poly_degree,						
 				this->energy_rescale,					this->energy_shift,
 				this->magOn,							this->elecOn,

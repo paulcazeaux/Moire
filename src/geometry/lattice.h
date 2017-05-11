@@ -34,7 +34,7 @@ static_assert( (dim == 1 || dim == 2), "Lattice dimension must be 1 or 2!");
 public:
 	/* Announce to the world the cut-off radius, number of vertices and array basis */
 	const double 							radius;
-	types::global_index 		 			number_of_vertices;
+	unsigned int 		 					num_vertices;
 	const dealii::Tensor<2,dim>				basis;
 	const dealii::Tensor<2,dim>				inverse_basis;
 
@@ -43,14 +43,14 @@ public:
 	~Lattice() {};
 
 	/* List all indices in a disk-like neighborhood of any radius around any point */
-	std::vector<types::global_index> 		list_neighborhood_indices(const dealii::Point<dim>& X, const double radius) const;
+	std::vector<unsigned int> 				list_neighborhood_indices(const dealii::Point<dim>& X, const double radius) const;
 
 	/* Utilities for locating the global index of a vertex from its grid index,
 	*	or vice versa the grid index from the global index */
 
-	types::global_index 					get_vertex_global_index(const std::array<types::grid_index, dim>& indices) const;
-	std::array<types::grid_index, dim> 		get_vertex_grid_indices(const types::global_index& index) const;
-	dealii::Point<dim>						get_vertex_position(const types::global_index& index) const;
+	unsigned int 							get_vertex_global_index(const std::array<int, dim>& indices) const;
+	std::array<int, dim> 					get_vertex_grid_indices(const unsigned int& index) const;
+	dealii::Point<dim>						get_vertex_position(const unsigned int& index) const;
 
 private:
 
@@ -59,7 +59,7 @@ private:
 
 		/* Maps from global index to grid index */
 	GridToIndexMap<dim>								grid_to_index_map_;
-	std::vector<std::array<types::grid_index, dim>>	index_to_grid_map_; 
+	std::vector<std::array<int, dim>>				index_to_grid_map_; 
 
 		/* A useful quantity for determining necessary search sizes when looking for neighborhoods */
 	const double 									unit_cell_inscribed_radius_;
@@ -79,10 +79,10 @@ Lattice<dim>::Lattice(const dealii::Tensor<2,dim> basis, const double radius)
 	unit_cell_inscribed_radius_(Lattice<dim>::compute_unit_cell_inscribed_radius(basis))
 {
 	/* Compute the grid indices range that has to be explored */
-	types::grid_index search_size = static_cast<types::grid_index>( std::floor(radius / unit_cell_inscribed_radius_) );
+	int search_size = static_cast<int>( std::floor(radius / unit_cell_inscribed_radius_) );
 
 	/* Deduce the strides for each dimension in a corresponding flattened multi-dimensional array */
-	types::grid_index  strides[dim+1];
+	int  strides[dim+1];
 	strides[0] = 1;
 	for (unsigned int i = 0; i<dim; i++)
 		strides[i+1] = strides[i] * (2*search_size + 1);
@@ -93,17 +93,17 @@ Lattice<dim>::Lattice(const dealii::Tensor<2,dim> basis, const double radius)
 
 	/* Walk through the flattened multi-dimensional array and populate the index_to_grid_map_
 	* and vertices_ data containers */
-	types::grid_index 	indices[dim];
-	for (types::grid_index unrolled_index = 0; unrolled_index < strides[dim]; ++unrolled_index)
+	int 	indices[dim];
+	for (int unrolled_index = 0; unrolled_index < strides[dim]; ++unrolled_index)
 	{
 		for (unsigned int i=0; i<dim; ++i)
 			indices[i] = (unrolled_index / strides[i]) % strides[i+1] - search_size;
 
-		dealii::Point<dim> vertex (basis * dealii::Tensor<1,dim,types::grid_index>(indices));
+		dealii::Point<dim> vertex (basis * dealii::Tensor<1,dim,int>(indices));
 		if (vertex.square() < radius*radius)
 			{
 				vertices_.push_back(vertex);
-				std::array<types::grid_index, dim> indices_array;
+				std::array<int, dim> indices_array;
 				for (unsigned int i=0; i<dim; ++i) 
 					indices_array[i] = indices[i];
 				index_to_grid_map_.push_back(indices_array);
@@ -113,7 +113,7 @@ Lattice<dim>::Lattice(const dealii::Tensor<2,dim> basis, const double radius)
 	index_to_grid_map_.shrink_to_fit();
 
 	/* Initialize the grid_to_index_map_ data structure */
-	std::array<types::grid_index, dim> range_min, range_max;
+	std::array<int, dim> range_min, range_max;
 	for (unsigned int i=0; i<dim; ++i)
 	{
 		range_min[i] = -search_size; 
@@ -122,28 +122,28 @@ Lattice<dim>::Lattice(const dealii::Tensor<2,dim> basis, const double radius)
 	grid_to_index_map_.reinit(index_to_grid_map_, range_min, range_max);
 
 	/* Initialize the subdomain ids to zero (no partition) */
-	number_of_vertices = vertices_.size();
+	num_vertices = vertices_.size();
 }
 
 template<int dim>
-std::vector<types::global_index>
+std::vector<unsigned int>
 Lattice<dim>::list_neighborhood_indices(const dealii::Point<dim>& X, const double radius) const
 {
 	/* Rotate X into the grid basis */
 	dealii::Point<dim> Xg (inverse_basis * X);
 	/* Compute the grid indices range that has to be explored */
 	double search_radius = radius / unit_cell_inscribed_radius_;
-	std::array<types::grid_index, dim> search_range_min, search_range_max;
+	std::array<int, dim> search_range_min, search_range_max;
 
 	for (unsigned int i = 0; i < dim; ++i) 
 	{
-		search_range_min[i] = static_cast<types::grid_index>( std::ceil(Xg(i) - search_radius) );
-		search_range_max[i] = static_cast<types::grid_index>( std::floor(Xg(i) + search_radius) );
+		search_range_min[i] = static_cast<int>( std::ceil(Xg(i) - search_radius) );
+		search_range_max[i] = static_cast<int>( std::floor(Xg(i) + search_radius) );
 	}
 	/* Use the grid_to_index_map_ object to get a list of relevant indices to explore */
-	std::vector<types::global_index>	search_range = grid_to_index_map_.find(search_range_min, search_range_max, false);
+	std::vector<unsigned int>	search_range = grid_to_index_map_.find(search_range_min, search_range_max, false);
 	
-	std::vector<types::global_index> neighborhood;
+	std::vector<unsigned int> neighborhood;
 	neighborhood.reserve(search_range.size());
 	for (const auto & idx : search_range)
 		if (X.distance(vertices_[idx]) < radius)
@@ -152,28 +152,24 @@ Lattice<dim>::list_neighborhood_indices(const dealii::Point<dim>& X, const doubl
 	return neighborhood;
 };
 
-
-
-
-
 /* Basic getters and setters */
 template<int dim>
-types::global_index 	
-Lattice<dim>::get_vertex_global_index(const std::array<types::grid_index, dim>& indices) const
+unsigned int 	
+Lattice<dim>::get_vertex_global_index(const std::array<int, dim>& indices) const
 { 
 	return grid_to_index_map_.find(indices);
 };
 
 
 template<int dim>
-std::array<types::grid_index, dim> 	
-Lattice<dim>::get_vertex_grid_indices(const types::global_index& index) const
+std::array<int, dim> 	
+Lattice<dim>::get_vertex_grid_indices(const unsigned int& index) const
 {	return index_to_grid_map_.at(index);	};
 
 
 template<int dim>
 dealii::Point<dim>
-Lattice<dim>::get_vertex_position(const types::global_index& index) const
+Lattice<dim>::get_vertex_position(const unsigned int& index) const
 {	return vertices_.at(index);	};
 
 

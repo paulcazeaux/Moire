@@ -21,6 +21,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/app)
 
 ADD_EXECUTABLE(HullSpace main.cpp)
 ADD_DEPENDENCIES(HullSpace Calgebra)
+
 DEAL_II_SETUP_TARGET(HullSpace)
 
 ######################################################################################

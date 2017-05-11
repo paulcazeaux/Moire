@@ -31,5 +31,5 @@ echo "==========================================================================
 InputFile=../app/cfg/tblg_hstruct.in
 ExportFile=../test_output
 rm ${ExportFile}.out
-mpirun -n 4 ./app/${TARGET} -i ${InputFile} > ${ExportFile}.out
+mpirun -n 8 ./app/${TARGET} -i ${InputFile} > ${ExportFile}.out
 open ${ExportFile}.out
