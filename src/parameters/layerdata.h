@@ -26,64 +26,61 @@
  */
 
 template<int dim>
-class LayerData {
-	private:
-		/* class members ======================================================================== */
-		dealii::Tensor<2,dim> lattice_;
-		std::vector<dealii::Point<dim+1> > orbital_positions_;
-		std::vector<int> orbital_types_;
-		int material_;
+struct LayerData {
 
-		double height_;
-		double angle_;
-        double dilation_;
-        
     public:
 		/* constuctors and destructor ============================================================ */
 		LayerData();
-        LayerData(dealii::Tensor<2,dim> lattice, 
+        LayerData(unsigned char material,
+                    dealii::Tensor<2,dim> lattice, 
         			std::vector<dealii::Point<dim+1> > orbital_pos, 
                     std::vector<int> orbital_types, 
                     double height, double angle, double dilation);
         LayerData(const LayerData&);
         ~LayerData() {}
 
-		/* getters */
-        dealii::Tensor<2,dim> 					get_lattice()			const { return lattice_; }
-		std::vector<dealii::Point<dim+1> > 		get_orbital_positions()	const { return orbital_positions_; }
-        std::vector<int>						get_orbital_types()		const { return orbital_types_; }
-        unsigned int                            get_num_orbitals()      const { return orbital_types_.size(); }
-        int 									get_material()			const { return material_; }
+        unsigned char                           material;
+        dealii::Tensor<2,dim>                   lattice_basis;
+        unsigned int                            n_orbitals;
+        std::vector<dealii::Point<dim+1> >      orbital_positions;
+        std::vector<int>                        orbital_types;
 
-		double 									get_height()			const { return height_; }
-		double 									get_angle()				const { return angle_; }
-        double                                  get_dilation()             const { return dilation_; }
+        double height;
+        double angle;
+        double dilation;
 };
 
 template<int dim>
-LayerData<dim>::LayerData(): material_(-1), height_(0), angle_(0) {}
+LayerData<dim>::LayerData(): material(-1), n_orbitals(0), height(0), angle(0), dilation(1.) {}
 
 template<int dim>
-LayerData<dim>::LayerData(   dealii::Tensor<2,dim> lattice, 
+LayerData<dim>::LayerData(      unsigned char material,
+                                dealii::Tensor<2,dim> lattice, 
                                 std::vector<dealii::Point<dim+1> > orbital_pos, 
                                 std::vector<int> orbital_types, 
                                 double height, double angle, double dilation):
-                        lattice_(lattice), 
-                        orbital_positions_(orbital_pos), 
-                        orbital_types_(orbital_types), 
-                        height_(height), 
-                        angle_(angle),
-                        dilation_(dilation) {}
+                        material(material),
+                        lattice_basis(lattice), 
+                        n_orbitals(orbital_pos.size()),
+                        orbital_positions(orbital_pos), 
+                        orbital_types(orbital_types), 
+                        height(height), 
+                        angle(angle),
+                        dilation(dilation) 
+                        {
+                            assert(orbital_types.size() == n_orbitals);
+                        }
 
 template<int dim>
 LayerData<dim>::LayerData(const LayerData<dim>& layerdata) {
-    lattice_            = layerdata.lattice_;
-    orbital_positions_  = layerdata.orbital_positions_;
-    orbital_types_      = layerdata.orbital_types_;
-    material_           = layerdata.material_;
-    height_             = layerdata.height_;
-    angle_              = layerdata.angle_;
-    dilation_           = layerdata.dilation_;
+    material           = layerdata.material;
+    lattice_basis      = layerdata.lattice_basis;
+    n_orbitals         = layerdata.n_orbitals;
+    orbital_positions  = layerdata.orbital_positions;
+    orbital_types      = layerdata.orbital_types;
+    height             = layerdata.height;
+    angle              = layerdata.angle;
+    dilation           = layerdata.dilation;
 }
 
 #endif /* LAYERDATA_H */

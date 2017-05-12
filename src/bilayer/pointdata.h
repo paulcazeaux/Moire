@@ -64,19 +64,19 @@ public:
 	 * These points belong to the other middle block (2 if block_id = 1 and vice versa).
 	 * First element of the pair is the element index, second the grid point information as above
 	 */
-	std::vector<std::pair<unsigned int, point_indices>	>	interpolated_grid_points;
+	std::vector<std::pair<unsigned int, point_indices>	>	interpolated_nodes;
 
 	PointData(unsigned char, unsigned int, types::global_index);
 
 };
 
-PointData::PointData(unsigned char block_id, unsigned int index_in_block, types::global_index total_num_dofs)
+PointData::PointData(unsigned char block_id, unsigned int index_in_block, types::global_index total_n_dofs)
 	:
 	block_id(block_id), 
 	index_in_block(index_in_block),
-	owned_dofs(total_num_dofs), 
-	relevant_dofs(total_num_dofs) 
+	owned_dofs(total_n_dofs), 
+	relevant_dofs(total_n_dofs) 
 {};
 
-}
+} /* Namespace Bilayer */
 #endif /* BILAYER_POINTDATA_H */

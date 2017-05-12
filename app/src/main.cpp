@@ -13,9 +13,9 @@
 #include "deal.II/lac/dynamic_sparsity_pattern.h"
 #include "bilayer/dofhandler.h"
 
-static const int dim = 2;
+static const int dim = 1;
 static const int degree = 1;
-static const int num_layers = 2;
+static const int n_layers = 2;
  
 int main(int argc, char** argv) {
 
@@ -35,15 +35,18 @@ int main(int argc, char** argv) {
 	/*********************************************************/
 	/*	 Read input file, and initialize params and vars. 	 */
 	/*********************************************************/
-	Multilayer<dim, num_layers> 				bilayer(argc,argv);
-	Bilayer::DoFHandler<dim, degree> 			dof_handler(bilayer);
+	Multilayer<dim, n_layers> 				bilayer(argc,argv);
+	Bilayer::DoFHandler<dim, degree> 		dof_handler(bilayer);
 	dof_handler.initialize(mpi);
 
 	dealii::DynamicSparsityPattern dsp (dof_handler.locally_owned_dofs());
 	dof_handler.make_sparsity_pattern_rmultiply(dsp);
 
 	// dealii::DynamicSparsityPattern dsp (dof_handler.locally_relevant_dofs());
-	// dof_handler.make_sparsity_pattern_translate(dsp);
+	// dof_handler.make_sparsity_pattern_transpose(dsp);
+	// dealii::SparsityTools::distribute_sparsity_pattern(dsp, 
+	// 				dof_handler.n_locally_owned_dofs_per_processor(), 
+	// 				mpi, dof_handler.locally_relevant_dofs());
 
 	if (dof_handler.my_pid == 0)
 		dsp.print_gnuplot(std::cout);

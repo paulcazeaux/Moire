@@ -24,13 +24,13 @@
 /**
  * This class holds the data read from input file at the start of the program. 
  * In particular, it assumes a particular input file format (see the constructor)
- * with the data for num_layers individual layers of dimension dim.
+ * with the data for n_layers individual layers of dimension dim.
  * Note that each of these layers exist as a hyperplane in a dim+1 space with
  * a specific height in the last coordinate, and the position of orbitals in 
  * the unit cell may include an offset in this last coordinate (e.g. for TMDC layers) 
  */
 
-template<int dim, int num_layers>
+template<int dim, int n_layers>
 struct Multilayer {
 public:
 	// Generic job information
@@ -51,7 +51,7 @@ public:
 			
 	
 	// Layer data
-	std::array<LayerData<dim>,num_layers > 	layer_data;
+	std::array<LayerData<dim>,n_layers > 	layer_data;
 
 	// Determines the cutoff radius in real and reciprocal space (equal for now)
 	double 	cutoff_radius;
@@ -76,7 +76,7 @@ public:
     Multilayer<dim,1>	extract_monolayer(const int layer_index) const;
 
 	/* operator << ========================================================================== */
-	friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, num_layers>& ml)
+	friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, n_layers>& ml)
 	{
 			os << " T Input parameters for multilayer object:" 						<< std::endl;
 			os << " | observable_type = " 			<< ml.observable_type 			<< std::endl;
@@ -101,8 +101,8 @@ public:
 
 
 /* Default Constructor */
-template <int dim, int num_layers>
-Multilayer<dim,num_layers>::Multilayer(	std::string job_name, 
+template <int dim, int n_layers>
+Multilayer<dim,n_layers>::Multilayer(	std::string job_name, 
     			int observable_type,
 				double intra_search_radius, 	double inter_search_radius,
 				int poly_degree,	
@@ -123,8 +123,8 @@ Multilayer<dim,num_layers>::Multilayer(	std::string job_name,
 
 
 /* File Constructor */
-template <int dim, int num_layers>
-Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
+template <int dim, int n_layers>
+Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
 	/* Generate default values */
 	job_name = "UNKNOWN_JOB"; 
 	observable_type = 0;
@@ -143,18 +143,18 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 	// Generate input for simulation.
 	// ------------------------------
 
-	int current_layer = -1;
+	int current_layer = static_cast<unsigned int>(-1);
 
 	// ---------------------------------------------------------
 	// Next three Categories define a single layer's information
 	// ---------------------------------------------------------
-	int mat = -1;
+	unsigned char mat = static_cast<unsigned  char>(-1);
 	// Unit cell information, gets put into an sdata object
 	double a = 0;
 	dealii::Tensor<2,dim> lattice_basis;
 
 	// number of orbitals per unit cell
-	int num_orbitals = 0;
+	int n_orbitals = 0;
 	std::vector<int> types;
 	std::vector<dealii::Point<dim+1> > pos;
 	
@@ -203,12 +203,12 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 					getline(in_line,in_string,' ');
 					getline(in_line,in_string,' ');
 					int N = atoi(in_string.c_str());
-					if (num_layers > N)
+					if (n_layers > N)
 						throw std::runtime_error("Mismatched number of layers. The input file declares " + in_string 
-							+ " layers while the templated Multilayer parameters expects " + std::to_string(num_layers) + ".\n");
-					else if (num_layers < N)
+							+ " layers while the templated Multilayer parameters expects " + std::to_string(n_layers) + ".\n");
+					else if (n_layers < N)
 						std::cout << "Warning ! Mismatched number of layers. The input file declares " + in_string 
-							+ " layers while the templated Multilayer parameters expects " + std::to_string(num_layers) + ".\n" 
+							+ " layers while the templated Multilayer parameters expects " + std::to_string(n_layers) + ".\n" 
 								<< "We will proceed regardless with only the first layer.\n" ;
 					}
 				
@@ -217,10 +217,10 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 					current_layer = atoi(in_string.c_str()) - 1;
 				}
 				
-				if (in_string == "END_LAYER" && current_layer < num_layers) {
+				if (in_string == "END_LAYER" && current_layer < n_layers) {
 					getline(in_line,in_string,' ');
 					if (current_layer == atoi(in_string.c_str()) - 1) {
-						layer_data[current_layer] = LayerData<dim>(lattice_basis, pos, types, height, angle, dilation);
+						layer_data[current_layer] = LayerData<dim>(mat, lattice_basis, pos, types, height, angle, dilation);
 					}
 				}
 				
@@ -255,14 +255,14 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 				if (in_string == "NUM_ORBITALS"){
 					getline(in_line,in_string,' ');
 					getline(in_line,in_string,' ');
-					num_orbitals = atoi(in_string.c_str());
-					types.resize(num_orbitals);
-					pos.resize(num_orbitals);
+					n_orbitals = atoi(in_string.c_str());
+					types.resize(n_orbitals);
+					pos.resize(n_orbitals);
 				}
 				
 				if (in_string == "TYPES"){
 					getline(in_line,in_string,' ');
-					for (int i = 0; i < num_orbitals; ++i) {
+					for (int i = 0; i < n_orbitals; ++i) {
 						getline(in_line,in_string,' ');
 						types[i] = atoi(in_string.c_str());
 					}
@@ -270,7 +270,7 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 					
 				if (in_string == "POS"){
 					getline(in_line,in_string,' ');
-					for (int i = 0; i < num_orbitals; ++i) {
+					for (int i = 0; i < n_orbitals; ++i) {
 						for (int j = 0; j < dim+1; ++j) {
 							getline(in_line,in_string,' ');
 							pos[i](j) = a*atof(in_string.c_str());
@@ -366,9 +366,9 @@ Multilayer<dim,num_layers>::Multilayer(int argc, char **argv) {
 
 }
 
-template<int dim,int num_layers>
+template<int dim,int n_layers>
 Multilayer<dim,1>
-Multilayer<dim,num_layers>::extract_monolayer(const int layer_index) const
+Multilayer<dim,n_layers>::extract_monolayer(const int layer_index) const
 {
 	Multilayer<dim,1> monolayer = Multilayer<dim,1>(
 				this->job_name,							this->observable_type,

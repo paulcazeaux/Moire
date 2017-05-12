@@ -34,7 +34,7 @@ static_assert( (dim == 1 || dim == 2), "Lattice dimension must be 1 or 2!");
 public:
 	/* Announce to the world the cut-off radius, number of vertices and array basis */
 	const double 							radius;
-	unsigned int 		 					num_vertices;
+	unsigned int 		 					n_vertices;
 	const dealii::Tensor<2,dim>				basis;
 	const dealii::Tensor<2,dim>				inverse_basis;
 
@@ -122,7 +122,7 @@ Lattice<dim>::Lattice(const dealii::Tensor<2,dim> basis, const double radius)
 	grid_to_index_map_.reinit(index_to_grid_map_, range_min, range_max);
 
 	/* Initialize the subdomain ids to zero (no partition) */
-	num_vertices = vertices_.size();
+	n_vertices = vertices_.size();
 }
 
 template<int dim>

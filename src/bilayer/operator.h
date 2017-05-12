@@ -43,9 +43,11 @@
 namespace Bilayer {
 
 template <int dim, int degree>
-class Operator
+class Operator : public Multilayer<dim, 2>
 {
 
 }
+
+}/* Namespace Bilayer */
 
 #endif /* BILAYER_OPERATOR_H */

@@ -7,8 +7,8 @@
 
 
 
-#ifndef MONOLAYER_H
-#define MONOLAYER_H
+#ifndef MONOLAYER_DOFHANDLER_H
+#define MONOLAYER_DOFHANDLER_H
 
 #include <memory>
 #include "deal.II/base/mpi.h"
@@ -21,10 +21,10 @@
 
 
 /**
-* This class encapsulates the underlying monolayer discrete structure:
+* This class encapsulates the discretized underlying monolayer structure:
 * assembly of Brillouin zone mesh and direct lattice points for a monolayer group.
-* It is in particular responsible for holding the structure of degrees of freedom
-* and building a sparsity pattern.
+* It is in particular responsible for building a sparsity pattern 
+* and handling partitioning of the degrees of freedom by metis.
 * This is not meant be work in an MPI distributed fashion (as it should be used 
 * e.g. as a local preconditioner for the bilayer structures).
 */
@@ -32,14 +32,14 @@
 namespace Monolayer {
 
 template <int dim, int degree>
-class Group : public Multilayer<dim, 1>
+class DoFHandler : public Multilayer<dim, 1>
 {
 
 static_assert( (dim == 1 || dim == 2), "UnitCell dimension must be 1 or 2!\n");
 
 public:
-	Group(const Multilayer<dim, 1>& parameters);
-	~Group() {};
+	DoFHandler(const Multilayer<dim, 1>& parameters);
+	~DoFHandler() {};
 
 
 
@@ -56,14 +56,14 @@ private:
 };
 
 template<int dim, int degree>
-Group<dim,degree>::Group(const Multilayer<dim, 1>& parameters)
+DoFHandler<dim,degree>::DoFHandler(const Multilayer<dim, 1>& parameters)
 	:
 	Multilayer<dim, 1>(parameters)
 {
 	const  LayerData<dim>& layer = parameters.layer_data[0];
 
-	dealii::Tensor<2,dim> rotated_basis = Transformation<dim>::matrix(layer.get_dilation(), layer.get_angle()) 
-											* layer.get_lattice();
+	dealii::Tensor<2,dim> rotated_basis = Transformation<dim>::matrix(layer.dilation, layer.angle)
+											* layer.lattice_basis;
 		
 	lattice_   = std::make_unique<Lattice<dim>>(rotated_basis, parameters.cutoff_radius);
 	brillouin_zone_ = std::make_unique<UnitCell<dim,degree>>(
@@ -72,7 +72,7 @@ Group<dim,degree>::Group(const Multilayer<dim, 1>& parameters)
 
 template<int dim, int degree>
 void
-Group<dim,degree>::distribute_dofs()
+DoFHandler<dim,degree>::distribute_dofs()
 {
 	// TODO
 };
@@ -80,10 +80,10 @@ Group<dim,degree>::distribute_dofs()
 
 template<int dim, int degree>
 void
-Group<dim,degree>::make_sparsity_pattern()
+DoFHandler<dim,degree>::make_sparsity_pattern()
 {
 	// TODO
 };
 }
 
-#endif /* MONOLAYER_H */
+#endif /* MONOLAYER_DOFHANDLER_H */
