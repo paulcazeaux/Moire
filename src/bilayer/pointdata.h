@@ -28,57 +28,55 @@ struct PointData
 {
 public:
 	/**
-	 * Type used to identify a grid point and its corresponding global dof block.
-	 * First index is the lattice point, second is the unit cell grid index,
-	 * then the global dof index block start and end.
+	 * Type used to fully identify a grid point geometrically.
+	 * First index is the block index, then the lattice point (within its block), 
+	 * and the unit cell grid index.
 	 */
-	typedef std::tuple<unsigned int, 
+	typedef std::tuple<	unsigned char,
 						unsigned int, 
-						types::global_index, 
-						types::global_index> 	point_indices;
+						unsigned int> 			point_indices;
 
 	/* To which block [0-3] does the point belong? */
 	unsigned char 								block_id;
 
-	/* What is its size? */
-	unsigned int 								size;
+	/* Within this block, which is its index on the corresponding lattice */
+	unsigned int 								index_in_block;
 
 	/* Range of global dofs owned by the lattice point (interior dofs) */
-	dealii::IndexSet							owned_global_dofs;
+	dealii::IndexSet							owned_dofs;
 	/* Range of global dofs relevant to the lattice point (interior + boundary dofs) */
-	dealii::IndexSet							relevant_global_dofs;
-
-	/* Stride associated with each index: orbital column, orbital row, grid point */
-	std::array<unsigned int,3> 					strides;
+	dealii::IndexSet							relevant_dofs;
 
 	/**
 	 * Now we need to store details for the interpolation process.
 	 * These vectors should remain empty if block_id is 0 or 3 
 	 * (where cells have periodic boundary conditions).
+	 *
+	 *
+	 *
+	 * First some information about the unit cell's boundary.
+	 * These points belong to the same block
 	 */
-
-	/* First some information about the unit cell's boundary. */
 	std::vector<point_indices> 					boundary_lattice_points;
 
-	/* Now some information about points we will interpolate to. */
-	std::vector<point_indices>					interpolated_grid_points;
-	std::vector<unsigned int> 					interpolating_elements;
+	/**
+	 * Now some information about points we will interpolate to. 
+	 * These points belong to the other middle block (2 if block_id = 1 and vice versa).
+	 * First element of the pair is the element index, second the grid point information as above
+	 */
+	std::vector<std::pair<unsigned int, point_indices>	>	interpolated_grid_points;
 
-	PointData(unsigned char, unsigned int, types::global_index, 
-				std::array<unsigned int, 3>);
+	PointData(unsigned char, unsigned int, types::global_index);
 
 };
 
-PointData::PointData(unsigned char block_id, 
-				unsigned int size, 
-				types::global_index total_num_dofs, 
-				std::array<unsigned int, 3> strides)
+PointData::PointData(unsigned char block_id, unsigned int index_in_block, types::global_index total_num_dofs)
 	:
 	block_id(block_id), 
-	size(size), 
-	owned_global_dofs(total_num_dofs), relevant_global_dofs(total_num_dofs),
-	strides(strides) {};
-};
+	index_in_block(index_in_block),
+	owned_dofs(total_num_dofs), 
+	relevant_dofs(total_num_dofs) 
+{};
 
-
+}
 #endif /* BILAYER_POINTDATA_H */

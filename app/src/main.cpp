@@ -10,9 +10,8 @@
 #include <deal.II/base/mpi.h>
 
 #include "tools/types.h"
-#include "bilayer/bilayer.h"
-#include "monolayer/monolayer.h"
-#include "fe/element.h"
+#include "deal.II/lac/dynamic_sparsity_pattern.h"
+#include "bilayer/dofhandler.h"
 
 static const int dim = 2;
 static const int degree = 1;
@@ -25,9 +24,9 @@ int main(int argc, char** argv) {
 	/*********************************************************/
 
 	dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+	MPI_Comm 					mpi(MPI_COMM_WORLD);
 
-
-	if (dealii::Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) == 1)
+	if (dealii::Utilities::MPI::n_mpi_processes(mpi) == 1)
 	{
 		printf("Error: Only 1 MPI rank detected (need to run with n > 1).\n");
 		return -1;
@@ -36,9 +35,18 @@ int main(int argc, char** argv) {
 	/*********************************************************/
 	/*	 Read input file, and initialize params and vars. 	 */
 	/*********************************************************/
-	Multilayer<dim, num_layers> 				parameters(argc,argv);
-	Bilayer::Groupoid<dim, degree> 				bilayer(parameters);
-	bilayer.coarse_setup(MPI_COMM_WORLD);
-	bilayer.local_setup(MPI_COMM_WORLD);
+	Multilayer<dim, num_layers> 				bilayer(argc,argv);
+	Bilayer::DoFHandler<dim, degree> 			dof_handler(bilayer);
+	dof_handler.initialize(mpi);
+
+	dealii::DynamicSparsityPattern dsp (dof_handler.locally_owned_dofs());
+	dof_handler.make_sparsity_pattern_rmultiply(dsp);
+
+	// dealii::DynamicSparsityPattern dsp (dof_handler.locally_relevant_dofs());
+	// dof_handler.make_sparsity_pattern_translate(dsp);
+
+	if (dof_handler.my_pid == 0)
+		dsp.print_gnuplot(std::cout);
+
 	return 0;
 }

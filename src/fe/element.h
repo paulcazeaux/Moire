@@ -15,7 +15,6 @@
 
 #include "deal.II/base/tensor.h"
 #include "deal.II/base/point.h"
-#include "deal.II/lac/full_matrix.h"
 #include "deal.II/base/utilities.h"
 
 #include "tools/types.h"
@@ -62,8 +61,8 @@ struct Element<1,degree>
 	 * For speed, we assume that the quadrature points are inside the element.
 	 * Checking this is the responsibility of the caller.
 	 */
-	void 				get_interpolation_matrix(const std::vector<dealii::Point<1>> quadrature_points, 
-													dealii::FullMatrix<double> & matrix) const;
+	void 				get_interpolation_weights(const dealii::Point<1> quadrature_point, 
+													std::vector<double> & weights) const;
 };
 
 template <int degree>
@@ -88,19 +87,15 @@ Element<1,degree>::Element(const Element<1,degree>& orig)
  */
 
 template <>
-void	Element<1,1>::get_interpolation_matrix(
-						const std::vector<dealii::Point<1>> quadrature_points, 
-						dealii::FullMatrix<double> & matrix) const
+void	Element<1,1>::get_interpolation_weights(
+						const dealii::Point<1> quadrature_point, 
+						std::vector<double> & weights) const
 {
-	unsigned int n = quadrature_points.size();
-	matrix.reinit(n, dofs_per_cell);
+	weights.resize(dofs_per_cell);
 
-	for (unsigned int i=0; i<n; ++i)
-	{
-		double x = jacobian * (quadrature_points[i](0) - vertices[0](0));
-		matrix(i,0) = -(x-1.);
-		matrix(i,1) = x;
-	}
+	double x = jacobian * (quadrature_point(0) - vertices[0](0));
+	weights[0] = -(x-1.);
+	weights[1] = x;
 };
 
 
@@ -111,20 +106,16 @@ void	Element<1,1>::get_interpolation_matrix(
  */
 
 template<>
-void	Element<1,2>::get_interpolation_matrix(
-						const std::vector<dealii::Point<1>> quadrature_points, 
-						dealii::FullMatrix<double> & matrix) const
+void	Element<1,2>::get_interpolation_weights(
+						const dealii::Point<1> quadrature_point, 
+						std::vector<double> & weights) const
 {
-	unsigned int n = quadrature_points.size();
-	matrix.reinit(n, dofs_per_cell);
+	weights.resize(dofs_per_cell);
 
-	for (unsigned int i=0; i<n; ++i)
-	{
-		double x = jacobian * (quadrature_points[i](0) - vertices[0](0));
-		matrix(i,0) = (x-1.)*(2.*x-1.);
-		matrix(i,1) = -4. * x * (x-1.);
-		matrix(i,2) = x * (2.*x-1.);
-	}
+	double x = jacobian * (quadrature_point(0) - vertices[0](0));
+	weights[0] = (x-1.)*(2.*x-1.);
+	weights[1] = -4. * x * (x-1.);
+	weights[2] = x * (2.*x-1.);
 };
 
 /*		Order 3
@@ -134,21 +125,17 @@ void	Element<1,2>::get_interpolation_matrix(
  */
 
 template<>
-void	Element<1,3>::get_interpolation_matrix(
-						const std::vector<dealii::Point<1>> quadrature_points, 
-						dealii::FullMatrix<double> & matrix) const
+void	Element<1,3>::get_interpolation_weights(
+						const dealii::Point<1> quadrature_point, 
+						std::vector<double> & weights) const
 {
-	unsigned int n = quadrature_points.size();
-	matrix.reinit(n, dofs_per_cell);
+	weights.resize(dofs_per_cell);
 
-	for (unsigned int i=0; i<n; ++i)
-	{
-		double x = jacobian * (quadrature_points[i](0) - vertices[0](0));
-		matrix(i,0) = -0.5 * (3.*x-1.) * (3.*x-2.) * (x-1.);
-		matrix(i,1) =  4.5 * x * (3.*x-2.) * (x-1.);
-		matrix(i,2) = -4.5 * x * (3.*x-1.) * (x-1.);
-		matrix(i,3) =  0.5 * x * (3.*x-1.) * (3.*x-2.);
-	}
+	double x = jacobian * (quadrature_point(0) - vertices[0](0));
+	weights[0] = -0.5 * (3.*x-1.) * (3.*x-2.) * (x-1.);
+	weights[1] =  4.5 * x * (3.*x-2.) * (x-1.);
+	weights[2] = -4.5 * x * (3.*x-1.) * (x-1.);
+	weights[3] =  0.5 * x * (3.*x-1.) * (3.*x-2.);
 };
 
 
@@ -187,8 +174,8 @@ struct Element<2,degree>
 	 * For speed, we assume that the quadrature points are inside the element.
 	 * Checking this is the responsibility of the caller.
 	 */
-	void 		get_interpolation_matrix(const std::vector<dealii::Point<2>> quadrature_points, 
-													dealii::FullMatrix<double> & matrix) const;
+	void 		get_interpolation_weights(const dealii::Point<2> quadrature_point, 
+													std::vector<double> & weights) const;
 };
 
 template<int degree>
@@ -224,24 +211,20 @@ Element<2,degree>::Element(const Element<2,degree>& orig)
 
 
 template<>
-void	Element<2,1>::get_interpolation_matrix(
-						const std::vector<dealii::Point<2>> quadrature_points, 
-						dealii::FullMatrix<double> & matrix) const
+void	Element<2,1>::get_interpolation_weights(
+						const dealii::Point<2> quadrature_point, 
+						std::vector<double> & weights) const
 {
-	unsigned int n = quadrature_points.size();
-	matrix.reinit(n, dofs_per_cell);
+	weights.resize(dofs_per_cell);
 
-	for (unsigned int i=0; i<n; ++i)
-	{
-		dealii::Tensor<1,2> X = jacobian * (quadrature_points[i] - vertices[0]);
-		double x = X[0], y = X[1];
-		double px[2] = {1.-x , x};
-		double py[2] = {1.-y , y};
-		matrix(i,0) = px[0] * py[0];
-		matrix(i,1) = px[1] * py[0];
-		matrix(i,2) = px[0] * py[1];
-		matrix(i,3) = px[1] * py[1];
-	}
+	dealii::Tensor<1,2> X = jacobian * (quadrature_point - vertices[0]);
+	double x = X[0], y = X[1];
+	double px[2] = {1.-x , x};
+	double py[2] = {1.-y , y};
+	weights[0] = px[0] * py[0];
+	weights[1] = px[1] * py[0];
+	weights[2] = px[0] * py[1];
+	weights[3] = px[1] * py[1];
 };
 
 /*		Order 2	
@@ -257,34 +240,30 @@ void	Element<2,1>::get_interpolation_matrix(
 
 
 template<>
-void	Element<2,2>::get_interpolation_matrix(
-						const std::vector<dealii::Point<2>> quadrature_points, 
-						dealii::FullMatrix<double> & matrix) const
+void	Element<2,2>::get_interpolation_weights(
+						const dealii::Point<2> quadrature_point, 
+						std::vector<double> & weights) const
 {
-	unsigned int n = quadrature_points.size();
-	matrix.reinit(n, dofs_per_cell);
+	weights.resize(dofs_per_cell);
 
-	for (unsigned int i=0; i<n; ++i)
-	{
-		dealii::Tensor<1,2> X = jacobian * (quadrature_points[i] - vertices[0]);
-		double x = X[0], y = X[1];
-		double px[3] = {          (2.*x-1.) * (x-1.), 
-			                x   *    -4.    * (x-1.), 
-			                x   * (2.*x-1.)            };
-		double py[3] = {          (2.*y-1.) * (y-1.), 
-			                y   *    -4.    * (y-1.), 
-			                y   * (2.*y-1.)             };
+	dealii::Tensor<1,2> X = jacobian * (quadrature_point - vertices[0]);
+	double x = X[0], y = X[1];
+	double px[3] = {          (2.*x-1.) * (x-1.), 
+		                x   *    -4.    * (x-1.), 
+		                x   * (2.*x-1.)            };
+	double py[3] = {          (2.*y-1.) * (y-1.), 
+		                y   *    -4.    * (y-1.), 
+		                y   * (2.*y-1.)             };
 
-		matrix(i,0) = px[0] * py[0];
-		matrix(i,1) = px[1] * py[0];
-		matrix(i,2) = px[2] * py[0];
-		matrix(i,3) = px[0] * py[1];
-		matrix(i,4) = px[1] * py[1];
-		matrix(i,5) = px[2] * py[1];
-		matrix(i,6) = px[0] * py[2];
-		matrix(i,7) = px[1] * py[2];
-		matrix(i,8) = px[2] * py[2];
-	}
+	weights[0] = px[0] * py[0];
+	weights[1] = px[1] * py[0];
+	weights[2] = px[2] * py[0];
+	weights[3] = px[0] * py[1];
+	weights[4] = px[1] * py[1];
+	weights[5] = px[2] * py[1];
+	weights[6] = px[0] * py[2];
+	weights[7] = px[1] * py[2];
+	weights[8] = px[2] * py[2];
 };
 
 /*		Order 3
@@ -301,43 +280,39 @@ void	Element<2,2>::get_interpolation_matrix(
  */
 
 template<>
-void	Element<2,3>::get_interpolation_matrix(
-						const std::vector<dealii::Point<2>> quadrature_points, 
-						dealii::FullMatrix<double> & matrix) const
+void	Element<2,3>::get_interpolation_weights(
+						const dealii::Point<2> quadrature_point, 
+						std::vector<double> & weights) const
 {
-	unsigned int n = quadrature_points.size();
-	matrix.reinit(n, dofs_per_cell);
+	weights.resize(dofs_per_cell);
 
-	for (unsigned int i=0; i<n; ++i)
-	{
-		dealii::Tensor<1,2> X = jacobian * (quadrature_points[i] - vertices[0]);
-		double x = X[0], y = X[1];
-		double px[4] = {     -0.5 * (3.*x-1.) * (3.*x-2.) * (x-1.) , 
-							   x  *    4.5    * (3.*x-2.) * (x-1.) ,
-							   x  * (3.*x-1.) *   -4.5    * (x-1.) ,
-							   x  * (3.*x-1.) * (3.*x-2.) *   0.5  };
-		double py[4] = {     -0.5 * (3.*y-1.) * (3.*y-2.) * (y-1.) , 
-							   y  *    4.5    * (3.*y-2.) * (y-1.) ,
-							   y  * (3.*y-1.) *   -4.5    * (y-1.) ,
-							   y  * (3.*y-1.) * (3.*y-2.) *   0.5  };
+	dealii::Tensor<1,2> X = jacobian * (quadrature_point - vertices[0]);
+	double x = X[0], y = X[1];
+	double px[4] = {     -0.5 * (3.*x-1.) * (3.*x-2.) * (x-1.) , 
+						   x  *    4.5    * (3.*x-2.) * (x-1.) ,
+						   x  * (3.*x-1.) *   -4.5    * (x-1.) ,
+						   x  * (3.*x-1.) * (3.*x-2.) *   0.5  };
+	double py[4] = {     -0.5 * (3.*y-1.) * (3.*y-2.) * (y-1.) , 
+						   y  *    4.5    * (3.*y-2.) * (y-1.) ,
+						   y  * (3.*y-1.) *   -4.5    * (y-1.) ,
+						   y  * (3.*y-1.) * (3.*y-2.) *   0.5  };
 
-		matrix(i,0) = px[0] * py[0];
-		matrix(i,1) = px[1] * py[0];
-		matrix(i,2) = px[2] * py[0];
-		matrix(i,3) = px[3] * py[0];
-		matrix(i,4) = px[0] * py[1];
-		matrix(i,5) = px[1] * py[1];
-		matrix(i,6) = px[2] * py[1];
-		matrix(i,7) = px[3] * py[1];
-		matrix(i,8) = px[0] * py[2];
-		matrix(i,9) = px[1] * py[2];
-		matrix(i,10) = px[2] * py[2];
-		matrix(i,11) = px[3] * py[2];
-		matrix(i,12) = px[0] * py[3];
-		matrix(i,13) = px[1] * py[3];
-		matrix(i,14) = px[2] * py[3];
-		matrix(i,15) = px[3] * py[3];
-	}
+	weights[0] = px[0] * py[0];
+	weights[1] = px[1] * py[0];
+	weights[2] = px[2] * py[0];
+	weights[3] = px[3] * py[0];
+	weights[4] = px[0] * py[1];
+	weights[5] = px[1] * py[1];
+	weights[6] = px[2] * py[1];
+	weights[7] = px[3] * py[1];
+	weights[8] = px[0] * py[2];
+	weights[9] = px[1] * py[2];
+	weights[10] = px[2] * py[2];
+	weights[11] = px[3] * py[2];
+	weights[12] = px[0] * py[3];
+	weights[13] = px[1] * py[3];
+	weights[14] = px[2] * py[3];
+	weights[15] = px[3] * py[3];
 };
 
 

@@ -68,7 +68,11 @@ public:
 	unsigned int 		 					number_of_interior_grid_points;
 	unsigned int 		 					number_of_boundary_grid_points;
 
+	/* A list of finite elements paving the unit cell, with each one storing for each support point
+	 * the corresponding global index within the cell 
+	 */
 	unsigned int 							number_of_elements;
+	std::vector<Element<dim,degree>>		subcell_list;
 
 	const dealii::Tensor<2,dim>				basis;
 	const dealii::Tensor<2,dim>				inverse_basis;
@@ -78,11 +82,6 @@ public:
 	UnitCell(const dealii::Tensor<2,dim> basis, const unsigned int refinement_level);
 	~UnitCell() {};
 
-
-	/* Construction of the list of finite elements paving the unit cell, with each one storing for each support point
-	 * the corresponding global index within the cell 
-	 */
-	std::vector<Element<dim,degree>>		build_subcell_list() const;
 	unsigned int 							find_element(const dealii::Tensor<1,dim>& X) const;
 
 	/**
@@ -218,63 +217,61 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 
 	/* Cache the number of elements appearing in a line as it is used by the find_element_index function */
 	line_element_count_ = interior_line_count / degree;
-};
 
-template<int dim,int degree>
-std::vector<Element<dim,degree>>			
-UnitCell<dim,degree>::build_subcell_list() const
-{
-	std::vector<Element<dim,degree>> subcells;
-	subcells.reserve(number_of_elements);
+	/* Build the list of elements */
+
+	subcell_list.reserve(number_of_elements);
 
 	std::array<dealii::Point<dim>, Element<dim,degree>::vertices_per_cell>	vertices;
 	
 	/* Sadly this is impossible to write in a dimension-independent manner (mainly because of correct vertex ordering) */
 	switch (dim)
 	{
-		case 1: {
-				for (unsigned int element_index=0; element_index<number_of_elements; ++element_index)
-				{
-					vertices[0] = grid_points_.at( element_index * degree );
-					vertices[1] = grid_points_.at( (element_index + 1) * degree );
-					subcells.emplace_back(vertices);
-					for (unsigned int i=0; i<degree+1; ++i)
-						subcells.back().unit_cell_dof_index_map[i] = element_index * degree + i;
-				}
-				return subcells;
+		case 1: 
+		{
+			for (unsigned int element_index=0; element_index<number_of_elements; ++element_index)
+			{
+				vertices[0] = grid_points_.at( element_index * degree );
+				vertices[1] = grid_points_.at( (element_index + 1) * degree );
+				subcell_list.emplace_back(vertices);
+				for (unsigned int i=0; i<degree+1; ++i)
+					subcell_list.back().unit_cell_dof_index_map[i] = element_index * degree + i;
+			}
+		break;
 		}
 
-		case 2:	{
-				for (unsigned int element_index=0; element_index<number_of_elements; ++element_index)
+		case 2:	
+		{
+			for (unsigned int element_index=0; element_index<number_of_elements; ++element_index)
+			{
+				/* Find the indices of vertex 0 */
+				std::array<int, dim> 	indices;
+				indices[0] = degree * (element_index  % line_element_count_ - (line_element_count_/2) );
+				indices[1] = degree * (element_index  / line_element_count_ - (line_element_count_/2) );
+
+				/* First enumerate the vertices real-space coordinates */
+											vertices[0] = grid_points_.at( grid_to_index_map_.find(indices) );
+				indices[0] += degree;		vertices[1] = grid_points_.at( grid_to_index_map_.find(indices) );
+				indices[1] += degree;		vertices[2] = grid_points_.at( grid_to_index_map_.find(indices) );
+				indices[0] -= degree;		vertices[3] = grid_points_.at( grid_to_index_map_.find(indices) );
+				indices[1] -= degree;
+
+				/* Create the element */
+				subcell_list.emplace_back(vertices);
+
+				/* Assign dof index */
+				for (unsigned int j=0; j<degree+1; ++j)
 				{
-					/* Find the indices of vertex 0 */
-					std::array<int, dim> 	indices;
-					indices[0] = degree * (element_index  % line_element_count_ - (line_element_count_/2) );
-					indices[1] = degree * (element_index  / line_element_count_ - (line_element_count_/2) );
-
-					/* First enumerate the vertices real-space coordinates */
-												vertices[0] = grid_points_.at( grid_to_index_map_.find(indices) );
-					indices[0] += degree;		vertices[1] = grid_points_.at( grid_to_index_map_.find(indices) );
-					indices[1] += degree;		vertices[2] = grid_points_.at( grid_to_index_map_.find(indices) );
-					indices[0] -= degree;		vertices[3] = grid_points_.at( grid_to_index_map_.find(indices) );
-					indices[1] -= degree;
-
-					/* Create the element */
-					subcells.emplace_back(vertices);
-
-					/* Assign dof index */
-					for (unsigned int j=0; j<degree+1; ++j)
+					for (unsigned int i=0; i<degree+1; ++i)
 					{
-						for (unsigned int i=0; i<degree+1; ++i)
-						{
-							subcells.back().unit_cell_dof_index_map[(degree+1)*j + i] = grid_to_index_map_.find( indices );
-							++indices[0];
-						}
-						indices[0] -= degree+1;
-						++indices[1];
+						subcell_list.back().unit_cell_dof_index_map[(degree+1)*j + i] = grid_to_index_map_.find( indices );
+						++indices[0];
 					}
+					indices[0] -= degree+1;
+					++indices[1];
 				}
-				return subcells;
+			}
+			break;
 		}
 	}
 };
@@ -293,7 +290,7 @@ UnitCell<dim,degree>::find_element(const dealii::Tensor<1,dim>& X) const
 				return static_cast<unsigned int>(std::floor(line_element_count_ * (Xg(0) + .5) ));
 			case 2:
 				return static_cast<unsigned int>(std::floor(line_element_count_ * (Xg(0) + .5) )
-						+ std::floor(line_element_count_ * (Xg(1) + .5) * line_element_count_) );
+						+ std::floor(line_element_count_ * (Xg(1) + .5)) * line_element_count_);
 		}
 	else 
 		return types::invalid_lattice_index;
