@@ -14,7 +14,7 @@
 #include "bilayer/dofhandler.h"
 
 static const int dim = 1;
-static const int degree = 1;
+static const int degree = 3;
 static const int n_layers = 2;
  
 int main(int argc, char** argv) {

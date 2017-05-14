@@ -28,6 +28,7 @@ echo "==========================================================================
 echo "                                     EXECUTION                                       "
 echo "====================================================================================="
 
+# InputFile=../app/cfg/twisted_blg.in
 InputFile=../app/cfg/1d_toymodel.in
 ExportFile=../test_output
 rm ${ExportFile}.out

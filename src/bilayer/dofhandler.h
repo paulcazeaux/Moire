@@ -30,8 +30,8 @@
 #include "parameters/multilayer.h"
 #include "geometry/lattice.h"
 #include "geometry/unitcell.h"
-#include "tools/transformation.h"
 #include "bilayer/pointdata.h"
+#include "tools/transformation.h"
 
 
 /**
@@ -62,14 +62,14 @@ public:
 	unsigned int 						my_pid;
 
 	/**
-	 * Construction of the sparsity patterns for the two main operations: right-multiply by the Hamiltonian, and transpose.
+	 * Construction of the sparsity patterns for the two main operations: right-multiply by the Hamiltonian, and adjoint.
 	 * We assume that the dynamic pattern has been initialized to the right size and row index set, obtained from this class
 	 * either as locally_owned_dofs() which is enough for the right multiply operator, or the larger locally_relevant_dofs()
-	 * for the transpose operator, which needs a further communication step to make sure all processors have all the relevant 
+	 * for the adjoint operator, which needs a further communication step to make sure all processors have all the relevant 
 	 * entries of the sparsity pattern.
 	 */
 	void 								make_sparsity_pattern_rmultiply(dealii::DynamicSparsityPattern& dynamic_pattern) const;
-	void 								make_sparsity_pattern_transpose(dealii::DynamicSparsityPattern& dynamic_pattern) const;
+	void 								make_sparsity_pattern_adjoint(dealii::DynamicSparsityPattern& dynamic_pattern) const;
 
 	void 								coarse_setup(MPI_Comm& mpi_communicator);
 	void 								distribute_dofs();
@@ -862,7 +862,7 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 
 template<int dim, int degree>
 void
-DoFHandler<dim,degree>::make_sparsity_pattern_transpose(dealii::DynamicSparsityPattern& dynamic_pattern) const
+DoFHandler<dim,degree>::make_sparsity_pattern_adjoint(dealii::DynamicSparsityPattern& dynamic_pattern) const
 {
 	/**
 	 * Note : the second step (shift translation) is dealt with by FFT after the operation modeled here
