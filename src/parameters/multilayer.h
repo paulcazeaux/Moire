@@ -18,6 +18,8 @@
 
 #include "deal.II/base/tensor.h"
 #include "deal.II/base/point.h"
+#include "deal.II/lac/petsc_compatibility.h"
+
 #include "parameters/layerdata.h"
 
 
@@ -74,6 +76,13 @@ public:
 
 
     Multilayer<dim,1>	extract_monolayer(const int layer_index) const;
+
+    PetscScalar 		intralayer_term(dealii::Tensor<1,dim> arrow_vector, 
+    										unsigned int orbital_row, unsigned int orbital_column, 
+    										unsigned char layer_index);
+    PetscScalar 		interlayer_term(dealii::Tensor<1,dim> arrow_vector, 
+    										unsigned int orbital_row, unsigned int orbital_column, 
+    										unsigned char layer_index_row, unsigned char layer_index_column);
 
 	/* operator << ========================================================================== */
 	friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, n_layers>& ml)
@@ -381,5 +390,26 @@ Multilayer<dim,n_layers>::extract_monolayer(const int layer_index) const
 	monolayer.layer_data[0] = this->layer_data[layer_index];
 	return monolayer;
 };
+
+
+template<int dim, int n_layers>
+PetscScalar
+Multilayer<dim,n_layers>::intralayer_term(dealii::Tensor<1,dim> arrow_vector, 
+    										unsigned int orbital_row, unsigned int orbital_column, 
+    										unsigned char layer_index)
+{
+	return 1.;
+}
+
+
+template<int dim, int n_layers>
+PetscScalar
+Multilayer<dim,n_layers>::interlayer_term(dealii::Tensor<1,dim> arrow_vector, 
+    										unsigned int orbital_row, unsigned int orbital_column, 
+    										unsigned char layer_index_row, unsigned char layer_index_column)
+{
+	return 0;
+}
+
 
 #endif /* MULTILAYER_H */

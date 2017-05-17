@@ -68,6 +68,9 @@ public:
 	unsigned int 		 					n_nodes;
 	unsigned int 		 					n_boundary_nodes;
 
+	/* Needed for the FFT */
+	std::array<int,dim>						n_nodes_per_dim;
+
 	/* A list of finite elements paving the unit cell, with each one storing for each support point
 	 * the corresponding global index within the cell 
 	 */
@@ -136,6 +139,8 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 	n_closure_nodes 	= dealii::Utilities::fixed_power<dim, unsigned int>(interior_line_count+1);
 	n_nodes 			= dealii::Utilities::fixed_power<dim, unsigned int>(interior_line_count);
 	n_boundary_nodes	= n_closure_nodes - n_nodes;
+	for (unsigned int i =0; i<dim; ++i)
+		n_nodes_per_dim[i] = interior_line_count;
 	
 	n_elements 			= dealii::Utilities::fixed_power<dim, unsigned int>(interior_line_count/degree);
 

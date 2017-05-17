@@ -60,6 +60,7 @@ public:
 
 	void 								initialize(MPI_Comm& mpi_communicator);
 	unsigned int 						my_pid;
+	unsigned int 						n_procs;
 
 	/**
 	 * Construction of the sparsity patterns for the two main operations: right-multiply by the Hamiltonian, and adjoint.
@@ -70,9 +71,6 @@ public:
 	 */
 	void 								make_sparsity_pattern_rmultiply(dealii::DynamicSparsityPattern& dynamic_pattern) const;
 	void 								make_sparsity_pattern_adjoint(dealii::DynamicSparsityPattern& dynamic_pattern) const;
-
-	void 								coarse_setup(MPI_Comm& mpi_communicator);
-	void 								distribute_dofs();
 
 	/* Coarse level of discretization: basic information about lattice points */
 	unsigned int 						n_points() const;
@@ -121,7 +119,6 @@ private:
 
 	/* The subdomain ID for each lattice point, determined by the setup() function and known to all processors, 
 	 * in the original numbering */
-	unsigned int 											n_partitions_;
 	std::vector<types::subdomain_id> 						partition_indices_;
 
 	/* Re-ordering of corresponding lattice point indices, known to all processors */
@@ -136,6 +133,8 @@ private:
 	/* Tool to construct the above global partition and reordering of lattice points */
 	dealii::DynamicSparsityPattern		make_coarse_sparsity_pattern();
 	void 								make_coarse_partition(std::vector<unsigned int>& partition_indices);
+	void 								coarse_setup(MPI_Comm& mpi_communicator);
+	void 								distribute_dofs();
 
 	/**
 	 *	Now we turn to the matter of enumerating local, fine degrees of freedom, including cell node and orbital indices.
@@ -200,7 +199,7 @@ DoFHandler<dim,degree>::coarse_setup(MPI_Comm& mpi_communicator)
 
 
 	my_pid = dealii::Utilities::MPI::this_mpi_process(mpi_communicator);
-	n_partitions_ = dealii::Utilities::MPI::n_mpi_processes(mpi_communicator);
+	n_procs = dealii::Utilities::MPI::n_mpi_processes(mpi_communicator);
 	partition_indices_.resize(n_points());
 
 	if (!my_pid) // Use Parmetis in the future?
@@ -216,9 +215,9 @@ DoFHandler<dim,degree>::coarse_setup(MPI_Comm& mpi_communicator)
 	AssertThrowMPI(ierr);
 	/* Compute the reordering of the indices into contiguous range for each processor */
 
-	locally_owned_points_partition_.resize(n_partitions_+1);
+	locally_owned_points_partition_.resize(n_procs+1);
 	unsigned int next_free_index = 0;
-	for (types::subdomain_id m = 0; m<n_partitions_; ++m)
+	for (types::subdomain_id m = 0; m<n_procs; ++m)
 	{
 		locally_owned_points_partition_[m] = next_free_index;
 		for (unsigned int i = 0; i<n_points(); ++i)
@@ -230,7 +229,7 @@ DoFHandler<dim,degree>::coarse_setup(MPI_Comm& mpi_communicator)
 			}
 	}
 
-	locally_owned_points_partition_[n_partitions_] = next_free_index;
+	locally_owned_points_partition_[n_procs] = next_free_index;
 	n_locally_owned_points_ = locally_owned_points_partition_[my_pid+1]
 								- locally_owned_points_partition_[my_pid];
 };
@@ -421,7 +420,7 @@ DoFHandler<dim,degree>::make_coarse_partition(std::vector<unsigned int>& partiti
 	idx_t
     n       = static_cast<signed int>(n_points()),
     ncon    = 1,                              
-    nparts  = static_cast<int>(n_partitions_), 
+    nparts  = static_cast<int>(n_procs), 
     dummy;                                    
 
     /* Set Metis options */
@@ -468,10 +467,12 @@ DoFHandler<dim,degree>::distribute_dofs()
 	/* Initialize basic #dofs information for each lattice point */
 
 	point_size_per_block_ =
-				{{ 	unit_cell(0).n_nodes * layer(0).n_orbitals * layer(0).n_orbitals,
+				{{ 	unit_cell(1).n_nodes * layer(0).n_orbitals * layer(0).n_orbitals,
 					unit_cell(1).n_nodes * layer(0).n_orbitals * layer(1).n_orbitals,
 					unit_cell(0).n_nodes * layer(1).n_orbitals * layer(0).n_orbitals,
-					unit_cell(1).n_nodes * layer(1).n_orbitals * layer(1).n_orbitals	}};
+					unit_cell(0).n_nodes * layer(1).n_orbitals * layer(1).n_orbitals	}};
+
+		/* Column major ordering for the inner orbital matrix */
 	strides_per_block_ =
 				{{	{{1, layer(0).n_orbitals, layer(0).n_orbitals * layer(0).n_orbitals}},
 				 	{{1, layer(1).n_orbitals, layer(1).n_orbitals * layer(0).n_orbitals}},
@@ -504,8 +505,8 @@ DoFHandler<dim,degree>::distribute_dofs()
 		throw std::runtime_error("Error in the distribution of degrees of freedom to the lattice points, which do not sum up to the right value: " 
 			+ std::to_string(next_free_dof)+ " out of expected " + std::to_string(n_dofs_) + ".\n");
 
-	n_locally_owned_dofs_per_processor_.resize(n_partitions_);
-	for (types::subdomain_id m = 0; m<n_partitions_; ++m)
+	n_locally_owned_dofs_per_processor_.resize(n_procs);
+	for (types::subdomain_id m = 0; m<n_procs; ++m)
 		n_locally_owned_dofs_per_processor_[m] =  lattice_point_dof_range_[locally_owned_points_partition_[m+1]] 
 								- lattice_point_dof_range_[locally_owned_points_partition_[m]];
 
@@ -558,13 +559,9 @@ DoFHandler<dim,degree>::distribute_dofs()
 				/* Check that this point exists in our cutout */
 				if (index_in_block != types::invalid_lattice_index)
 				{
-					/* Identify block of global degrees of freedom */
-					auto [dof_range_start, dof_range_end] = get_dof_range(block_id, index_in_block, cell_index);
 					/* Add the point to the vector of identified boundary points */
 					this_point.boundary_lattice_points.push_back(
 						std::make_tuple(block_id, index_in_block, cell_index));
-					/* Add its block of degrees of freedom to the relevant range */
-					this_point.relevant_dofs.add_range(dof_range_start, dof_range_end);
 				}
 				else // The point is out of bounds
 					this_point.boundary_lattice_points.push_back(std::make_tuple(
@@ -601,6 +598,10 @@ DoFHandler<dim,degree>::distribute_dofs()
 						/* Add the point to the vector of identified interpolated points */
 						this_point.interpolated_nodes.push_back(std::make_pair(element_index,
 										std::make_tuple(other_block_id, index_in_block, cell_index)));
+					/* Identify block of global degrees of freedom */
+						auto [dof_range_start, dof_range_end] = get_dof_range(other_block_id, index_in_block, cell_index);
+					/* Add its block of degrees of freedom to the relevant range */
+						this_point.relevant_dofs.add_range(dof_range_start, dof_range_end);
 					}
 				}
 			}
@@ -609,7 +610,7 @@ DoFHandler<dim,degree>::distribute_dofs()
 		this_point.relevant_dofs.compress();
 		locally_relevant_dofs_.add_indices(this_point.relevant_dofs);
 	}
-	// locally_owned_dofs_.compress();
+	locally_owned_dofs_.compress();
 	locally_relevant_dofs_.compress();
 };
 
@@ -618,72 +619,49 @@ template<int dim, int degree>
 void
 DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityPattern& dynamic_pattern) const
 {
-	std::vector<types::global_index> columns;
-
 	for (unsigned int n=0; n< n_locally_owned_points(); ++n)
 	{
 		const PointData& this_point = locally_owned_point(n);
 
-		auto [row_start, row_stop] = get_dof_range(this_point.block_id, this_point.index_in_block);
-		unsigned int row_stride = strides_per_block_[this_point.block_id][2];
-		assert(locally_owned_dofs_.is_element(row_start));
 		switch (this_point.block_id) 
 		{					/******************/
 			case 0:			/* Row in block 0 */
 			{				/******************/
 				dealii::Point<dim> this_point_position = lattice(0).get_vertex_position(this_point.index_in_block);
 
-
 					/* Block 0 <-> 0 */
-				unsigned int col_stride = strides_per_block_[0][2];
+
 				std::vector<unsigned int> 	
 				neighbors =	lattice(0).list_neighborhood_indices(this_point_position, 
 											this->intra_search_radius);
-				columns.clear();
-				columns.reserve(neighbors.size() * col_stride);
 				for (auto neighbor_index_in_block : neighbors)
-				{
-					auto [col_start, col_stop] = get_dof_range(0, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
+					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
+						for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
+							for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
+								for (unsigned int orbital_middle = 0; orbital_middle < layer(0).n_orbitals; orbital_middle++)
+									dynamic_pattern.add(
+										get_dof_index(0, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+										get_dof_index(0, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
+					
 
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
-				}
-				for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-				{
-					for (types::global_index row = row_start + cell_index * row_stride; 
-											row < row_start + (cell_index+1) * row_stride; ++row)
-						dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-					for (auto & col : columns)
-						col += col_stride;
-				}
 
-					/* Block 1 -> 0 */
-				col_stride = strides_per_block_[1][2];
+				/* Block 1 -> 0 */
 				neighbors = lattice(1).list_neighborhood_indices( this_point_position, 
 											this->inter_search_radius + unit_cell(1).bounding_radius);
 				
 				for (auto neighbor_index_in_block : neighbors)
 				{
-					columns.clear();
-					columns.reserve(col_stride);
-					auto [col_start, col_stop] = get_dof_range(1, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
-
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
 					dealii::Point<dim> neighbor_position = lattice(1).get_vertex_position(neighbor_index_in_block);
 
 					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-					{
 						if (this_point_position.distance(neighbor_position + unit_cell(1).get_node_position(cell_index)) 
 														< this->inter_search_radius)
-							for (types::global_index row = row_start + cell_index * row_stride; 
-													row < row_start + (cell_index+1) * row_stride; ++row)
-								dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-						for (auto & col : columns)
-							col += col_stride;
-					}
+							for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
+								for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
+										for (unsigned int orbital_middle = 0; orbital_middle < layer(1).n_orbitals; orbital_middle++)
+											dynamic_pattern.add(
+												get_dof_index(0, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+												get_dof_index(1, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 				}
 				break;
 			}				/******************/
@@ -692,53 +670,36 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 				dealii::Point<dim> this_point_position = lattice(1).get_vertex_position(this_point.index_in_block);
 
 					/* Block 0 -> 1 */
-				unsigned int col_stride = strides_per_block_[0][2];
 				std::vector<unsigned int> 	
 				neighbors =	lattice(0).list_neighborhood_indices( this_point_position, 
 											this->inter_search_radius + unit_cell(1).bounding_radius);
 
 				for (auto neighbor_index_in_block : neighbors)
 				{
-					columns.clear();
-					columns.reserve(col_stride);
-					auto [col_start, col_stop] = get_dof_range(0, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
-
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
 					dealii::Point<dim> neighbor_position = lattice(0).get_vertex_position(neighbor_index_in_block);
 
 					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-					{
-						if (neighbor_position.distance(this_point_position + unit_cell(1).get_node_position(cell_index)) < this->inter_search_radius)
-							for (types::global_index row = row_start + cell_index * row_stride; 
-													row < row_start + (cell_index+1) * row_stride; ++row)
-								dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-						for (auto & col : columns)
-							col += col_stride;
-					}
+						if (neighbor_position.distance(this_point_position + unit_cell(1).get_node_position(cell_index)) 
+																< this->inter_search_radius)
+							for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
+								for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
+										for (unsigned int orbital_middle = 0; orbital_middle < layer(0).n_orbitals; orbital_middle++)
+											dynamic_pattern.add(
+												get_dof_index(1, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+												get_dof_index(0, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 				}
-					/* Block 1 <-> 1 */
-				col_stride = strides_per_block_[1][2];
-				neighbors = lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius);
-				columns.clear();
-				columns.reserve(neighbors.size() * col_stride);
-				for (auto neighbor_index_in_block : neighbors)
-				{
-					auto [col_start, col_stop] = get_dof_range(1, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
 
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
-				}
-				for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-				{
-					for (types::global_index row = row_start + cell_index * row_stride; 
-											row < row_start + (cell_index+1) * row_stride; ++row)
-						dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-					for (auto & col : columns)
-						col += col_stride;
-				}
+					/* Block 1 <-> 1 */
+				neighbors = lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius);
+
+				for (auto neighbor_index_in_block : neighbors)
+					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
+						for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
+							for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
+								for (unsigned int orbital_middle = 0; orbital_middle < layer(1).n_orbitals; orbital_middle++)
+									dynamic_pattern.add(
+										get_dof_index(1, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+										get_dof_index(1, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 
 				break;
 			}				/*******************/
@@ -747,53 +708,35 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 				dealii::Point<dim> this_point_position = lattice(0).get_vertex_position(this_point.index_in_block);
 
 						/* Block 3 -> 2 */
-				unsigned int col_stride = strides_per_block_[3][2];
 				std::vector<unsigned int> 	
 				neighbors =	lattice(1).list_neighborhood_indices( this_point_position, 
 											this->inter_search_radius + unit_cell(0).bounding_radius);
 
 				for (auto neighbor_index_in_block : neighbors)
 				{
-					columns.clear();
-					columns.reserve(col_stride);
-					auto [col_start, col_stop] = get_dof_range(3, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
-
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
 					dealii::Point<dim> neighbor_position = lattice(1).get_vertex_position(neighbor_index_in_block);
-
 					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-					{
-						if (neighbor_position.distance(this_point_position + unit_cell(0).get_node_position(cell_index)) < this->inter_search_radius)
-							for (types::global_index row = row_start + cell_index * row_stride; 
-													row < row_start + (cell_index+1) * row_stride; ++row)
-								dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-						for (auto & col : columns)
-							col += col_stride;
-					}
+						if (neighbor_position.distance(this_point_position + unit_cell(0).get_node_position(cell_index)) 
+																< this->inter_search_radius)
+							for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
+								for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
+										for (unsigned int orbital_middle = 0; orbital_middle < layer(1).n_orbitals; orbital_middle++)
+											dynamic_pattern.add(
+												get_dof_index(2, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+												get_dof_index(3, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 				}
-					/* Block 2 <-> 2 */
-				col_stride = strides_per_block_[2][2];
-				neighbors = lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius);
-				columns.clear();
-				columns.reserve(neighbors.size() * col_stride);
-				for (auto neighbor_index_in_block : neighbors)
-				{
-					auto [col_start, col_stop] = get_dof_range(2, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
 
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
-				}
-				for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-				{
-					for (types::global_index row = row_start + cell_index * row_stride; 
-											row < row_start + (cell_index+1) * row_stride; ++row)
-						dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-					for (auto & col : columns)
-						col += col_stride;
-				}
+					/* Block 2 <-> 2 */
+				neighbors = lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius);
+
+				for (auto neighbor_index_in_block : neighbors)
+					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
+						for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
+							for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
+								for (unsigned int orbital_middle = 0; orbital_middle < layer(0).n_orbitals; orbital_middle++)
+									dynamic_pattern.add(
+										get_dof_index(2, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+										get_dof_index(2, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 
 				break;
 			}				/*******************/
@@ -803,54 +746,35 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 
 
 					/* Block 3 <-> 3 */
-				unsigned int col_stride = strides_per_block_[3][2];
 				std::vector<unsigned int> 	
 				neighbors =	lattice(1).list_neighborhood_indices(this_point_position, 
 											this->intra_search_radius);
-				columns.clear();
-				columns.reserve(neighbors.size() * col_stride);
 				for (auto neighbor_index_in_block : neighbors)
-				{
-					auto [col_start, col_stop] = get_dof_range(3, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
-					
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
-				}
-				for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-				{
-					for (types::global_index row = row_start + cell_index * row_stride; 
-											row < row_start + (cell_index+1) * row_stride; ++row)
-						dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-					for (auto & col : columns)
-						col += col_stride;
-				}
+					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
+						for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
+							for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
+								for (unsigned int orbital_middle = 0; orbital_middle < layer(1).n_orbitals; orbital_middle++)
+									dynamic_pattern.add(
+										get_dof_index(3, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+										get_dof_index(3, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 
 					/* Block 2 -> 3 */
-				col_stride = strides_per_block_[2][2];
 				neighbors = lattice(0).list_neighborhood_indices( this_point_position, 
 											this->inter_search_radius + unit_cell(0).bounding_radius);
 				
 				for (auto neighbor_index_in_block : neighbors)
 				{
-					columns.clear();
-					columns.reserve(col_stride);
-					auto [col_start, col_stop] = get_dof_range(2, neighbor_index_in_block);
-					assert(col_stop <= n_dofs());
+					dealii::Point<dim> neighbor_position = lattice(0).get_vertex_position(neighbor_index_in_block);
 					
-					for (types::global_index col = col_start; col < col_start+col_stride; ++col)
-						columns.push_back(col);
-					dealii::Point<dim> neighbor_position = lattice(1).get_vertex_position(neighbor_index_in_block);
-
 					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-					{
-						if (this_point_position.distance(neighbor_position + unit_cell(0).get_node_position(cell_index)) < this->inter_search_radius)
-							for (types::global_index row = row_start + cell_index * row_stride; 
-													row < row_start + (cell_index+1) * row_stride; ++row)
-								dynamic_pattern.add_entries(row, columns.begin(), columns.end());
-						for (auto & col : columns)
-							col += col_stride;
-					}
+						if (this_point_position.distance(neighbor_position + unit_cell(0).get_node_position(cell_index)) 
+														< this->inter_search_radius)
+							for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
+								for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
+										for (unsigned int orbital_middle = 0; orbital_middle < layer(0).n_orbitals; orbital_middle++)
+											dynamic_pattern.add(
+												get_dof_index(3, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+												get_dof_index(2, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
 				}
 				break;
 			}
@@ -901,8 +825,10 @@ DoFHandler<dim,degree>::make_sparsity_pattern_adjoint(dealii::DynamicSparsityPat
 						{
 							for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
 								for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
+								{
 									dynamic_pattern.add(get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
 														get_dof_index(1, this_point.index_in_block, cell_index, orbital_row, orbital_column));
+								}
 						}
 						else // Boundary point!
 						{
@@ -982,13 +908,19 @@ DoFHandler<dim,degree>::n_locally_owned_points() const
 template<int dim, int degree>
 const PointData &
 DoFHandler<dim,degree>::locally_owned_point(unsigned int index) const
-	{ return lattice_points_[index]; };
+{ 
+	assert(index < n_locally_owned_points_);
+	return lattice_points_[index]; 
+};
 
 
 template<int dim, int degree>
 const PointData &
 DoFHandler<dim,degree>::locally_owned_point(unsigned char block_id, const unsigned int index_in_block) const
 {
+	/* Bounds checking */
+	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
+
 	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
 	return lattice_points_[index];
 };
@@ -1031,6 +963,12 @@ DoFHandler<dim,degree>::get_dof_index(const unsigned char block_id, const unsign
 									const unsigned int cell_index, 
 									const unsigned int orbital_row, const unsigned int orbital_column) const
 {
+	/* Bounds checking */
+	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
+	assert(cell_index < unit_cell(block_id == 0 || block_id == 1 ? 1 : 0).n_nodes);
+	assert(orbital_row < layer(block_id == 0 || block_id == 1 ? 0 : 1).n_orbitals);
+	assert(orbital_column < layer(block_id == 0 || block_id == 2 ? 0 : 1).n_orbitals);
+
 	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
 	return lattice_point_dof_range_[index] + cell_index * strides_per_block_[block_id][2]
 											+ orbital_row * strides_per_block_[block_id][1]
@@ -1042,6 +980,10 @@ std::pair<types::global_index,types::global_index>
 DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsigned int index_in_block,
 									const unsigned int cell_index) const
 {
+	/* Bounds checking */
+	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
+	assert(cell_index < unit_cell(block_id == 0 || block_id == 1 ? 1 : 0).n_nodes);
+
 	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
 	types::global_index
 	dof_range_start = lattice_point_dof_range_[index] + cell_index * strides_per_block_[block_id][2];
@@ -1052,6 +994,9 @@ template<int dim, int degree>
 std::pair<types::global_index,types::global_index>
 DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsigned int index_in_block) const
 {
+	/* Bounds checking */
+	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
+
 	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
 	return std::make_pair(lattice_point_dof_range_[index], lattice_point_dof_range_[index+1]);
 };
