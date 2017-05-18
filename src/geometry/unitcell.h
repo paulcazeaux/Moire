@@ -80,6 +80,7 @@ public:
 	const dealii::Tensor<2,dim>				basis;
 	const dealii::Tensor<2,dim>				inverse_basis;
 	const double							bounding_radius;
+	const double 							area;
 
 	/* Creator and destructor */
 	UnitCell(const dealii::Tensor<2,dim> basis, const unsigned int refinement_level);
@@ -129,7 +130,8 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 	refinement_level(refinement_level),
 	basis(basis),
 	inverse_basis(dealii::invert(basis)),
-	bounding_radius(UnitCell<dim,degree>::compute_bounding_radius(basis))
+	bounding_radius(UnitCell<dim,degree>::compute_bounding_radius(basis)),
+	area(dealii::determinant(basis))
 {
 	/* Compute the number of grid points first */
 	unsigned int interior_line_count = 2 * degree;

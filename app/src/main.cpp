@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
 
 		dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 		PetscInitialize(&argc, &argv, NULL, NULL);
-		if (dealii::Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) == 1)
-		{
-			printf("Error: Only 1 MPI rank detected (need to run with n > 1).\n");
-			return -1;
-		}
+		// if (dealii::Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) == 1)
+		// {
+		// 	printf("Error: Only 1 MPI rank detected (need to run with n > 1).\n");
+		// 	return -1;
+		// }
 
 		/*********************************************************/
 		/*	 Read input file, and initialize params and vars. 	 */

@@ -14,6 +14,7 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <algorithm>
 
 #include <complex>
 #include "fftw3.h"
@@ -69,27 +70,87 @@ private:
 	void 				solve();
 	void 				output_results() const;
 
-	MPI_Comm					mpi_communicator;
+	/* Assemble identity observable */
+	void 				create_identity(Vec& Result);
+	/* Adjoint operation on an observable */
+	void 				adjoint(const Vec& A, Vec& Result);
+	/* Trace of an observable, returned on root process (pid = 0, returns 0 on other processes) */
+	PetscScalar			trace(const Vec& A);
 
+	/* MPI communication environment and utilities */
+	MPI_Comm					mpi_communicator;
+	dealii::ConditionalOStream	pcout;
+	dealii::TimerOutput 		computing_timer;
+
+	/* DoF Handler object and local indices range */
 	DoFHandler<dim,degree>		dof_handler;
 	dealii::IndexSet 			locally_owned_dofs;
 	dealii::IndexSet 			locally_relevant_dofs;
 
-	Vec 						T, U;
+	/* PETSc vectors to hold information about three observables in successive Chebyshev recursion steps */
+	Vec 						Tp, T, Tn;
+
+	/* Chebyshev DoS moments to be computed */
+	std::vector<PetscScalar>	chebyshev_moments;
+
+	/* Matrices representing the sparse linear action of the two main operations */
 	LA::MPI::SparseMatrix 		adjoint_action;
 	LA::MPI::SparseMatrix 		hamiltonian_action;
 
-	dealii::ConditionalOStream	pcout;
-	dealii::TimerOutput 		computing_timer;
-
-
-	void 				adjoint(const Vec& A, Vec& Result);
-	PetscScalar			trace(const Vec& A);
-
-	/* Data structures allocated for the computation of the adjoint operation */
+	/* Data structures allocated for additional local computations in the adjoint operation */
 	fftw_plan 	fplan_0, bplan_0, fplan_1, bplan_1;
 	std::complex<double> * data_in_0, * data_out_0, * data_in_1, * data_out_1;
 	std::array<unsigned int, 2>		point_size;
+};
+
+
+template<int dim, int degree>
+void
+ComputeDoS<dim,degree>::solve()
+{
+	dealii::TimerOutput::Scope t(computing_timer, "Solve");
+
+	/* Initialization of the vector to the identity */
+
+	create_identity(Tp);
+	MatMult(hamiltonian_action, Tp, T);
+	PetscScalar m0 = trace(Tp), m = trace(T);
+
+	if (dof_handler.my_pid == 0)
+	{
+	  chebyshev_moments.reserve(this->poly_degree+1);
+	  chebyshev_moments.push_back(m0);
+	  chebyshev_moments.push_back(m);
+	}
+
+	for (unsigned int i=2; i <= this->poly_degree; ++i)
+	{
+		MatMult(hamiltonian_action, T, Tn);
+		VecAXPBY(Tn, -1., 2., Tp);
+		VecSwap(Tn, Tp);
+		VecSwap(T, Tp);
+		m = trace(T);
+		if (dof_handler.my_pid == 0)
+	  		chebyshev_moments.push_back(m);
+	}
+
+	for (const auto& m: chebyshev_moments)
+	  pcout << m.real() << "\t";
+	pcout << std::endl;
+};
+
+template<int dim, int degree>
+void
+ComputeDoS<dim,degree>::output_results() const
+{
+	PetscViewer    viewer;
+	PetscErrorCode ierr = PetscViewerDrawOpen(mpi_communicator, NULL, NULL, 0, 0, 1500, 1000, & viewer);
+	PetscObjectSetName((PetscObject)viewer,"Output vector plot");
+	PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
+	VecView(T, viewer);
+
+	PetscViewerPopFormat(viewer);
+	PetscViewerDestroy(&viewer);
 };
 
 
@@ -98,12 +159,12 @@ ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
 	:
 	Multilayer<dim, 2>(bilayer),
 	mpi_communicator(MPI_COMM_WORLD),
-	dof_handler(bilayer),
 	pcout(std::cout, (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) == 0)),
 	computing_timer (mpi_communicator,
                    pcout,
                    dealii::TimerOutput::summary,
-                   dealii::TimerOutput::wall_times) 
+                   dealii::TimerOutput::wall_times),
+	dof_handler(bilayer)
 {
     dealii::TimerOutput::Scope t(computing_timer, "Initialization");
 
@@ -144,7 +205,8 @@ ComputeDoS<dim,degree>::~ComputeDoS()
 	fftw_free(data_out_1);
 
 	VecDestroy(&T);
-	VecDestroy(&U);
+	VecDestroy(&Tp);
+	VecDestroy(&Tn);
 }
 
 
@@ -183,9 +245,10 @@ ComputeDoS<dim,degree>::setup()
     AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
 	PetscInt sz;
 	VecGetSize (T, &sz);
-    Assert (sz == dof_handler.n_dofs(), dealii::ExcDimensionMismatch (sz,  dof_handler.n_dofs()));
+    Assert (static_cast<unsigned int>(sz) == dof_handler.n_dofs(), dealii::ExcDimensionMismatch (sz,  dof_handler.n_dofs()));
 
-	ierr = VecDuplicate(T, &U);
+	ierr = VecDuplicate(T, &Tp);
+	ierr = VecDuplicate(T, &Tn);
     AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
 
 	dealii::DynamicSparsityPattern dsp (locally_relevant_dofs);
@@ -211,24 +274,6 @@ ComputeDoS<dim,degree>::setup()
 };
 
 
-
-template<int dim, int degree>
-void
-ComputeDoS<dim,degree>::solve()
-{
-  dealii::TimerOutput::Scope t(computing_timer, "Solve");
-
-  MatMult(hamiltonian_action, T, U);
-  adjoint(U, T);
-
-};
-
-template<int dim, int degree>
-void
-ComputeDoS<dim,degree>::output_results() const
-{
-
-};
 
 
 template<int dim, int degree>
@@ -658,6 +703,89 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
 	AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
 };
 
+
+template<int dim, int degree>
+void
+ComputeDoS<dim,degree>::create_identity(Vec& Result)
+{
+	VecSet(Result, 0.0);
+	std::vector<int> indices;
+	std::vector<PetscScalar> values;
+
+	std::array<int, dim> lattice_indices_0;
+	for (unsigned int i=0; i<dim; ++i)
+		lattice_indices_0[i] = 0;
+	/* Block 0 */
+	unsigned int lattice_index_0 = dof_handler.lattice(0).get_vertex_global_index(lattice_indices_0);
+	if (dof_handler.is_locally_owned_point(0,lattice_index_0))
+		for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(1).n_nodes; ++cell_index)
+			for (unsigned int orbital = 0; orbital < dof_handler.layer(0).n_orbitals; ++orbital)
+			{
+				indices.push_back(dof_handler.get_dof_index(0, lattice_index_0, cell_index, orbital, orbital));
+				values.push_back(1.);
+			}
+
+	/* Block 3 */
+	lattice_index_0 = dof_handler.lattice(1).get_vertex_global_index(lattice_indices_0);
+	if (dof_handler.is_locally_owned_point(3,lattice_index_0))
+		for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(0).n_nodes; ++cell_index)
+			for (unsigned int orbital = 0; orbital < dof_handler.layer(1).n_orbitals; ++orbital)
+			{
+				indices.push_back(dof_handler.get_dof_index(3, lattice_index_0, cell_index, orbital, orbital));
+				values.push_back(1.);
+			}
+
+	VecSetValues(Result, indices.size(), indices.data(), values.data(), INSERT_VALUES);
+	VecAssemblyBegin(Result);
+	VecAssemblyEnd(Result);
+};
+
+
+template<int dim, int degree>
+PetscScalar
+ComputeDoS<dim,degree>::trace(const Vec& A)
+{
+	std::vector<int> indices;
+	std::vector<PetscScalar> values;
+
+	std::array<int, dim> lattice_indices_0;
+	for (unsigned int i=0; i<dim; ++i)
+		lattice_indices_0[i] = 0;
+	/* Block 0 */
+	unsigned int lattice_index_0 = dof_handler.lattice(0).get_vertex_global_index(lattice_indices_0);
+	if (dof_handler.is_locally_owned_point(0,lattice_index_0))
+		for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(1).n_nodes; ++cell_index)
+			for (unsigned int orbital = 0; orbital < dof_handler.layer(0).n_orbitals; ++orbital)
+				indices.push_back(dof_handler.get_dof_index(0, lattice_index_0, cell_index, orbital, orbital));
+
+	values.resize(indices.size());
+	VecGetValues(A, indices.size(), indices.data(), values.data());
+	PetscScalar 
+	loc_trace_0 = std::accumulate(values.begin(), values.end(), static_cast<PetscScalar>(0.0)) 
+						* dof_handler.unit_cell(1).area / (double) dof_handler.unit_cell(1).n_nodes;
+
+	indices.clear();
+
+	/* Block 3 */
+	lattice_index_0 = dof_handler.lattice(1).get_vertex_global_index(lattice_indices_0);
+	if (dof_handler.is_locally_owned_point(3,lattice_index_0))
+		for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(0).n_nodes; ++cell_index)
+			for (unsigned int orbital = 0; orbital < dof_handler.layer(1).n_orbitals; ++orbital)
+				indices.push_back(dof_handler.get_dof_index(3, lattice_index_0, cell_index, orbital, orbital));
+
+	values.resize(indices.size());
+	VecGetValues(A, indices.size(), indices.data(), values.data());
+	PetscScalar 
+	loc_trace_1 = std::accumulate(values.begin(), values.end(), static_cast<PetscScalar>(0.0)) 
+						* dof_handler.unit_cell(0).area / (double) dof_handler.unit_cell(0).n_nodes;
+
+	PetscScalar 
+	loc_trace = (loc_trace_0 + loc_trace_1) / (dof_handler.unit_cell(0).area + dof_handler.unit_cell(1).area),
+	result = 0.0;
+
+	MPI_Reduce(&loc_trace, &result, 1, MPIU_SCALAR, MPI_SUM, 0, mpi_communicator);
+	return result;
+};
 
 
 }/* Namespace Bilayer */

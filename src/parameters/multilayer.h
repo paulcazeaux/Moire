@@ -10,6 +10,7 @@
 #define MULTILAYER_H
 #include <vector>
 #include <array>
+#include <cmath>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -42,7 +43,7 @@ public:
 	double 			intra_search_radius;
 	double 			inter_search_radius;
 	
-	int 			poly_degree;
+	unsigned int	poly_degree;
 	double 			energy_rescale;
 	double 			energy_shift;
 
@@ -398,7 +399,11 @@ Multilayer<dim,n_layers>::intralayer_term(dealii::Tensor<1,dim> arrow_vector,
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index)
 {
-	return 1.;
+	double r = arrow_vector.norm();
+	if (r < .9 || r > 1.1)
+		return 0.;
+	else 
+		return 1./energy_rescale;
 }
 
 
@@ -408,7 +413,8 @@ Multilayer<dim,n_layers>::interlayer_term(dealii::Tensor<1,dim> arrow_vector,
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index_row, unsigned char layer_index_column)
 {
-	return 0;
+	double r = arrow_vector.norm();
+	return 0.5/energy_rescale * std::exp(-(r*r)/0.125);
 }
 
 

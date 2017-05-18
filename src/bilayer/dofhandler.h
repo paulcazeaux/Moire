@@ -77,8 +77,9 @@ public:
 	unsigned int 						n_locally_owned_points() const;
 
 	/* Accessors to traverse the lattice points level of discretization */
-	const PointData & 					locally_owned_point(unsigned int index) const;
+	const PointData & 					locally_owned_point(unsigned int local_index) const;
 	const PointData & 					locally_owned_point(unsigned char block_id, const unsigned int index_in_block) const;
+	bool 								is_locally_owned_point(unsigned char block_id, const unsigned int index_in_block) const;
 
 	/* Some basic information about the DoF repartition, available after their distribution */
 	types::global_index 				n_dofs() const;
@@ -201,20 +202,24 @@ DoFHandler<dim,degree>::coarse_setup(MPI_Comm& mpi_communicator)
 	my_pid = dealii::Utilities::MPI::this_mpi_process(mpi_communicator);
 	n_procs = dealii::Utilities::MPI::n_mpi_processes(mpi_communicator);
 	partition_indices_.resize(n_points());
-
-	if (!my_pid) // Use Parmetis in the future?
+	if (n_procs > 1)
 	{
-		/* the reordering array needs to be initialized to form a sparsity pattern */
-		for (unsigned int i=0; i<n_points(); ++i)
-			reordered_indices_[i] = i; 
-		this->make_coarse_partition(partition_indices_);
+		if (!my_pid) // Use Parmetis in the future?
+		{
+			/* the reordering array needs to be initialized to form a sparsity pattern */
+			for (unsigned int i=0; i<n_points(); ++i)
+				reordered_indices_[i] = i; 
+			this->make_coarse_partition(partition_indices_);
+		}
+		/* Broadcast the result of this operation */
+		int ierr = MPI_Bcast(partition_indices_.data(), n_points(), MPI_UNSIGNED,
+	                           0, mpi_communicator);
+		AssertThrowMPI(ierr);
 	}
-	/* Broadcast the result of this operation */
-	int ierr = MPI_Bcast(partition_indices_.data(), n_points(), MPI_UNSIGNED,
-                           0, mpi_communicator);
-	AssertThrowMPI(ierr);
+	else
+		std::fill(partition_indices_.begin(), partition_indices_.end(), 0);
+	
 	/* Compute the reordering of the indices into contiguous range for each processor */
-
 	locally_owned_points_partition_.resize(n_procs+1);
 	unsigned int next_free_index = 0;
 	for (types::subdomain_id m = 0; m<n_procs; ++m)
@@ -410,7 +415,7 @@ DoFHandler<dim,degree>::make_coarse_partition(std::vector<unsigned int>& partiti
 	// /* First round of reordering to facilitate partitioning? */
 	// dealii::DynamicSparsityPattern dynamic_pattern = this->make_coarse_sparsity_pattern();
 	// dealii::SparsityTools::reorder_Cuthill_McKee(dynamic_pattern, reordered_indices_);
-	// std::vector<unsigned int> partition_indices_reordered(n_points());
+	// std::vector<unsigned int> locally_owned_points_partition_(n_points());
 
 	/* Produce a sparsity pattern used for the Metis partitioner */
 	dealii::SparsityPattern sparsity_pattern;
@@ -456,7 +461,7 @@ DoFHandler<dim,degree>::make_coarse_partition(std::vector<unsigned int>& partiti
 
 	/* revert Cuthill-McKee ordering */
 	// for (unsigned int i=0; i<n_points(); ++i)
-	// 	partition_indices[i] = partition_indices_reordered[reordered_indices_[i]];
+	// 	partition_indices[i] = locally_owned_points_partition_[reordered_indices_[i]];
 }
 
 
@@ -907,11 +912,12 @@ DoFHandler<dim,degree>::n_locally_owned_points() const
 
 template<int dim, int degree>
 const PointData &
-DoFHandler<dim,degree>::locally_owned_point(unsigned int index) const
+DoFHandler<dim,degree>::locally_owned_point(unsigned int local_index) const
 { 
-	assert(index < n_locally_owned_points_);
-	return lattice_points_[index]; 
+	assert(local_index < n_locally_owned_points_);
+	return lattice_points_[local_index]; 
 };
+
 
 
 template<int dim, int degree>
@@ -921,10 +927,21 @@ DoFHandler<dim,degree>::locally_owned_point(unsigned char block_id, const unsign
 	/* Bounds checking */
 	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
 
-	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
-	return lattice_points_[index];
+	unsigned int local_index = reordered_indices_[start_block_indices_[block_id] + index_in_block]
+										- locally_owned_points_partition_[my_pid];
+	return lattice_points_[local_index];
 };
 
+
+template<int dim, int degree>
+bool
+DoFHandler<dim,degree>::is_locally_owned_point(unsigned char block_id, const unsigned int index_in_block) const
+{
+	/* Bounds checking */
+	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
+	unsigned int idx = reordered_indices_[start_block_indices_[block_id] + index_in_block];
+	return !(idx < locally_owned_points_partition_[my_pid] || idx >= locally_owned_points_partition_[my_pid+1]);
+};
 
 
 template<int dim, int degree>
@@ -969,8 +986,8 @@ DoFHandler<dim,degree>::get_dof_index(const unsigned char block_id, const unsign
 	assert(orbital_row < layer(block_id == 0 || block_id == 1 ? 0 : 1).n_orbitals);
 	assert(orbital_column < layer(block_id == 0 || block_id == 2 ? 0 : 1).n_orbitals);
 
-	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
-	return lattice_point_dof_range_[index] + cell_index * strides_per_block_[block_id][2]
+	unsigned int idx = reordered_indices_[start_block_indices_[block_id] + index_in_block];
+	return lattice_point_dof_range_[idx] + cell_index * strides_per_block_[block_id][2]
 											+ orbital_row * strides_per_block_[block_id][1]
 											+ orbital_column;
 };
@@ -984,9 +1001,9 @@ DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsign
 	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
 	assert(cell_index < unit_cell(block_id == 0 || block_id == 1 ? 1 : 0).n_nodes);
 
-	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
+	unsigned int idx = reordered_indices_[start_block_indices_[block_id] + index_in_block];
 	types::global_index
-	dof_range_start = lattice_point_dof_range_[index] + cell_index * strides_per_block_[block_id][2];
+	dof_range_start = lattice_point_dof_range_[idx] + cell_index * strides_per_block_[block_id][2];
 	return std::make_pair(dof_range_start, dof_range_start + strides_per_block_[block_id][2]);
 };
 
@@ -997,8 +1014,8 @@ DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsign
 	/* Bounds checking */
 	assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
 
-	unsigned int index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
-	return std::make_pair(lattice_point_dof_range_[index], lattice_point_dof_range_[index+1]);
+	unsigned int local_index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
+	return std::make_pair(lattice_point_dof_range_[local_index], lattice_point_dof_range_[local_index+1]);
 };
 
 } /* Namespace Bilayer */
