@@ -38,6 +38,7 @@ struct Multilayer {
 public:
 	// Generic job information
 	std::string 	job_name;
+	std::string 	output_file;
 	int 			observable_type;
 	
 	double 			intra_search_radius;
@@ -64,6 +65,7 @@ public:
 
 	/* constuctors and destructor ============================================================ */
     Multilayer(	std::string job_name = "UNKNOWN_JOB", 
+				std::string output_file = "UNKNOWN_JOB_DATA.jld",
     			int observable_type = 0,
 				double intra_search_radius = 5, double inter_search_radius = 5,
 				int poly_degree = 20,	
@@ -113,6 +115,7 @@ public:
 /* Default Constructor */
 template <int dim, int n_layers>
 Multilayer<dim,n_layers>::Multilayer(	std::string job_name, 
+				std::string output_file,
     			int observable_type,
 				double intra_search_radius, 	double inter_search_radius,
 				int poly_degree,	
@@ -121,7 +124,8 @@ Multilayer<dim,n_layers>::Multilayer(	std::string job_name,
 				double B, 							double E,
 				double cutoff_radius)
 	:
-	job_name(job_name),		observable_type(observable_type),
+	job_name(job_name),		output_file(output_file),
+	observable_type(observable_type),
 	intra_search_radius(intra_search_radius),	
 	inter_search_radius(inter_search_radius),
 	poly_degree(poly_degree),						
@@ -137,6 +141,7 @@ template <int dim, int n_layers>
 Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
 	/* Generate default values */
 	job_name = "UNKNOWN_JOB"; 
+	output_file = "UNKNOWN_JOB_DATA.jld";
 	observable_type = 0;
 	intra_search_radius = 12.5;
 	inter_search_radius = 12.5;
@@ -194,6 +199,12 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
 					getline(in_line,in_string,' ');
 					getline(in_line,in_string,' ');
 					job_name = in_string;
+					}
+
+				if (in_string == "OUTPUT_FILE"){
+					getline(in_line,in_string,' ');
+					getline(in_line,in_string,' ');
+					output_file = in_string;
 					}
 				
 				if (in_string == "CUTOFF"){

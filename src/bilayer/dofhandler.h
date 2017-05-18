@@ -655,19 +655,21 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 											this->inter_search_radius + unit_cell(1).bounding_radius);
 				
 				for (auto neighbor_index_in_block : neighbors)
-				{
-					dealii::Point<dim> neighbor_position = lattice(1).get_vertex_position(neighbor_index_in_block);
-
 					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-						if (this_point_position.distance(neighbor_position + unit_cell(1).get_node_position(cell_index)) 
-														< this->inter_search_radius)
+					{
+						dealii::Tensor<1,dim> arrow_vector = lattice(1).get_vertex_position(neighbor_index_in_block)
+															+ unit_cell(1).get_node_position(cell_index)
+															 - this_point_position;
+
+						if ( arrow_vector.norm() < this->inter_search_radius)
 							for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
 								for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
 										for (unsigned int orbital_middle = 0; orbital_middle < layer(1).n_orbitals; orbital_middle++)
 											dynamic_pattern.add(
 												get_dof_index(0, this_point.index_in_block, cell_index, orbital_row, orbital_column),
 												get_dof_index(1, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
-				}
+					}
+
 				break;
 			}				/******************/
 			case 1:			/* Row in block 1 */
@@ -680,19 +682,21 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 											this->inter_search_radius + unit_cell(1).bounding_radius);
 
 				for (auto neighbor_index_in_block : neighbors)
-				{
-					dealii::Point<dim> neighbor_position = lattice(0).get_vertex_position(neighbor_index_in_block);
-
 					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-						if (neighbor_position.distance(this_point_position + unit_cell(1).get_node_position(cell_index)) 
-																< this->inter_search_radius)
+					{
+						dealii::Tensor<1,dim> arrow_vector = lattice(0).get_vertex_position(neighbor_index_in_block)
+															- unit_cell(1).get_node_position(cell_index)
+															 - this_point_position;
+
+						if ( arrow_vector.norm() < this->inter_search_radius + 1e-10)
 							for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
 								for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
 										for (unsigned int orbital_middle = 0; orbital_middle < layer(0).n_orbitals; orbital_middle++)
 											dynamic_pattern.add(
 												get_dof_index(1, this_point.index_in_block, cell_index, orbital_row, orbital_column),
 												get_dof_index(0, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
-				}
+					}
+				
 
 					/* Block 1 <-> 1 */
 				neighbors = lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius);
@@ -718,18 +722,19 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 											this->inter_search_radius + unit_cell(0).bounding_radius);
 
 				for (auto neighbor_index_in_block : neighbors)
-				{
-					dealii::Point<dim> neighbor_position = lattice(1).get_vertex_position(neighbor_index_in_block);
 					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-						if (neighbor_position.distance(this_point_position + unit_cell(0).get_node_position(cell_index)) 
-																< this->inter_search_radius)
+					{
+						dealii::Tensor<1,dim> arrow_vector = lattice(1).get_vertex_position(neighbor_index_in_block)
+															- unit_cell(0).get_node_position(cell_index)
+															 - this_point_position;
+						if ( arrow_vector.norm() < this->inter_search_radius  + 1e-10)
 							for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
 								for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
 										for (unsigned int orbital_middle = 0; orbital_middle < layer(1).n_orbitals; orbital_middle++)
 											dynamic_pattern.add(
 												get_dof_index(2, this_point.index_in_block, cell_index, orbital_row, orbital_column),
 												get_dof_index(3, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
-				}
+					}
 
 					/* Block 2 <-> 2 */
 				neighbors = lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius);
@@ -768,19 +773,19 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 											this->inter_search_radius + unit_cell(0).bounding_radius);
 				
 				for (auto neighbor_index_in_block : neighbors)
-				{
-					dealii::Point<dim> neighbor_position = lattice(0).get_vertex_position(neighbor_index_in_block);
-					
 					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-						if (this_point_position.distance(neighbor_position + unit_cell(0).get_node_position(cell_index)) 
-														< this->inter_search_radius)
+					{
+						dealii::Tensor<1,dim> arrow_vector = lattice(0).get_vertex_position(neighbor_index_in_block)
+															+ unit_cell(0).get_node_position(cell_index)
+															 - this_point_position;
+						if ( arrow_vector.norm() < this->inter_search_radius  + 1e-10)
 							for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
 								for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
 										for (unsigned int orbital_middle = 0; orbital_middle < layer(0).n_orbitals; orbital_middle++)
 											dynamic_pattern.add(
 												get_dof_index(3, this_point.index_in_block, cell_index, orbital_row, orbital_column),
 												get_dof_index(2, neighbor_index_in_block, cell_index, orbital_row, orbital_middle));
-				}
+					}
 				break;
 			}
 		}

@@ -15,6 +15,7 @@
 #include <array>
 #include <utility>
 #include <algorithm>
+#include <fstream>
 
 #include <complex>
 #include "fftw3.h"
@@ -62,13 +63,13 @@ class ComputeDoS : public Multilayer<dim, 2>
 public:
 	ComputeDoS(const Multilayer<dim, 2>& bilayer);
 	~ComputeDoS();
-	void 				run();
+	void 						run();
+	std::vector<PetscScalar> 	output_results();
 
 private:
 	void 				setup();
 	void 				assemble_matrices();
 	void 				solve();
-	void 				output_results() const;
 
 	/* Assemble identity observable */
 	void 				create_identity(Vec& Result);
@@ -133,24 +134,25 @@ ComputeDoS<dim,degree>::solve()
 		if (dof_handler.my_pid == 0)
 	  		chebyshev_moments.push_back(m);
 	}
-
-	for (const auto& m: chebyshev_moments)
-	  pcout << m.real() << "\t";
-	pcout << std::endl;
 };
 
 template<int dim, int degree>
-void
-ComputeDoS<dim,degree>::output_results() const
+std::vector<PetscScalar>
+ComputeDoS<dim,degree>::output_results()
 {
-	PetscViewer    viewer;
-	PetscErrorCode ierr = PetscViewerDrawOpen(mpi_communicator, NULL, NULL, 0, 0, 1500, 1000, & viewer);
-	PetscObjectSetName((PetscObject)viewer,"Output vector plot");
-	PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
-	VecView(T, viewer);
-
-	PetscViewerPopFormat(viewer);
-	PetscViewerDestroy(&viewer);
+	dealii::TimerOutput::Scope t(computing_timer, "Output");
+	if (dealii::Utilities::MPI::n_mpi_processes(mpi_communicator) == 1)
+    {
+    	PetscViewer    viewer;
+    	PetscErrorCode ierr = PetscViewerDrawOpen(mpi_communicator, NULL, NULL, 0, 0, 1500, 1000, & viewer);
+    	PetscObjectSetName((PetscObject)viewer,"Output vector plot");
+    	PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
+    	VecView(T, viewer);
+    
+    	PetscViewerPopFormat(viewer);
+    	PetscViewerDestroy(&viewer);
+	}
+	return chebyshev_moments;
 };
 
 
@@ -217,15 +219,7 @@ ComputeDoS<dim,degree>::run()
 	setup();
 	assemble_matrices();
 	solve();
-
-	if (dealii::Utilities::MPI::n_mpi_processes(mpi_communicator) <= 32)
-          {
-            dealii::TimerOutput::Scope t(computing_timer, "Output");
-            output_results ();
-          }
-        computing_timer.print_summary ();
-        computing_timer.reset ();
-        pcout << std::endl;
+    output_results();
 };
 
 
@@ -234,6 +228,11 @@ void
 ComputeDoS<dim,degree>::setup()
 {
 	dealii::TimerOutput::Scope t(computing_timer, "Setup");
+
+	VecDestroy(& Tp);
+	VecDestroy(& T);
+	VecDestroy(& Tn);
+
 
 	dof_handler.initialize(mpi_communicator);
 	locally_owned_dofs = dof_handler.locally_owned_dofs();

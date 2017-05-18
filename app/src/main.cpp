@@ -13,6 +13,7 @@
 #include "bilayer/computedos.h"
 
 #include <iostream>
+#include <fstream>
 
 static const int dim = 1;
 static const int degree = 3;
@@ -29,18 +30,43 @@ int main(int argc, char** argv) {
 
 		dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 		PetscInitialize(&argc, &argv, NULL, NULL);
-		// if (dealii::Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) == 1)
-		// {
-		// 	printf("Error: Only 1 MPI rank detected (need to run with n > 1).\n");
-		// 	return -1;
-		// }
 
 		/*********************************************************/
 		/*	 Read input file, and initialize params and vars. 	 */
 		/*********************************************************/
 		Multilayer<dim, n_layers> 				bilayer(argc,argv);
-		Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
-		compute_dos.run();
+		int M = bilayer.poly_degree + 1;
+		int N = 100;
+
+
+		int my_pid = dealii::Utilities::MPI::this_mpi_process(PETSC_COMM_WORLD);
+
+		if (my_pid == 0)
+		{
+			std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+			output_file.write((char*) &M, sizeof(int));
+			output_file.write((char*) &N, sizeof(int));
+			output_file.close();
+		}
+
+		for (int i=0; i<N; ++i)
+		{
+			double t = .95 + .001 * static_cast<double>(i);
+			bilayer.layer_data[0].dilation = t;
+			bilayer.layer_data[1].dilation = 1./t;
+			Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
+			compute_dos.run();
+			std::vector<PetscScalar> moments = compute_dos.output_results();
+
+			if (my_pid == 0)
+				for (unsigned int i = 0; i<moments.size(); ++i)
+				{
+					std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::app);
+					double m = moments[i].real();
+					output_file.write((char*) & m, sizeof(double));
+					output_file.close();
+				}
+		}
 	}
 	catch (std::exception &exc)
     {

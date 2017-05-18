@@ -33,4 +33,4 @@ InputFile=../app/cfg/1d_toymodel.in
 ExportFile=../test_output
 rm ${ExportFile}.out
 mpirun -n 8 ./app/${TARGET} -i ${InputFile} -draw_pause -1 > ${ExportFile}.out
-open ${ExportFile}.out
+# open ${ExportFile}.out
