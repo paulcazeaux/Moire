@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
 		for (int i=0; i<N; ++i)
 		{
-			double t = .95 + .001 * static_cast<double>(i);
+			double t = .45 + .001 * static_cast<double>(i);
 			bilayer.layer_data[0].dilation = t;
 			bilayer.layer_data[1].dilation = 1./t;
 			Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);

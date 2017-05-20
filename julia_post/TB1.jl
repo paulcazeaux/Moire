@@ -6,12 +6,13 @@ using PyPlot
 using Interpolations
 
 function DoS(a, b, mu)
+    #mu = mu[1:1024,:];
     N = size(mu,1)
     nratios = size(mu,2)
     M = 2*N
 
     g = ((N-(0:N-1)).*cos(pi*(0:N-1)/N) + sin(pi*(0:N-1)/N)*cot(pi/N))/N
-    g = [g[1]; sqrt(2)*g[2:end]]
+    g = [g[1]/sqrt(2); g[2:end]]
     Y = cos(pi/M*(0.5:M))
     Y = repmat(Y, 1, nratios)
     Z = zeros(Float64, M, nratios)
@@ -20,8 +21,9 @@ function DoS(a, b, mu)
       Z[1:N,p] =  g .* mu[:,p]
       Z[:,p] = idct!(Z[:,p])
     end
-    Z = flip( sqrt(M)*Z./(2*pi*sqrt(1-Y.^2)), 1)
-    Y = flip(a*Y+b, 1)
+
+    Z = 4*flipdim(Z./(pi*sqrt(1-Y.^2)), 1)
+    Y = flipdim(a*Y+b, 1)
 
     return Y, Z
 end
@@ -58,22 +60,21 @@ function Image(grid, values, npx, upscaling, xrange, yrange, cscale, crange, xLa
   end
 
   if cscale == :auto
-    crange = [-3, log10(maximum(Img))]
+    crange = collect(extrema(Img))
   elseif cscale == :relative
-    crange = [-3, crange[2]*log10(maximum(Img))]
+    crange = [crange[1]*minimum(Img), crange[2]*maximum(Img)]
   elseif cscale == :absolute
     crange = collect(crange)
   end
 
-  Img[find(x -> (x < 1e-3), Img)] = 1e-3
-  Img = log10(Img)
-
-
+  Img = max(crange[1], Img)
+  Img = min(crange[2], Img)
   close(number)
   fig = figure(number, figsize = (15, 10))
   ax = axes()
   img = ax[:imshow](Img, interpolation = "bicubic", origin = "lower",
    extent = (xmin, xmax, ymin, ymax), aspect = "auto", cmap="magma", clim = crange)
+
 
   xlabel(xLabel, fontsize=20)
   ylabel(yLabel, fontsize=20)
@@ -95,7 +96,16 @@ function Image(grid, values, npx, upscaling, xrange, yrange, cscale, crange, xLa
   tick_params(axis="y", labelsize=15)
   ax[:spines]["top"][:set_color]("none")
   ax[:spines]["right"][:set_color]("none")
-  cbar = colorbar(img, ax=ax, orientation=:vertical, shrink=.75,label=cLabel, format="%g")
+  # cbar = colorbar(img, ax=ax, orientation=:vertical, shrink=.75,label=cLabel, format="%g")
+
+  # cticks = collect(linspace(crange[1], crange[2], 9))
+  # cticklabels = [@sprintf("\$%.1g\$", tick) for tick in cticks]
+  # if crange[2] < maximum(Img)
+  #   cticklabels[end] = @sprintf("\$\\geq %.1g\$", cticks[end])
+  # end
+  # cbar[:set_ticks](cticks)
+  # cbar[:set_ticklabels](cticklabels)
+  
   return fig
 end
 

@@ -410,7 +410,7 @@ Multilayer<dim,n_layers>::intralayer_term(dealii::Tensor<1,dim> arrow_vector,
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index)
 {
-	double r = arrow_vector.norm();
+	double r = arrow_vector.norm()/layer_data[layer_index].dilation;
 	if (r < .9 || r > 1.1)
 		return 0.;
 	else 

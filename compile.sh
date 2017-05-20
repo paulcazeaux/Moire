@@ -30,7 +30,7 @@ echo "==========================================================================
 
 # InputFile=../app/cfg/twisted_blg.in
 InputFile=../app/cfg/1d_toymodel.in
-ExportFile=../test_output
+ExportFile=../test_output4
 rm ${ExportFile}.out
 mpirun -n 8 ./app/${TARGET} -i ${InputFile} -draw_pause -1 > ${ExportFile}.out
 # open ${ExportFile}.out
