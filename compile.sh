@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # user parameter
-TARGET="HullSpace"
+TARGET="Moire"
 
 # cmake parameters
 export CC=clang
 export CXX=clang++
 
 # build directory
-cd /Users/cazeaux/Dropbox/Workplace/Projets_actuels/Minnesota/Calgebras_1D/Cpp/hullspace/build
+cd ./build
 
 # automatic makefile generation and compilation
 echo "====================================================================================="
@@ -30,7 +30,7 @@ echo "==========================================================================
 
 # InputFile=../app/cfg/twisted_blg.in
 InputFile=../app/cfg/1d_toymodel.in
-ExportFile=../test_output4
+ExportFile=../output
 rm ${ExportFile}.out
 mpirun -n 8 ./app/${TARGET} -i ${InputFile} -draw_pause -1 > ${ExportFile}.out
 # open ${ExportFile}.out

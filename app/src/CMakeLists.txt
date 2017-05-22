@@ -19,14 +19,14 @@ LINK_DIRECTORIES(${CMAKE_BINARY_DIR}/lib)
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/app)
 
-ADD_EXECUTABLE(HullSpace main.cpp)
-ADD_DEPENDENCIES(HullSpace Calgebra)
+ADD_EXECUTABLE(Moire main.cpp)
+ADD_DEPENDENCIES(Moire Calgebra)
 
-DEAL_II_SETUP_TARGET(HullSpace)
+DEAL_II_SETUP_TARGET(Moire)
 
 ######################################################################################
 ### 4) Link the librairies for your executable
 ######################################################################################
-TARGET_LINK_LIBRARIES( HullSpace Calgebra ${FFTW_LIBRARIES} ${MPI_LIBRARIES})
+TARGET_LINK_LIBRARIES( Moire Calgebra ${FFTW_LIBRARIES} ${MPI_LIBRARIES})
 
 ######################################################################################

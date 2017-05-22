@@ -5,11 +5,11 @@
 cmake_minimum_required(VERSION 2.8.8)
 
 # Here define your project name
-project(HullSpace)
+project(Moire)
 SET(CMAKE_BUILD_TYPE Debug)
 
 # Here define the name and the version of your package
-SET(PACKAGE_NAME “HullSpace” CACHE STRING "package_name" FORCE)
+SET(PACKAGE_NAME “Moire” CACHE STRING "package_name" FORCE)
 SET(PACKAGE_VERSION “1.0” CACHE STRING “package_version” FORCE)
 
 # set a language for the entire project.
