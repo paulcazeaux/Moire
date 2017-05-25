@@ -34,7 +34,7 @@ struct BlockData {
 public:
 
 	std::array<unsigned int, 2> 							n_points;
-	std::array<unsigned int, 2>				 				n_nodes;
+	unsigned int							 				n_nodes;
 	std::array<unsigned int, 2>				 				n_orbitals;
 
 	std::vector<types::global_index> 						lattice_point_dof_range;
@@ -43,11 +43,12 @@ public:
 	types::global_index 									n_dofs;
 	Teuchos::RCP<const Map> 			 					owned_dofs;
 
-	std::array<types::global_index>, 2> 					n_dofs_block_row;
-	std::array<Teuchos::RCP<const Map>, 2>					owned_dofs_block_row;
+	std::array<types::global_index>, 2> 					n_dofs_row_block;
+	std::array<Teuchos::RCP<const Map>, 2>					owned_dofs_row_block;
+	std::array<Teuchos::RCP<const Map>, 2>					transpose_row_block_range;
 
 	BlockData(const std::array<unsigned int, 2>& 	n_points, 
-				const std::array<unsigned int, 2>& 	n_nodes, 
+				const unsigned int& 				n_nodes, 
 				const std::array<unsigned int, 2>& 	n_orbitals, 
 				const std::vector<unsigned int>& 	original_indices,
 				const std::vector<unsigned int>& 	locally_owned_points_partition,
@@ -57,19 +58,20 @@ public:
 
 
 BlockData::BlockData(const std::array<unsigned int, 2>& n_points, 
-					const std::array<unsigned int, 2>& 	n_nodes, 
+					const unsigned int& 				n_nodes, 
 					const std::array<unsigned int, 2>& 	n_orbitals, 
 					const std::vector<unsigned int>& 	original_indices,
 					const std::vector<unsigned int>& 	locally_owned_points_partition,
+					const unsigned char block_col,
 					Teuchos::RCP<const Teuchos::Comm<int> > comm)
 	:
 	n_points(n_points),
 	n_orbitals(n_orbitals),
 	n_nodes(n_nodes)
 {
-	n_dofs_block_row = {n_points[0] * n_nodes[0] * n_orbitals[0],  
-						n_points[1] * n_nodes[1] * n_orbitals[1] };
-	n_dofs = n_dofs_block_row[0] + n_dofs_block_row[1];
+	n_dofs_row_block = {n_points[0] * n_nodes * n_orbitals[0],  
+						n_points[1] * n_nodes * n_orbitals[1] };
+	n_dofs = n_dofs_row_block[0] + n_dofs_row_block[1];
 	lattice_point_dof_range.resize(n_points[0]+n_points[1]+1);
 
 	/**
@@ -82,9 +84,9 @@ BlockData::BlockData(const std::array<unsigned int, 2>& n_points,
 	{
 		/* Find the block id to determine the size */
 		if (original_indices[n] < n_points[0])
-			next_free_dof += n_nodes[0] * n_orbitals[0];
+			next_free_dof += n_nodes * n_orbitals[0];
 		else
-			next_free_dof += n_nodes[1] * n_orbitals[1];
+			next_free_dof += n_nodes * n_orbitals[1];
 		lattice_point_dof_range[n+1] = next_free_dof;
 	}
 
@@ -92,26 +94,41 @@ BlockData::BlockData(const std::array<unsigned int, 2>& n_points,
 		throw std::runtime_error("Error in the distribution of degrees of freedom to the lattice points, which do not sum up to the right value: " 
 			+ std::to_string(next_free_dof)+ " out of expected " + std::to_string(n_dofs) + ".\n");
 
-		/* Create a distributed DoF map */
+	/* Create distributed DoF maps */
 	my_pid = comm->getRank ();
-	n_procs = comm->getSize ();
-
-	n_owned_dofs_per_proc .resize(n_procs);
-	for (types::subdomain_id m = 0; m<n_procs; ++m)
-		n_owned_dofs_per_proc [m] =  lattice_point_dof_range [locally_owned_points_partition[m+1]] 
-							- lattice_point_dof_range [locally_owned_points_partition[m]];
-
 
 		/* Find the first local point index belonging to the second row block */
-	const unsigned int local_start = lattice_point_dof_range [locally_owned_points_partition[my_pid]];
-	const unsigned int local_size = n_owned_dofs_per_proc[my_pid];
-	unsigned int local_sep = start;
-	while (original_indices[start + local_sep] < n_points[0] && local_sep < local_size)
+	const unsigned int local_begin = locally_owned_points_partition[my_pid];
+	const unsigned int local_end  = locally_owned_points_partition[my_pid+1];
+	unsigned int local_sep = local_begin;
+	while (original_indices[local_sep] < n_points[0] && local_sep < local_end)
 		++local_sep;
 
-	owned_dofs = createContigMap(n_dofs, local_size, comm);
-	owned_dofs_block_row[0] = createContigMap(n_dofs_block_row[0], local_sep, comm);
-	owned_dofs_block_row[1] = createContigMap(n_dofs_block_row[1], local_size - local_sep, comm);
+	const unsigned int n_local_dofs = lattice_point_dof_range[local_end] - lattice_point_dof_range[local_begin];
+	const unsigned int n_local_dofs_row_block[2] = 
+			{	lattice_point_dof_range[local_sep] - lattice_point_dof_range[local_begin],
+				lattice_point_dof_range[local_end] - lattice_point_dof_range[local_sep]		};
+
+		/* Create Tpetra Maps */
+	owned_dofs = createContigMap(n_dofs, n_local_dofs, comm);
+	owned_dofs_row_block[0] = createContigMap(n_dofs_row_block[0], n_local_dofs_row_block[0], comm);
+	owned_dofs_row_block[1] = createContigMap(n_dofs_row_block[1], n_local_dofs_row_block[1], comm);
+
+	if (block_col == 0)
+	{
+		transpose_row_block_range[0] = owned_dofs_row_block[0];
+		transpose_row_block_range[1] = createContigMap(n_dofs_row_block[0] / n_orbitals[0] * n_orbitals[1] , 
+														n_dofs_row_block[0] / n_orbitals[0] * n_orbitals[1], comm);
+	}
+	else if (block_col == 1)
+	{
+		transpose_row_block_range[0] = createContigMap(n_dofs_row_block[1] / n_orbitals[1] * n_orbitals[0] , 
+														n_dofs_row_block[1] / n_orbitals[1] * n_orbitals[0], comm);
+		transpose_row_block_range[1] = owned_dofs_row_block[1];
+	}
+	else
+		throw std::runtime_error("Wrong block column argument in BlockData constructor, block_col = " 
+					+ std::to_string(block_col)+ " instead of 0 or 1.\n");
 };
 
 } /* Namespace Bilayer */

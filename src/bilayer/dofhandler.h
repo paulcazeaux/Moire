@@ -67,8 +67,10 @@ public:
 	/**
 	 * Construction of the sparsity patterns for the two main operations: right-multiply by the Hamiltonian, and adjoint.
 	 */
-	Teuchos::RCP<const SparsityPattern> make_sparsity_pattern_rmultiply(const unsigned char block_col) const;
-	Teuchos::RCP<const SparsityPattern> make_sparsity_pattern_adjoint(const unsigned char block_col, const unsigned char block_row) const;
+	std::array<Teuchos::RCP<const SparsityPattern>, 2> 
+										make_sparsity_pattern_rmultiply() const;
+	std::array<std::array<Teuchos::RCP<const SparsityPattern>, 2>, 2>
+										make_sparsity_pattern_adjoint() const;
 
 	/* Coarse level of discretization: basic information about lattice points */
 	unsigned int 						n_points() const;
@@ -90,6 +92,10 @@ public:
 	std::pair<types::global_index,types::global_index>
 										get_dof_range(	const unsigned char block_col, 		const unsigned char block_row,
 														const unsigned int index_in_block) const;
+
+	types::global_index 				get_dof_index_in_row_block(	const unsigned char block_col, 		const unsigned char block_row,
+																	const unsigned int index_in_block,	const unsigned int cell_index, 
+																	const unsigned int orbital 	) const;
 
 private:
 	/* The base geometry, available on every processor */
@@ -355,14 +361,14 @@ DoFHandler<dim,degree>::distribute_dofs(Teuchos::RCP<const Teuchos::Comm<int> > 
 {
 	/* Initialize basic #dofs information for each lattice point */
 	block_[0] = BlockData(	{ lattice(0).n_vertices, 	lattice(1).n_vertices 	},
-							{ unit_cell(1).n_nodes, 	unit_cell(1).n_nodes 	},
+							  unit_cell(1).n_nodes,
 							{ layer(0).n_orbitals, 		layer(1).n_orbitals 	},
-							 original_indices_, locally_owned_points_partition_, comm);
+							 original_indices_, locally_owned_points_partition_, 0, comm);
 
 	block_[1] = BlockData(	{ lattice(0).n_vertices, 	lattice(1).n_vertices 	},
-							{ unit_cell(0).n_nodes, 	unit_cell(0).n_nodes 	},
+							  unit_cell(0).n_nodes,
 							{ layer(0).n_orbitals, 		layer(1).n_orbitals 	},
-							 original_indices_, locally_owned_points_partition_, comm);
+							 original_indices_, locally_owned_points_partition_, 1, comm);
 
 	/**
 	 * Now we know which global dof range is owned by each lattice point system-wide. 
@@ -371,7 +377,7 @@ DoFHandler<dim,degree>::distribute_dofs(Teuchos::RCP<const Teuchos::Comm<int> > 
 	for (unsigned int n = locally_owned_points_partition_[my_pid]; n < locally_owned_points_partition_[my_pid+1]; ++n)
 	{
 		/* Find the block id to determine the size */
-		unsigned int 	this_point_index = original_indices_[n];
+		unsigned int  this_point_index = original_indices_[n];
 		unsigned char block_row = 0;
 		if (this_point_index >= lattice(0).n_vertices)
 		{
@@ -461,186 +467,164 @@ DoFHandler<dim,degree>::distribute_dofs(Teuchos::RCP<const Teuchos::Comm<int> > 
 
 
 template<int dim, int degree>
-Teuchos::RCP<const SparsityPattern>
-DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(const unsigned char block_col) const
+std::array<Teuchos::RCP<const SparsityPattern>, 2>
+DoFHandler<dim,degree>::make_sparsity_patterns_rmultiply() const
 {
-	assert(block_col == 0 || block_col == 1);
+	std::array<Teuchos::RCP<const SparsityPattern>, 2> sparsity_patterns;
 
-	Teuchos::RCP<SparsityPattern> sparsity_pattern = Tpetra::createCrsGraph(block(block_col).owned_dofs);
-	Teuchos::Array<types::global_index> ColIndices;
-
-	/* Each column block has a specific unit cell attached */
-	const auto& cell = unit_cell(block_col == 0 ? 1 : 0);
-
-	for (unsigned int n=0; n < n_locally_owned_points(); ++n)
+	for (unsigned char block_col = 0; block_col <2; ++block_col)
 	{
-		const PointData& this_point = locally_owned_point(block_col, n);
-		dealii::Point<dim> this_point_position = lattice(this_point.block_row).get_vertex_position(this_point.index_in_block);
+		Teuchos::RCP<SparsityPattern> sparsity_pattern = Tpetra::createCrsGraph(block(block_col).owned_dofs);
+		Teuchos::Array<types::global_index> ColIndices;
 
-				/* Block b <-> b */
-		std::vector<unsigned int> 	
-		neighbors =	lattice(this_point.block_row).list_neighborhood_indices(this_point_position, 
-																			this->intra_search_radius);
-		for (auto neighbor_index_in_block : neighbors)
-			for (unsigned int cell_index = 0; cell_index < cell.n_nodes [this_point.block_row]; ++cell_index)
-			{
-				ColIndices.clear();
-				for (unsigned int orbital_middle = 0; orbital_middle <  block(block_col).n_orbitals [this_point.block_row]; orbital_middle++)
-					ColIndices.push_back(
-						get_dof_index(block_col, this_point.block_row, neighbor_index_in_block, cell_index, orbital_middle));
-				for (unsigned int orbital_column = 0; orbital_column <  block(block_col).n_orbitals [this_point.block_row]; orbital_column++)
-					sparsity_pattern.insertGlobalIndices(
-						get_dof_index(block_col, this_point.block_row, this_point.index_in_block, cell_index, orbital_column), ColIndices);
-			}
+		/* Each column block has a specific unit cell attached */
+		const auto& cell = unit_cell(1-block_col);
 
-		unsigned char other_block_row = (this_point.block_row == 0 ? 1 : 0);
-				/* Block a -> b, a != b */
-		neighbors = lattice(other_block_row).list_neighborhood_indices( this_point_position, 
-									this->inter_search_radius + cell.bounding_radius);
-				
-		for (auto neighbor_index_in_block : neighbors)
-			for (unsigned int cell_index = 0; cell_index < cell.n_nodes; ++cell_index)
-			{
-				/* Note: the unit cell node displacement follows the point which is in the interlayer block */
-				dealii::Tensor<1,dim> arrow_vector = lattice(other_block_row).get_vertex_position(neighbor_index_in_block)
-													+ (other_block_row != block_col ? 1. : -1.) 
-														* cell.get_node_position(cell_index)
-													 		- this_point_position;
-				
-				if ( arrow_vector.norm() < this->inter_search_radius + 1e-10)
+		for (unsigned int n=0; n < n_locally_owned_points(); ++n)
+		{
+			const PointData& this_point = locally_owned_point(block_col, n);
+			dealii::Point<dim> this_point_position = lattice(this_point.block_row).get_vertex_position(this_point.index_in_block);
+
+					/* Block b <-> b */
+			std::vector<unsigned int> 	
+			neighbors =	lattice(this_point.block_row).list_neighborhood_indices(this_point_position, 
+																				this->intra_search_radius);
+			for (auto neighbor_index_in_block : neighbors)
+				for (unsigned int cell_index = 0; cell_index < cell.n_nodes [this_point.block_row]; ++cell_index)
 				{
 					ColIndices.clear();
-					for (unsigned int orbital_middle = 0; orbital_middle < block(block_col).n_orbitals [other_block_row]; orbital_middle++)
+					for (unsigned int orbital_middle = 0; orbital_middle <  block(block_col).n_orbitals [this_point.block_row]; orbital_middle++)
 						ColIndices.push_back(
-							get_dof_index(block_col, other_block_row, neighbor_index_in_block, cell_index, orbital_middle));
-					for (unsigned int orbital_column = 0; orbital_column < block(block_col).n_orbitals [this_point.block_row]; orbital_column++)
+							get_dof_index(block_col, this_point.block_row, neighbor_index_in_block, cell_index, orbital_middle));
+					for (unsigned int orbital_column = 0; orbital_column <  block(block_col).n_orbitals [this_point.block_row]; orbital_column++)
 						sparsity_pattern.insertGlobalIndices(
 							get_dof_index(block_col, this_point.block_row, this_point.index_in_block, cell_index, orbital_column), ColIndices);
 				}
-			}
+
+					/* Block a -> b, a != b */
+			unsigned char other_block_row = 1-this_point.block_row;
+			neighbors = lattice(other_block_row).list_neighborhood_indices( this_point_position, 
+										this->inter_search_radius + cell.bounding_radius);
+					
+			for (auto neighbor_index_in_block : neighbors)
+				for (unsigned int cell_index = 0; cell_index < cell.n_nodes; ++cell_index)
+				{
+					/* Note: the unit cell node displacement follows the point which is in the interlayer block */
+					dealii::Tensor<1,dim> arrow_vector = lattice(other_block_row).get_vertex_position(neighbor_index_in_block)
+														+ (other_block_row != block_col ? 1. : -1.) 
+															* cell.get_node_position(cell_index)
+														 		- this_point_position;
+					
+					if ( arrow_vector.norm() < this->inter_search_radius + 1e-10)
+					{
+						ColIndices.clear();
+						for (unsigned int orbital_middle = 0; orbital_middle < block(block_col).n_orbitals [other_block_row]; orbital_middle++)
+							ColIndices.push_back(
+								get_dof_index(block_col, other_block_row, neighbor_index_in_block, cell_index, orbital_middle));
+						for (unsigned int orbital_column = 0; orbital_column < block(block_col).n_orbitals [this_point.block_row]; orbital_column++)
+							sparsity_pattern.insertGlobalIndices(
+								get_dof_index(block_col, this_point.block_row, this_point.index_in_block, cell_index, orbital_column), ColIndices);
+					}
+				}
+		}
+		sparsity_pattern.fillComplete ();
+		sparsity_patterns[block_col] = sparsity_pattern.getConst ();
 	}
-	sparsity_pattern.fillComplete ();
-	return sparsity_pattern.getConst ();
+	return sparsity_patterns;
 };
 
 
 
 template<int dim, int degree>
-Teuchos::RCP<const SparsityPattern>
-DoFHandler<dim,degree>::make_sparsity_pattern_adjoint(const unsigned char block_col, const unsigned char block_row) const
+std::array<std::array<Teuchos::RCP<const SparsityPattern>, 2>, 2>
+DoFHandler<dim,degree>::make_sparsity_pattern_adjoint() const
 {
 	/**
 	 * Note : the second step (shift translation, local transpose) is dealt with by FFT after the operation modeled here
 	 */
-	Teuchos::RCP<SparsityPattern> sparsity_pattern = Tpetra::createCrsGraph(locally_owned_dofs_);
-	Teuchos::Array<types::global_index> ColIndices;
-	
-	for (unsigned int n=0; n<n_locally_owned_points(); ++n)
+	std::array<std::array<Teuchos::RCP<const SparsityPattern>, 2>, 2> sparsity_patterns;
+	for (unsigned char block_col = 0; block_col < 2; ++block_col)
 	{
-		const PointData& this_point = locally_owned_point(n);
-		
-		switch (this_point.block_row) {
-							/***********************/
-			case 0:			/* Row in block 0 -> 0 */
-			{				/***********************/
-				std::array<int, dim> on_grid = lattice(0).get_vertex_grid_indices(this_point.index_in_block);
+		Teuchos::RCP<SparsityPattern> sparsity_pattern_diag 	= Tpetra::createCrsGraph(	block(block_col).owned_dofs_row_block [block_col]	);
+
+		Teuchos::RCP<SparsityPattern> sparsity_pattern_ndiag 	= Tpetra::createCrsGraph(	block(block_col).transpose_row_block_range 	[1-block_col], 
+																							block(block_col).owned_dofs_row_block 		[1-block_col]	);
+
+		for (const PointData& this_point : block(block_col).lattice_points )
+		{		
+			/* First, the case of diagonal blocks */
+			if (this_point.block_row == block_col)
+			{
+				const types::global_index n_orbitals = block(block_col).n_orbitals [block_col]; 
+				const types::global_index n_nodes =    block(block_col).n_nodes;
+				/* We simply exchange the point with its opposite */
+				std::array<int, dim> on_grid = lattice(this_point.block_row).get_vertex_grid_indices(this_point.index_in_block);
 				for (auto & c : on_grid)
 					c = -c;
-				unsigned int opposite_index_in_block = lattice(0).get_vertex_global_index(on_grid);
+				unsigned int opposite_index_in_block = lattice(this_point.block_row).get_vertex_global_index(on_grid);
 
-				for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
-					for (unsigned int orbital = 0; orbital < layer(0).n_orbitals; orbital++)
+				for (unsigned int cell_index = 0; cell_index < n_nodes; ++cell_index)
+					for (unsigned int orbital = 0; orbital < n_orbitals; orbital++)
 					{
 						types::global_index 
-						row = get_dof_index(0, this_point.index_in_block, cell_index, orbital),
-						col = get_dof_index(0, opposite_index_in_block, cell_index, orbital);
-						sparsity_pattern.insertGlobalIndices(row, 1, &col);
+						row = orbital + n_orbitals * (cell_index + n_nodes * this_point.index_in_block);
+						col = orbital + n_orbitals * (cell_index + n_nodes * opposite_index_in_block);
+						sparsity_pattern_diag.insertGlobalIndices(row, 1, &col);
 					}
-				break;
-			}				/***************************/
-			case 1:			/* COLUMNS in block 1 -> 2 */
-			{				/***************************/
+			}
+			else
+			/* Now the case of extradiagonal blocks : we map the interpolation process */
+			{
+				const types::global_index n_orbitals  = block(block_col).n_orbitals [this_point.block_row]; 
+				const types::global_index n_nodes 	  = block(block_col).n_nodes;
+				const types::global_index row_n_nodes = block(1-block_col).n_nodes;
+				const auto& cell = unit_cell(1-block_col);
 
 				for (auto & interp_point : this_point.interpolated_nodes)
 				{
 					unsigned int element_index = interp_point.first;
 					auto [row_block_id, row_index_in_block, row_cell_index] = interp_point.second;
-					for (unsigned int cell_index : unit_cell(1).subcell_list[element_index].unit_cell_dof_index_map)
+					assert(row_block_id != this_point.block_row);
+
+					for (unsigned int cell_index : cell.subcell_list [element_index].unit_cell_dof_index_map)
 					{
-						if (unit_cell(1).is_node_interior(cell_index))
+						if (cell.is_node_interior(cell_index))
 						{
-							for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
-								for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
-								{
-									dynamic_pattern.add(get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
-														get_dof_index(1, this_point.index_in_block, cell_index, orbital_row, orbital_column));
-								}
+							for (unsigned int orbital = 0; orbital < n_orbitals; orbital++)
+							{
+								types::global_index 
+								row = orbital + n_orbitals * (row_cell_index + row_n_nodes * row_index_in_block);
+								col = orbital + n_orbitals * (cell_index + n_nodes * this_point.index_in_block);
+								sparsity_pattern_ndiag.insertGlobalIndices(row, 1, &col);
+							}
 						}
 						else // Boundary point!
 						{
 							auto [column_block_id, column_index_in_block, column_cell_index] 
-										= this_point.boundary_lattice_points[cell_index - unit_cell(1).n_nodes];
+										= this_point.boundary_lattice_points[cell_index - cell.n_nodes];
+							assert(row_block_id != column_block_id);
+
 							/* Last check to see if the boundary point actually exists on the grid. Maybe some extrapolation would be useful? */
 							if (column_index_in_block != types::invalid_lattice_index) 
-								for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
-									for (unsigned int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
-										dynamic_pattern.add(get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
-															get_dof_index(1, column_index_in_block, column_cell_index, orbital_row, orbital_column));
+								for (unsigned int orbital = 0; orbital < n_orbitals; orbital++)
+								{
+									types::global_index 
+									row = orbital + n_orbitals * (row_cell_index + row_n_nodes * row_index_in_block);
+									col = orbital + n_orbitals * (column_cell_index + n_nodes * column_index_in_block);
+									sparsity_pattern_ndiag.insertGlobalIndices(row, 1, &col);
+								}
 						}
 					}
 				}
-
-				break;
-			}				/***************************/
-			case 2:			/* COLUMNS in block 2 -> 1 */
-			{				/***************************/
-				for (auto & interp_point : this_point.interpolated_nodes)
-				{
-					unsigned int element_index = interp_point.first;
-					auto [ row_block_id, row_index_in_block, row_cell_index] = interp_point.second;
-
-					for (unsigned int cell_index : unit_cell(0).subcell_list[element_index].unit_cell_dof_index_map)
-					{
-						if (unit_cell(0).is_node_interior(cell_index))
-							for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
-								for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
-									dynamic_pattern.add(get_dof_index(1, row_index_in_block, row_cell_index, orbital_column, orbital_row),
-														get_dof_index(2, this_point.index_in_block, cell_index, orbital_row, orbital_column));
-						else // Boundary point!
-						{
-							auto [column_block_id, column_index_in_block, column_cell_index] = this_point.boundary_lattice_points[cell_index - unit_cell(0).n_nodes];
-							/* Last check to see if the boundary point exists on the grid. Maybe some extrapolation would be useful? */
-							if (column_index_in_block != types::invalid_lattice_index) 
-								for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
-									for (unsigned int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
-										dynamic_pattern.add(get_dof_index(1, row_index_in_block, row_cell_index, orbital_column, orbital_row),
-															get_dof_index(2, column_index_in_block, column_cell_index, orbital_row, orbital_column));
-						}
-					}
-				}
-				break;
-			}				/************************/
-			case 3:			/* Rows in block 3 -> 3 */
-			{				/************************/
-				std::array<int, dim> on_grid = lattice(1).get_vertex_grid_indices(this_point.index_in_block);
-				for (auto & c : on_grid)
-					c = -c;
-				unsigned int opposite_index_in_block = lattice(1).get_vertex_global_index(on_grid);
-
-				for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
-					for (unsigned int orbital = 0; orbital < layer(1).n_orbitals; orbital++)
-					{
-						types::global_index 
-						row = get_dof_index(3, this_point.index_in_block, cell_index, orbital),
-						col = get_dof_index(3, opposite_index_in_block, cell_index, orbital);
-						sparsity_pattern.insertGlobalIndices(row, 1, &col);
-					}
-				break;
 			}
 		}
+		sparsity_pattern_diag.fillComplete ();
+		sparsity_pattern_ndiag.fillComplete ();
+
+		sparsity_patterns[block_col][block_col] = sparsity_pattern_diag.getConst ();
+		sparsity_patterns[block_col][1-block_col] = sparsity_pattern_ndiag.getConst ();
 	}
-	sparsity_pattern.fillComplete ();
-	return sparsity_pattern.getConst ();
+	return sparsity_patterns;
 };
 
 /* Interface accessors */
@@ -707,7 +691,7 @@ DoFHandler<dim,degree>::get_dof_index(const unsigned char block_col, const unsig
 	assert(	block_col < 2	);
 	assert(	block_row < 2	);
 	assert(	index_in_block 	< lattice(0).n_vertices	);
-	assert(	cell_index 		< block(block_col).n_nodes	[block_row]		);
+	assert(	cell_index 		< block(block_col).n_nodes		);
 	assert(		orbital 	< block(block_col).n_orbitals [block_row]	);
 
 	unsigned int idx;
@@ -729,7 +713,7 @@ DoFHandler<dim,degree>::get_dof_range(const unsigned char block_col, const unsig
 	assert(	block_col < 2	);
 	assert(	block_row < 2	);
 	assert(	index_in_block 	< lattice(0).n_vertices	);
-	assert(	cell_index 		< block(block_col).n_nodes	[block_row]		);
+	assert(	cell_index 		< block(block_col).n_nodes	);
 
 	unsigned int idx;
 	if (block_row == 0)
