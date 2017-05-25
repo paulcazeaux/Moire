@@ -80,10 +80,10 @@ public:
 
     Multilayer<dim,1>	extract_monolayer(const int layer_index) const;
 
-    PetscScalar 		intralayer_term(dealii::Tensor<1,dim> arrow_vector, 
+    std::complex<double> 		intralayer_term(dealii::Tensor<1,dim> arrow_vector, 
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index);
-    PetscScalar 		interlayer_term(dealii::Tensor<1,dim> arrow_vector, 
+    std::complex<double> 		interlayer_term(dealii::Tensor<1,dim> arrow_vector, 
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index_row, unsigned char layer_index_column);
 
@@ -405,7 +405,7 @@ Multilayer<dim,n_layers>::extract_monolayer(const int layer_index) const
 
 
 template<int dim, int n_layers>
-PetscScalar
+std::complex<double>
 Multilayer<dim,n_layers>::intralayer_term(dealii::Tensor<1,dim> arrow_vector, 
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index)
@@ -419,7 +419,7 @@ Multilayer<dim,n_layers>::intralayer_term(dealii::Tensor<1,dim> arrow_vector,
 
 
 template<int dim, int n_layers>
-PetscScalar
+std::complex<double>
 Multilayer<dim,n_layers>::interlayer_term(dealii::Tensor<1,dim> arrow_vector, 
     										unsigned int orbital_row, unsigned int orbital_column, 
     										unsigned char layer_index_row, unsigned char layer_index_column)

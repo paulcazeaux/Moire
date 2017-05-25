@@ -7,7 +7,9 @@
 
 
 
-#include "deal.II/base/mpi.h"
+#include <Tpetra_DefaultPlatform.hpp>
+#include <Tpetra_Version.hpp>
+#include <Teuchos_GlobalMPISession.hpp>
 
 #include "parameters/multilayer.h"
 #include "bilayer/computedos.h"
@@ -27,9 +29,9 @@ int main(int argc, char** argv) {
 		/*********************************************************/
 		/*					Initialize MPI 						 */
 		/*********************************************************/
-
-		dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
-		PetscInitialize(&argc, &argv, NULL, NULL);
+		Teuchos::GlobalMPISession mpiSession (&argc, &argv, NULL);
+		Teuchos::RCP<const Teuchos::Comm<int> > comm =
+    			Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ();
 
 		/*********************************************************/
 		/*	 Read input file, and initialize params and vars. 	 */
@@ -39,7 +41,7 @@ int main(int argc, char** argv) {
 		int N = 100;
 
 
-		int my_pid = dealii::Utilities::MPI::this_mpi_process(PETSC_COMM_WORLD);
+		int my_pid = comm->getRank ();
 
 		if (my_pid == 0)
 		{

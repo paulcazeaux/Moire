@@ -18,9 +18,14 @@
 #include <fstream>
 
 #include <complex>
-#include "fftw3.h"
+#include <fftw3.h>
 
-#include "petscvec.h" 
+#include <Tpetra_DefaultPlatform.hpp>
+#include <Teuchos_GlobalMPISession.hpp>
+#include <Tpetra_Vector.hpp>
+#include <Tpetra_Map_decl.hpp>
+#include <Tpetra_CrsGraph_decl.hpp>
+
 
 #include "deal.II/base/mpi.h"
 #include "deal.II/base/exceptions.h"
@@ -29,19 +34,8 @@
 #include "deal.II/base/index_set.h"
 #include "deal.II/base/utilities.h"
 #include "deal.II/base/conditional_ostream.h"
-#include <deal.II/base/timer.h>
-#include <deal.II/lac/generic_linear_algebra.h>
-
-namespace LA
-{
-#if defined(DEAL_II_WITH_PETSC)
-  using namespace dealii::LinearAlgebraPETSc;
-#  define USE_PETSC_LA
-#else
-#  error DEAL_II_WITH_PETSC required
-#endif
-}
-
+#include "deal.II/base/timer.h"
+#include "deal.II/lac/generic_linear_algebra.h"
 
 #include "deal.II/lac/dynamic_sparsity_pattern.h"
 #include "deal.II/lac/petsc_parallel_sparse_matrix.h"
@@ -50,53 +44,56 @@ namespace LA
 #include "bilayer/dofhandler.h"
 
 /**
-* This class encapsulates the DoS computation of a discretized Hamiltonian encoded by a C* algebra.
+* This class encapsulates the computation of the Density of States of a discretized Hamiltonian encoded by a C* algebra.
 */
-
-
 
 namespace Bilayer {
 
 template <int dim, int degree>
 class ComputeDoS : public Multilayer<dim, 2>
 {
+
+	typedef Tpetra::Map<int, types::global_index> 								Map;
+	typedef Tpetra::MultiVector<std::complex<double>, int, types::global_index> MultiVector;
+	typedef Tpetra::CrsGraph<int, types::global_index> 							SparsityPattern;
+	typedef Tpetra::CrsMatrix<std::complex<double>, int, types::global_index> 	Matrix;
+
 public:
 	ComputeDoS(const Multilayer<dim, 2>& bilayer);
 	~ComputeDoS();
-	void 						run();
-	std::vector<PetscScalar> 	output_results();
+	void 								run();
+	std::vector<std::complex<double> > 	output_results();
 
 private:
-	void 				setup();
-	void 				assemble_matrices();
-	void 				solve();
+	void 								setup();
+	void 								assemble_matrices();
+	void 								solve();
 
 	/* Assemble identity observable */
-	void 				create_identity(Vec& Result);
+	void 								create_identity(MultiVector& Result);
 	/* Adjoint operation on an observable */
-	void 				adjoint(const Vec& A, Vec& Result);
+	void 								adjoint(const MultiVector& A, MultiVector& Result);
 	/* Trace of an observable, returned on root process (pid = 0, returns 0 on other processes) */
-	PetscScalar			trace(const Vec& A);
+	std::complex<double>				trace(const MultiVector& A);
 
 	/* MPI communication environment and utilities */
-	MPI_Comm					mpi_communicator;
-	dealii::ConditionalOStream	pcout;
-	dealii::TimerOutput 		computing_timer;
+	Teuchos::RCP<const Teuchos::Comm<int> > mpi_communicator;
+	dealii::ConditionalOStream				pcout;
+	dealii::TimerOutput 					computing_timer;
 
 	/* DoF Handler object and local indices range */
-	DoFHandler<dim,degree>		dof_handler;
-	dealii::IndexSet 			locally_owned_dofs;
-	dealii::IndexSet 			locally_relevant_dofs;
+	DoFHandler<dim,degree>					dof_handler;
+	Teuchos::RCP<const Map> 				locally_owned_dofs;
 
-	/* PETSc vectors to hold information about three observables in successive Chebyshev recursion steps */
-	Vec 						Tp, T, Tn;
+	/* Trilinos vectors to hold information about three observables in successive Chebyshev recursion steps */
+	MultiVector 							Tp, T, Tn;
 
 	/* Chebyshev DoS moments to be computed */
-	std::vector<PetscScalar>	chebyshev_moments;
+	std::vector<std::complex<double> >		chebyshev_moments;
 
 	/* Matrices representing the sparse linear action of the two main operations */
-	LA::MPI::SparseMatrix 		adjoint_action;
-	LA::MPI::SparseMatrix 		hamiltonian_action;
+	Matrix									adjoint_action;
+	Matrix									hamiltonian_action;
 
 	/* Data structures allocated for additional local computations in the adjoint operation */
 	fftw_plan 	fplan_0, bplan_0, fplan_1, bplan_1;
@@ -114,8 +111,8 @@ ComputeDoS<dim,degree>::solve()
 	/* Initialization of the vector to the identity */
 
 	create_identity(Tp);
-	MatMult(hamiltonian_action, Tp, T);
-	PetscScalar m0 = trace(Tp), m = trace(T);
+	hamiltonian_action.apply(Tp, T);
+	std::complex<double> m0 = trace(Tp), m = trace(T);
 
 	if (dof_handler.my_pid == 0)
 	{
@@ -126,10 +123,14 @@ ComputeDoS<dim,degree>::solve()
 
 	for (unsigned int i=2; i <= this->poly_degree; ++i)
 	{
-		MatMult(hamiltonian_action, T, Tn);
-		VecAXPBY(Tn, -1., 2., Tp);
-		VecSwap(Tn, Tp);
-		VecSwap(T, Tp);
+		hamiltonian_action.apply(T, Tn);
+		Tn.update(-1., Tp, 2.);
+		/* Create temporary handle and swap vectors around */
+		MultiVector tmp(Tp, Teuchos::Copy);
+		Tp = T;
+		T = Tn;
+		Tn = tmp;
+
 		m = trace(T);
 		if (dof_handler.my_pid == 0)
 	  		chebyshev_moments.push_back(m);
@@ -137,14 +138,14 @@ ComputeDoS<dim,degree>::solve()
 };
 
 template<int dim, int degree>
-std::vector<PetscScalar>
+std::vector<std::complex<double> >
 ComputeDoS<dim,degree>::output_results()
 {
 	dealii::TimerOutput::Scope t(computing_timer, "Output");
-	if (dealii::Utilities::MPI::n_mpi_processes(mpi_communicator) == 1)
+	if (mpi_comm->getSize() == 1)
     {
     	PetscViewer    viewer;
-    	PetscErrorCode ierr = PetscViewerDrawOpen(mpi_communicator, NULL, NULL, 0, 0, 1500, 1000, & viewer);
+    	PetscErrorCode ierr = PetscViewerDrawOpen(mpi_comm, NULL, NULL, 0, 0, 1500, 1000, & viewer);
     	PetscObjectSetName((PetscObject)viewer,"Output vector plot");
     	PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
     	VecView(T, viewer);
@@ -160,9 +161,9 @@ template<int dim, int degree>
 ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
 	:
 	Multilayer<dim, 2>(bilayer),
-	mpi_communicator(MPI_COMM_WORLD),
-	pcout(std::cout, (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) == 0)),
-	computing_timer (mpi_communicator,
+	mpi_comm(Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ()),
+	pcout(std::cout, (mpi_comm.getRank () == 0)),
+	computing_timer (mpi_comm,
                    pcout,
                    dealii::TimerOutput::summary,
                    dealii::TimerOutput::wall_times),
@@ -205,10 +206,6 @@ ComputeDoS<dim,degree>::~ComputeDoS()
 	fftw_free(data_out_0);
 	fftw_free(data_in_1);
 	fftw_free(data_out_1);
-
-	VecDestroy(&T);
-	VecDestroy(&Tp);
-	VecDestroy(&Tn);
 }
 
 
@@ -229,26 +226,14 @@ ComputeDoS<dim,degree>::setup()
 {
 	dealii::TimerOutput::Scope t(computing_timer, "Setup");
 
-	VecDestroy(& Tp);
-	VecDestroy(& T);
-	VecDestroy(& Tn);
-
-
-	dof_handler.initialize(mpi_communicator);
+	dof_handler.initialize(mpi_comm);
 	locally_owned_dofs = dof_handler.locally_owned_dofs();
-	locally_relevant_dofs = dof_handler.locally_relevant_dofs();
 
-	Assert(locally_owned_dofs.is_contiguous(), dealii::ExcNotImplemented());
+	Assert(locally_owned_dofs.is_Contiguous(), dealii::ExcNotImplemented());
 
-	PetscErrorCode ierr = VecCreateMPI (mpi_communicator, locally_owned_dofs.n_elements(), PETSC_DETERMINE, &T);
-    AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
-	PetscInt sz;
-	VecGetSize (T, &sz);
-    Assert (static_cast<unsigned int>(sz) == dof_handler.n_dofs(), dealii::ExcDimensionMismatch (sz,  dof_handler.n_dofs()));
-
-	ierr = VecDuplicate(T, &Tp);
-	ierr = VecDuplicate(T, &Tn);
-    AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
+	Tp = MultiVector(	locally_owned_dofs	);
+	T  = MultiVector(	locally_owned_dofs	);
+	Tn = MultiVector(	locally_owned_dofs	);
 
 	dealii::DynamicSparsityPattern dsp (locally_relevant_dofs);
 	dof_handler.make_sparsity_pattern_adjoint(dsp);
@@ -287,7 +272,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 	for (unsigned int n=0; n<dof_handler.n_locally_owned_points(); ++n)
 	{
 		const PointData& this_point = dof_handler.locally_owned_point(n);
-		switch (this_point.block_id) {
+		switch (this_point.block_row) {
 							/***********************/
 			case 0:			/* Row in block 0 -> 0 */
 			{				/***********************/
@@ -408,7 +393,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 	for (unsigned int n=0; n< dof_handler.n_locally_owned_points(); ++n)
 	{
 		const PointData& this_point = dof_handler.locally_owned_point(n);
-		switch (this_point.block_id) 
+		switch (this_point.block_row) 
 		{					/******************/
 			case 0:			/* Row in block 0 */
 			{				/******************/
@@ -602,7 +587,7 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
 	PetscMPIInt  nprocs;
 	PetscErrorCode ierr = VecGetOwnershipRanges(A, & rangeA);
 	ierr = VecGetOwnershipRanges(Result, & rangeResult);
-	MPI_Comm_size(mpi_communicator, &nprocs);
+	nprocs = mpi_comm->getSize();
 	assert(nprocs == dof_handler.n_procs);
 	for (int i=0; i<nprocs; ++i)
 		Assert(rangeA[i] == rangeResult[i],
@@ -614,7 +599,7 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
     ierr = VecGetOwnershipRange (Result, &begin, &end);
     AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
 
-	PetscScalar * start_ptr;
+	std::complex<double> * start_ptr;
 	ierr = VecGetArray(Result, & start_ptr);
 	AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
         
@@ -624,10 +609,10 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
 	{
 		const PointData& this_point = dof_handler.locally_owned_point(n);
 
-		auto dof_range = dof_handler.get_dof_range(this_point.block_id, this_point.index_in_block);
+		auto dof_range = dof_handler.get_dof_range(this_point.block_row, this_point.index_in_block);
 		assert(dof_range.first >= begin && dof_range.second <= end);
 
-		switch (this_point.block_id) 
+		switch (this_point.block_row) 
 		{
 			case 0:
 			{
@@ -648,7 +633,7 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
 					if (dim == 2)
 						indices[1] = unrolled_index / stride;
 
-					PetscScalar phase = std::polar(1./(double) point_size[0], 
+					std::complex<double> phase = std::polar(1./(double) point_size[0], 
 													-2 * dealii::numbers::PI * dealii::scalar_product(this_point_position,  indices));
 					for (unsigned int j=0; j<stride; ++j)
 						data_out_0[stride * unrolled_index + j] *= phase;
@@ -681,7 +666,7 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
 					if (dim == 2)
 						indices[1] = unrolled_index / stride;
 
-					PetscScalar phase = std::polar(1./(double) point_size[1], 
+					std::complex<double> phase = std::polar(1./(double) point_size[1], 
 													-2 * dealii::numbers::PI * dealii::scalar_product( this_point_position, indices));
 					for (unsigned int j=0; j<stride; ++j)
 						data_out_1[stride * unrolled_index + j] *= phase;
@@ -709,7 +694,7 @@ ComputeDoS<dim,degree>::create_identity(Vec& Result)
 {
 	VecSet(Result, 0.0);
 	std::vector<int> indices;
-	std::vector<PetscScalar> values;
+	std::vector<std::complex<double> > values;
 
 	std::array<int, dim> lattice_indices_0;
 	for (unsigned int i=0; i<dim; ++i)
@@ -741,11 +726,11 @@ ComputeDoS<dim,degree>::create_identity(Vec& Result)
 
 
 template<int dim, int degree>
-PetscScalar
+std::complex<double>
 ComputeDoS<dim,degree>::trace(const Vec& A)
 {
 	std::vector<int> indices;
-	std::vector<PetscScalar> values;
+	std::vector<std::complex<double> > values;
 
 	std::array<int, dim> lattice_indices_0;
 	for (unsigned int i=0; i<dim; ++i)
@@ -759,8 +744,8 @@ ComputeDoS<dim,degree>::trace(const Vec& A)
 
 	values.resize(indices.size());
 	VecGetValues(A, indices.size(), indices.data(), values.data());
-	PetscScalar 
-	loc_trace_0 = std::accumulate(values.begin(), values.end(), static_cast<PetscScalar>(0.0)) 
+	std::complex<double>  
+	loc_trace_0 = std::accumulate(values.begin(), values.end(), static_cast<std::complex<double> >(0.0)) 
 						* dof_handler.unit_cell(1).area / (double) dof_handler.unit_cell(1).n_nodes;
 
 	indices.clear();
@@ -774,15 +759,15 @@ ComputeDoS<dim,degree>::trace(const Vec& A)
 
 	values.resize(indices.size());
 	VecGetValues(A, indices.size(), indices.data(), values.data());
-	PetscScalar 
-	loc_trace_1 = std::accumulate(values.begin(), values.end(), static_cast<PetscScalar>(0.0)) 
+	std::complex<double>  
+	loc_trace_1 = std::accumulate(values.begin(), values.end(), static_cast<std::complex<double> >(0.0)) 
 						* dof_handler.unit_cell(0).area / (double) dof_handler.unit_cell(0).n_nodes;
 
-	PetscScalar 
+	std::complex<double>  
 	loc_trace = (loc_trace_0 + loc_trace_1) / (dof_handler.unit_cell(0).area + dof_handler.unit_cell(1).area),
 	result = 0.0;
 
-	MPI_Reduce(&loc_trace, &result, 1, MPIU_SCALAR, MPI_SUM, 0, mpi_communicator);
+	Teuchos::reduce<int, std::complex<double> >(&loc_trace, &result, 1, REDUCE_SUM, 0, * mpi_comm);
 	return result;
 };
 
