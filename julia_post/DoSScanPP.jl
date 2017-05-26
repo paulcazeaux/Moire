@@ -7,7 +7,7 @@ pygui(true)
 
 # Energies, DofS = DoS(2.55, 0, Cheb_Moments);
 
-# # Conductivities as a function of Fermi Levels
+# # DoS as a function of Fermi Levels
 # Image(Energies, DofS, 2*n, 1, (.95, 1.05), (-2.5, -1.), :absolute, (0., .2),
 #                 "Ratio of lattice constants", "Energy", "DoS", 1)
 # savefig("DoSScan_low_zoom.pdf")
@@ -20,7 +20,7 @@ n, nratios, Cheb_Moments = Read_DoS("build/toy_model_1d_DoS_4.jld")
 
 Energies, DofS = DoS(2.55, 0, Cheb_Moments);
 
-# Conductivities as a function of Fermi Levels
-Image(Energies, DofS, 2*n, 1, (.2, .3), (-2.5, 2.5), :relative, (0., .25),
+# DoS as a function of Fermi Levels
+Image(Energies, DofS, 2*n, 1, (.25, 4.), (-2.5, 2.5), :relative, (0., .25),
                 "Ratio of lattice constants", "Energy", "DoS", 1)
-savefig("DoSScan.25.pdf")
+savefig("DoSScan.pdf")
