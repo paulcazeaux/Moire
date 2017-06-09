@@ -172,7 +172,6 @@ DoFHandler<dim,degree>::DoFHandler(const Multilayer<dim, 2>& bilayer)
 		lattices_[i]   = std::make_unique<Lattice<dim>>(rotated_basis, bilayer.cutoff_radius);
 		unit_cells_[i] = std::make_unique<UnitCell<dim,degree>>(rotated_basis, bilayer.refinement_level);
 	}
-
 	n_lattice_points_ = 2*(lattice(0).n_vertices + lattice(1).n_vertices);
 
 	start_block_indices_ = {{	0, 
@@ -262,7 +261,7 @@ DoFHandler<dim,degree>::make_coarse_sparsity_pattern()
 		std::vector<unsigned int> 	
 		neighbors =	lattice(0).list_neighborhood_indices(
 									lattice(0).get_vertex_position(m), 
-									this->intra_search_radius);
+									this->intra_search_radius*layer(0).dilation);
 		for (auto & mm: neighbors)
 			mm = reordered_indices_[mm+start_block_indices_[0]];
 		dynamic_pattern.add_entries(reordered_indices_[m+start_block_indices_[0]], neighbors.begin(), neighbors.end());
@@ -290,7 +289,7 @@ DoFHandler<dim,degree>::make_coarse_sparsity_pattern()
 		dynamic_pattern.add_entries(reordered_indices_[p+start_block_indices_[1]], neighbors.begin(), neighbors.end());
 			/* Block 1 <-> 1 */
 		neighbors = lattice(1).list_neighborhood_indices(
-									lattice(1).get_vertex_position(p), this->intra_search_radius );
+									lattice(1).get_vertex_position(p), this->intra_search_radius*layer(1).dilation );
 		for (auto & pp: neighbors) 
 			pp = reordered_indices_[pp+start_block_indices_[1]];
 		dynamic_pattern.add_entries(reordered_indices_[p+start_block_indices_[1]], neighbors.begin(), neighbors.end());
@@ -311,7 +310,7 @@ DoFHandler<dim,degree>::make_coarse_sparsity_pattern()
 		dynamic_pattern.add_entries(reordered_indices_[q+start_block_indices_[2]], neighbors.begin(), neighbors.end());
 			/* Block 2 <-> 2 */
 		neighbors = lattice(0).list_neighborhood_indices(
-									lattice(0).get_vertex_position(q), this->intra_search_radius);
+									lattice(0).get_vertex_position(q), this->intra_search_radius*layer(0).dilation);
 		for (auto & qq: neighbors) 
 			qq = reordered_indices_[qq+start_block_indices_[2]];
 		dynamic_pattern.add_entries(reordered_indices_[q+start_block_indices_[2]], neighbors.begin(), neighbors.end());
@@ -326,7 +325,7 @@ DoFHandler<dim,degree>::make_coarse_sparsity_pattern()
 		std::vector<unsigned int> 	
 		neighbors =	lattice(1).list_neighborhood_indices(
 									lattice(1).get_vertex_position(n), 
-									this->intra_search_radius);
+									this->intra_search_radius*layer(1).dilation);
 		for (auto & nn: neighbors) 
 			nn = reordered_indices_[nn+start_block_indices_[3]];
 		dynamic_pattern.add_entries(reordered_indices_[n+start_block_indices_[3]], neighbors.begin(), neighbors.end());
@@ -638,7 +637,7 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 
 				std::vector<unsigned int> 	
 				neighbors =	lattice(0).list_neighborhood_indices(this_point_position, 
-											this->intra_search_radius);
+											this->intra_search_radius*layer(0).dilation);
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
 						for (unsigned int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
@@ -699,7 +698,7 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 				
 
 					/* Block 1 <-> 1 */
-				neighbors = lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius);
+				neighbors = lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius*layer(1).dilation);
 
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
@@ -737,7 +736,7 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 					}
 
 					/* Block 2 <-> 2 */
-				neighbors = lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius);
+				neighbors = lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius*layer(0).dilation);
 
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
@@ -758,7 +757,7 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
 					/* Block 3 <-> 3 */
 				std::vector<unsigned int> 	
 				neighbors =	lattice(1).list_neighborhood_indices(this_point_position, 
-											this->intra_search_radius);
+											this->intra_search_radius*layer(1).dilation);
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
 						for (unsigned int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
@@ -801,7 +800,6 @@ DoFHandler<dim,degree>::make_sparsity_pattern_adjoint(dealii::DynamicSparsityPat
 	/**
 	 * Note : the second step (shift translation) is dealt with by FFT after the operation modeled here
 	 */
-	
 	for (unsigned int n=0; n<n_locally_owned_points(); ++n)
 	{
 		const PointData& this_point = locally_owned_point(n);
@@ -824,7 +822,6 @@ DoFHandler<dim,degree>::make_sparsity_pattern_adjoint(dealii::DynamicSparsityPat
 			}				/***************************/
 			case 1:			/* COLUMNS in block 1 -> 2 */
 			{				/***************************/
-
 				for (auto & interp_point : this_point.interpolated_nodes)
 				{
 					unsigned int element_index = interp_point.first;

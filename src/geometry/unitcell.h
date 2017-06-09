@@ -290,7 +290,7 @@ UnitCell<dim,degree>::find_element(const dealii::Tensor<1,dim>& X) const
 	dealii::Point<dim> Xg (inverse_basis * X);
 	bool test_in_cell = true;
 	for (unsigned int i=0; i<dim; ++i)
-		test_in_cell = test_in_cell && ( Xg(i) >= -.5) && ( Xg(i) < .5);
+		test_in_cell = test_in_cell && ( Xg(i) + .5 >= 0) && ( Xg(i) + .5 < 1);
 	if (test_in_cell)
 		switch (dim) {
 			case 1: 

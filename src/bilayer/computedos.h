@@ -116,7 +116,6 @@ ComputeDoS<dim,degree>::solve()
 	create_identity(Tp);
 	MatMult(hamiltonian_action, Tp, T);
 	PetscScalar m0 = trace(Tp), m = trace(T);
-
 	if (dof_handler.my_pid == 0)
 	{
 	  chebyshev_moments.reserve(this->poly_degree+1);
@@ -140,18 +139,6 @@ template<int dim, int degree>
 std::vector<PetscScalar>
 ComputeDoS<dim,degree>::output_results()
 {
-	dealii::TimerOutput::Scope t(computing_timer, "Output");
-	if (dealii::Utilities::MPI::n_mpi_processes(mpi_communicator) == 1)
-    {
-    	PetscViewer    viewer;
-    	PetscErrorCode ierr = PetscViewerDrawOpen(mpi_communicator, NULL, NULL, 0, 0, 1500, 1000, & viewer);
-    	PetscObjectSetName((PetscObject)viewer,"Output vector plot");
-    	PetscViewerPushFormat(viewer, PETSC_VIEWER_DRAW_LG);
-    	VecView(T, viewer);
-    
-    	PetscViewerPopFormat(viewer);
-    	PetscViewerDestroy(&viewer);
-	}
 	return chebyshev_moments;
 };
 
@@ -168,8 +155,7 @@ ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
                    dealii::TimerOutput::wall_times),
 	dof_handler(bilayer)
 {
-    dealii::TimerOutput::Scope t(computing_timer, "Initialization");
-
+	dealii::TimerOutput::Scope t(computing_timer, "Initialization");
 
 	point_size[0] = dof_handler.layer(0).n_orbitals * dof_handler.layer(0).n_orbitals * dof_handler.unit_cell(1).n_nodes;
 	point_size[1] = dof_handler.layer(1).n_orbitals * dof_handler.layer(1).n_orbitals * dof_handler.unit_cell(0).n_nodes;
@@ -178,7 +164,6 @@ ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
 	data_out_0 	= (std::complex<double> *) fftw_malloc(sizeof(std::complex<double>) * point_size[0]);
 	data_in_1 	= (std::complex<double> *) fftw_malloc(sizeof(std::complex<double>) * point_size[1]);
 	data_out_1 	= (std::complex<double> *) fftw_malloc(sizeof(std::complex<double>) * point_size[1]);
-
 	fplan_0 = fftw_plan_many_dft(dim, dof_handler.unit_cell(1).n_nodes_per_dim.data(), dof_handler.layer(0).n_orbitals * dof_handler.layer(0).n_orbitals, 
 											reinterpret_cast<fftw_complex *>(data_in_0),  NULL, dof_handler.layer(0).n_orbitals * dof_handler.layer(0).n_orbitals, 1,
 											reinterpret_cast<fftw_complex *>(data_out_0), NULL, dof_handler.layer(0).n_orbitals * dof_handler.layer(0).n_orbitals, 1, FFTW_FORWARD, FFTW_MEASURE);
@@ -191,6 +176,9 @@ ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
 	bplan_1 = fftw_plan_many_dft(dim, dof_handler.unit_cell(0).n_nodes_per_dim.data(), dof_handler.layer(1).n_orbitals * dof_handler.layer(1).n_orbitals, 
 											reinterpret_cast<fftw_complex *>(data_out_1), NULL, dof_handler.layer(1).n_orbitals * dof_handler.layer(1).n_orbitals, 1,
 											reinterpret_cast<fftw_complex *>(data_in_1),  NULL, dof_handler.layer(1).n_orbitals * dof_handler.layer(1).n_orbitals, 1, FFTW_BACKWARD, FFTW_MEASURE);
+	VecCreate(mpi_communicator, &T);
+	VecCreate(mpi_communicator, &Tp);
+	VecCreate(mpi_communicator, &Tn);
 };
 
 template<int dim, int degree>
@@ -219,7 +207,6 @@ ComputeDoS<dim,degree>::run()
 	setup();
 	assemble_matrices();
 	solve();
-    output_results();
 };
 
 
@@ -229,9 +216,9 @@ ComputeDoS<dim,degree>::setup()
 {
 	dealii::TimerOutput::Scope t(computing_timer, "Setup");
 
-	VecDestroy(& Tp);
-	VecDestroy(& T);
-	VecDestroy(& Tn);
+	VecDestroy(&T);
+	VecDestroy(&Tp);
+	VecDestroy(&Tn);
 
 
 	dof_handler.initialize(mpi_communicator);
@@ -418,7 +405,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 
 				std::vector<unsigned int> 	
 				neighbors =	dof_handler.lattice(0).list_neighborhood_indices(this_point_position, 
-											this->intra_search_radius);
+											this->intra_search_radius*dof_handler.layer(0).dilation);
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(1).n_nodes; ++cell_index)
 						for (unsigned int orbital_row = 0; orbital_row < dof_handler.layer(0).n_orbitals; orbital_row++)
@@ -485,7 +472,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 					}
 
 					/* Block 1 <-> 1 */
-				neighbors = dof_handler.lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius);
+				neighbors = dof_handler.lattice(1).list_neighborhood_indices(this_point_position, this->intra_search_radius*dof_handler.layer(1).dilation);
 
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(1).n_nodes; ++cell_index)
@@ -528,7 +515,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 					}
 
 					/* Block 2 <-> 2 */
-				neighbors = dof_handler.lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius);
+				neighbors = dof_handler.lattice(0).list_neighborhood_indices(this_point_position, this->intra_search_radius*dof_handler.layer(0).dilation);
 
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(0).n_nodes; ++cell_index)
@@ -551,7 +538,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 					/* Block 3 <-> 3 */
 				std::vector<unsigned int> 	
 				neighbors =	dof_handler.lattice(1).list_neighborhood_indices(this_point_position, 
-											this->intra_search_radius);
+											this->intra_search_radius*dof_handler.layer(1).dilation);
 				for (auto neighbor_index_in_block : neighbors)
 					for (unsigned int cell_index = 0; cell_index < dof_handler.unit_cell(0).n_nodes; ++cell_index)
 						for (unsigned int orbital_row = 0; orbital_row < dof_handler.layer(1).n_orbitals; orbital_row++)
@@ -781,10 +768,14 @@ ComputeDoS<dim,degree>::trace(const Vec& A)
 	PetscScalar 
 	loc_trace = (loc_trace_0 + loc_trace_1) / (dof_handler.unit_cell(0).area + dof_handler.unit_cell(1).area),
 	result = 0.0;
-
-	MPI_Reduce(&loc_trace, &result, 1, MPIU_SCALAR, MPI_SUM, 0, mpi_communicator);
+	// Weird bug does not allow for direct MPI_Reduce of PETSC_SCALAR / MPIU_SCALAR type */
+	const double Loc_Trace [2] = {loc_trace.real(), loc_trace.imag()};
+	double Result [2];
+	int ierr = MPI_Reduce(&Loc_Trace, &Result, 2, MPI_DOUBLE, MPI_SUM, 0, mpi_communicator);
+	CHKERRQ(ierr);
+	result = Result[0] + Result[1] * PETSC_i;
 	return result;
-};
+}	
 
 
 }/* Namespace Bilayer */

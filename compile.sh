@@ -19,7 +19,7 @@ cmake ..
 echo "====================================================================================="
 echo "                                       MAKE                                          " 
 echo "====================================================================================="
-make ${TARGET}
+make ${TARGET} -j 44
 # make
 
 
@@ -32,5 +32,5 @@ echo "==========================================================================
 InputFile=../app/cfg/1d_toymodel.in
 ExportFile=../output
 rm ${ExportFile}.out
-mpirun -n 8 ./app/${TARGET} -i ${InputFile} -draw_pause -1 > ${ExportFile}.out
+mpirun -n 44 ./app/${TARGET} -i ${InputFile}  > ${ExportFile}.out
 # open ${ExportFile}.out
