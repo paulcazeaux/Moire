@@ -32,8 +32,8 @@ end
 function Image(grid, values, npx, upscaling, xrange, yrange, cscale, crange, xLabel, yLabel, cLabel, number)
   nratios = size(grid, 2)
   if xrange == :custom_ratios
-    xmin = 1/7
-    xmax = 6/7
+    xmin = .25
+    xmax = .75
   else
     xmin = xrange[1]
     xmax = xrange[2]
@@ -81,18 +81,21 @@ function Image(grid, values, npx, upscaling, xrange, yrange, cscale, crange, xLa
   ax[:set_xlim]([xmin, xmax])
   ax[:set_ylim]([ymin, ymax])
 
-  if xrange == :custom_ratios
-    xtic = [1/6 1/5 1/4 1/3 2/5 1/2 3/5 2/3 4/5 1 5/4 3/2 5/3 2 5/2 3 4 5 6]'
-    xtic = xtic./(1+xtic)
-    xticstr = (L"\frac{1}{6}", L"\frac{1}{5}", L"\frac{1}{4}", L"\frac{1}{3}",
+  
+  xtic = [1/9 1/8 1/7 1/6 1/5 1/4 1/3 2/5 1/2 3/5 2/3 4/5 1 5/4 3/2 5/3 2 5/2 3 4 5 6 7 8 9]'
+  xtic = sqrt(xtic)./(1+sqrt(xtic))
+  xticstr = (L"\frac{1}{9}", L"\frac{1}{8}", L"\frac{1}{7}", 
+      L"\frac{1}{6}", L"\frac{1}{5}", L"\frac{1}{4}", L"\frac{1}{3}",
       L"\frac{2}{5}",  L"\frac{1}{2}", L"\frac{3}{5}", L"\frac{2}{3}", L"\frac{4}{5}", L"1",
-      L"\frac{5}{4}", L"\frac{3}{2}", L"\frac{5}{3}", L"2", L"\frac{5}{2}", L"3", L"4", L"5", L"6")
-    ax[:set_xticks](xtic)
-    ax[:set_xticklabels](xticstr)
-    tick_params(axis="x", labelsize=20)
-  else
-    tick_params(axis="x", labelsize=15)
-  end
+      L"\frac{5}{4}", L"\frac{3}{2}", L"\frac{5}{3}", L"2", L"\frac{5}{2}", 
+      L"3", L"4", L"5", L"6", L"7", L"8", L"9")
+
+  I = find((xtic .>= xmin) & (xtic .<= xmax))
+    
+  ax[:set_xticks](xtic[I])
+  ax[:set_xticklabels](xticstr[I])
+
+  tick_params(axis="x", labelsize=15)
   tick_params(axis="y", labelsize=15)
   ax[:spines]["top"][:set_color]("none")
   ax[:spines]["right"][:set_color]("none")
