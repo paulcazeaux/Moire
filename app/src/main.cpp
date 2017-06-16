@@ -10,7 +10,7 @@
 #include "deal.II/base/mpi.h"
 
 #include "parameters/multilayer.h"
-#include "bilayer/computedos.h"
+#include "bilayer/compute_dos.h"
 
 #include <iostream>
 #include <fstream>

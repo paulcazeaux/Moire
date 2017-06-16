@@ -10,7 +10,7 @@
 #ifndef moire__bilayer_computedos_h
 #define moire__bilayer_computedos_h
 
-#include "bilayer/basealgebra.h"
+#include "bilayer/base_algebra.h"
 
 /**
 * This class encapsulates the DoS computation of a discretized Hamiltonian encoded by a C* algebra.

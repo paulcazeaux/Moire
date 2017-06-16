@@ -47,7 +47,7 @@ namespace LA
 #include "deal.II/lac/petsc_parallel_vector.h"
 
 #include "tools/numbers.h"
-#include "bilayer/dofhandler.h"
+#include "bilayer/dof_handler.h"
 
 /**
 * This class encapsulates the basic operations in a C* algebra equipped with a discretized Hamiltonian.

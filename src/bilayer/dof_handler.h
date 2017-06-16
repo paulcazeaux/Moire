@@ -29,8 +29,8 @@
 
 #include "parameters/multilayer.h"
 #include "geometry/lattice.h"
-#include "geometry/unitcell.h"
-#include "bilayer/pointdata.h"
+#include "geometry/unit_cell.h"
+#include "bilayer/point_data.h"
 
 
 /**
