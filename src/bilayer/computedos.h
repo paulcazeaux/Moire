@@ -133,14 +133,14 @@ ComputeDoS<dim,degree>::solve()
         if (dof_handler.my_pid == 0)
             chebyshev_moments.push_back(m);
     }
-};
+}
 
 template<int dim, int degree>
 std::vector<PetscScalar>
 ComputeDoS<dim,degree>::output_results()
 {
     return chebyshev_moments;
-};
+}
 
 
 template<int dim, int degree>
@@ -179,7 +179,7 @@ ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
     VecCreate(mpi_communicator, &T);
     VecCreate(mpi_communicator, &Tp);
     VecCreate(mpi_communicator, &Tn);
-};
+}
 
 template<int dim, int degree>
 ComputeDoS<dim,degree>::~ComputeDoS()
@@ -207,7 +207,7 @@ ComputeDoS<dim,degree>::run()
     setup();
     assemble_matrices();
     solve();
-};
+}
 
 
 template<int dim, int degree>
@@ -257,7 +257,7 @@ ComputeDoS<dim,degree>::setup()
                                 dsp, 
                                 mpi_communicator);
 
-};
+}
 
 
 
@@ -607,7 +607,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
     hamiltonian_action.compress(LA::VectorOperation::insert);
     MatShift(hamiltonian_action, this->energy_shift);
     MatScale(hamiltonian_action, 1./this->energy_rescale);
-};
+}
 
 
 template<int dim, int degree>
@@ -717,7 +717,7 @@ ComputeDoS<dim,degree>::adjoint(const Vec&  A, Vec & Result)
     VecRestoreArray(Result, & start_ptr);
     ierr = VecConjugate(Result);
     AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
-};
+}
 
 
 template<int dim, int degree>
@@ -754,7 +754,7 @@ ComputeDoS<dim,degree>::create_identity(Vec& Result)
     VecSetValues(Result, indices.size(), indices.data(), values.data(), INSERT_VALUES);
     VecAssemblyBegin(Result);
     VecAssemblyEnd(Result);
-};
+}
 
 
 template<int dim, int degree>

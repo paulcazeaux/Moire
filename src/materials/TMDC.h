@@ -92,14 +92,14 @@ namespace TMDC {
     {
         assert(idx >= 0 && idx < n_orbitals);
         return static_cast<Orbital>(idx);
-    };
+    }
 
     inline 
     int 
     index(const Orbital O)
     {   
         return static_cast<int>(O); 
-    };
+    }
 
     inline 
     Atom 
@@ -124,7 +124,7 @@ namespace TMDC {
             case Orbital::X_B_pz:
                 return Atom::X_B;
         }   
-    };
+    }
 
 
 } /* End namespace TMDC */

@@ -15,7 +15,7 @@
 #include <iostream>
 #include <fstream>
 
-static const int dim = 1;
+static const int dim = 2;
 static const int degree = 3;
 static const int n_layers = 2;
 

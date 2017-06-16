@@ -76,7 +76,7 @@ PointData::PointData(unsigned char block_id, unsigned int index_in_block, types:
     index_in_block(index_in_block),
     owned_dofs(total_n_dofs), 
     relevant_dofs(total_n_dofs) 
-{};
+{}
 
 } /* End namespace Bilayer */
 #endif /* BILAYER_POINTDATA_H */

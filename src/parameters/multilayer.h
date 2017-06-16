@@ -123,7 +123,7 @@ Multilayer<dim,n_layers>::Multilayer(   std::string job_name,
     poly_degree(poly_degree),                       
     energy_rescale(energy_rescale),     energy_shift(energy_shift),
     B(B),                               E(E),
-    cutoff_radius(cutoff_radius) {};
+    cutoff_radius(cutoff_radius) {}
 
 
 
@@ -312,7 +312,7 @@ Multilayer<dim,n_layers>::extract_monolayer(const unsigned char layer_index) con
                 this->cutoff_radius);
     monolayer.layer_data[0] = this->layer_data[layer_index];
     return monolayer;
-};
+}
 
 
 template<int dim, int n_layers>

@@ -186,7 +186,7 @@ DoFHandler<dim,degree>::initialize(MPI_Comm& mpi_communicator)
 {
     this->coarse_setup(mpi_communicator);
     this->distribute_dofs();
-};
+}
 
 
 template<int dim, int degree>
@@ -235,7 +235,7 @@ DoFHandler<dim,degree>::coarse_setup(MPI_Comm& mpi_communicator)
     locally_owned_points_partition_[n_procs] = next_free_index;
     n_locally_owned_points_ = locally_owned_points_partition_[my_pid+1]
                                 - locally_owned_points_partition_[my_pid];
-};
+}
 
 template<int dim, int degree>
 dealii::DynamicSparsityPattern
@@ -401,7 +401,7 @@ DoFHandler<dim,degree>::make_coarse_sparsity_pattern()
     }
 
     return dynamic_pattern;
-};
+}
 
 
 template<int dim, int degree>
@@ -613,7 +613,7 @@ DoFHandler<dim,degree>::distribute_dofs()
     }
     locally_owned_dofs_.compress();
     locally_relevant_dofs_.compress();
-};
+}
 
 
 template<int dim, int degree>
@@ -785,7 +785,7 @@ DoFHandler<dim,degree>::make_sparsity_pattern_rmultiply(dealii::DynamicSparsityP
             }
         }
     }
-};
+}
 
 
 
@@ -893,20 +893,20 @@ DoFHandler<dim,degree>::make_sparsity_pattern_adjoint(dealii::DynamicSparsityPat
             }
         }
     }
-};
+}
 
 /* Interface accessors */
 
 template<int dim, int degree>
 unsigned int 
 DoFHandler<dim,degree>::n_points() const
-    { return n_lattice_points_; };
+    { return n_lattice_points_; }
 
 
 template<int dim, int degree>
 unsigned int 
 DoFHandler<dim,degree>::n_locally_owned_points() const
-    { return n_locally_owned_points_; };
+    { return n_locally_owned_points_; }
 
 template<int dim, int degree>
 const PointData &
@@ -914,7 +914,7 @@ DoFHandler<dim,degree>::locally_owned_point(unsigned int local_index) const
 { 
     assert(local_index < n_locally_owned_points_);
     return lattice_points_[local_index]; 
-};
+}
 
 
 
@@ -928,7 +928,7 @@ DoFHandler<dim,degree>::locally_owned_point(unsigned char block_id, const unsign
     unsigned int local_index = reordered_indices_[start_block_indices_[block_id] + index_in_block]
                                         - locally_owned_points_partition_[my_pid];
     return lattice_points_[local_index];
-};
+}
 
 
 template<int dim, int degree>
@@ -939,31 +939,31 @@ DoFHandler<dim,degree>::is_locally_owned_point(unsigned char block_id, const uns
     assert(index_in_block < lattice(block_id == 0 || block_id == 2 ? 0 : 1).n_vertices);
     unsigned int idx = reordered_indices_[start_block_indices_[block_id] + index_in_block];
     return !(idx < locally_owned_points_partition_[my_pid] || idx >= locally_owned_points_partition_[my_pid+1]);
-};
+}
 
 
 template<int dim, int degree>
 types::global_index
 DoFHandler<dim,degree>::n_dofs() const 
-    { return n_dofs_    ; };
+    { return n_dofs_    ; }
 
 
 template<int dim, int degree>
 types::global_index
 DoFHandler<dim,degree>::n_locally_owned_dofs() const 
-    { return locally_owned_dofs_.n_elements(); };
+    { return locally_owned_dofs_.n_elements(); }
 
 
 template<int dim, int degree>
 const dealii::IndexSet &
 DoFHandler<dim,degree>::locally_owned_dofs() const 
-    { return locally_owned_dofs_; };
+    { return locally_owned_dofs_; }
 
 
 template<int dim, int degree>
 const dealii::IndexSet &
 DoFHandler<dim,degree>::locally_relevant_dofs() const 
-    { return locally_relevant_dofs_; };
+    { return locally_relevant_dofs_; }
 
 template<int dim, int degree>
 const std::vector<types::global_index> &
@@ -988,7 +988,7 @@ DoFHandler<dim,degree>::get_dof_index(const unsigned char block_id, const unsign
     return lattice_point_dof_range_[idx] + cell_index * strides_per_block_[block_id][2]
                                             + orbital_row * strides_per_block_[block_id][1]
                                             + orbital_column;
-};
+}
 
 template<int dim, int degree>
 std::pair<types::global_index,types::global_index>
@@ -1003,7 +1003,7 @@ DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsign
     types::global_index
     dof_range_start = lattice_point_dof_range_[idx] + cell_index * strides_per_block_[block_id][2];
     return std::make_pair(dof_range_start, dof_range_start + strides_per_block_[block_id][2]);
-};
+}
 
 template<int dim, int degree>
 std::pair<types::global_index,types::global_index>
@@ -1014,7 +1014,7 @@ DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsign
 
     unsigned int local_index = reordered_indices_[start_block_indices_[block_id] + index_in_block];
     return std::make_pair(lattice_point_dof_range_[local_index], lattice_point_dof_range_[local_index+1]);
-};
+}
 
 } /* End namespace Bilayer */
 

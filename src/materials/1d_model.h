@@ -13,7 +13,7 @@
 
 namespace Toy1D {
     /* Parameters library */
-    const double            alpha           = 1.;
+    const double            alpha = 1.;
     const std::array<std::array<double, 1>, 1> // For compatibility with 2D case...
                             lattice = {{ {{1.}} }};
     const double            atom_pos = 0.;
@@ -25,7 +25,7 @@ namespace Toy1D {
 
     const double            W = .5;
     const double            r0 = .25;
-};
+}
 
 namespace Coupling {
 

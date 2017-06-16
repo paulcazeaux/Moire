@@ -67,14 +67,14 @@ namespace Graphene {
     {
         assert(idx >= 0 && idx < n_orbitals);
         return static_cast<Orbital>(idx);
-    };
+    }
 
     inline 
     int 
     index(const Orbital O)
     {   
         return static_cast<int>(O); 
-    };
+    }
 
     inline 
     Atom 
@@ -88,6 +88,6 @@ namespace Graphene {
             case Orbital::B_pz:
                 return Atom::B;
         }   
-    };
+    }
 }   /* End namespace Graphene */
 #endif

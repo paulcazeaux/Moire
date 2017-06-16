@@ -67,12 +67,13 @@ namespace Materials {
                     const Mat mat_row, const Mat mat_col);
 }   /* End namespace Materials */
 
+/* Explicit specializations for the lattice method */
 template<>
 const std::array<std::array<double, 1>, 1>&
-Materials::lattice<1>(const Mat mat);
+Materials::lattice<1>(const Materials::Mat mat);
 
 template<>
 const std::array<std::array<double, 2>, 2>&
-Materials::lattice<2>(const Mat mat);
+Materials::lattice<2>(const Materials::Mat mat);
 
 #endif

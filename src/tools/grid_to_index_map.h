@@ -79,7 +79,7 @@ GridToIndexMap<dim>::GridToIndexMap(
         global_indices_[unrolled_index] = index;
         ++index;
     }
-};
+}
 
 
 template <int dim>
@@ -115,7 +115,7 @@ void GridToIndexMap<dim>::reinit(
         global_indices_[unrolled_index] = index;
         ++index;
     }
-};
+}
 
 
 template <int dim>
@@ -131,7 +131,7 @@ GridToIndexMap<dim>::find(const std::array<int,dim> grid_vertex ) const
         unrolled_index = unrolled_index + static_cast<unsigned int>(strides_[i]*(grid_vertex[i] - range_min_[i]));
     }
     return global_indices_[unrolled_index];
-};
+}
 
 
 template <int dim>
@@ -170,7 +170,7 @@ GridToIndexMap<dim>::find(  std::array<int, dim> search_range_min,
     }
     neighborhood.shrink_to_fit();
     return neighborhood;
-};
+}
 
 
 #endif /* GRID_TO_INDEX_MAP_H */
