@@ -28,9 +28,9 @@ echo "==========================================================================
 echo "                                     EXECUTION                                       "
 echo "====================================================================================="
 
-# InputFile=../app/cfg/twisted_blg.in
+InputFile=../app/cfg/twisted_blg.in
 # InputFile=../app/cfg/1d_toymodel.in
-# ExportFile=../output
-# rm ${ExportFile}.out
-# mpirun -n 44 ./app/${TARGET} -i ${InputFile}  > ${ExportFile}.out
+ExportFile=../output
+rm ${ExportFile}.out
+mpirun -n 4 ./app/${TARGET} -i ${InputFile} #  > ${ExportFile}.out
 # open ${ExportFile}.out
