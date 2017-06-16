@@ -5,8 +5,8 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#ifndef TMDCS_H
-#define TMDCS_H
+#ifndef moire__materials_tmdc_h
+#define moire__materials_tmdc_h
 
 #include <algorithm>
 #include <array>
@@ -135,4 +135,5 @@ namespace MoS2  = TMDC::MS2;
 namespace WS2   = TMDC::MS2;
 namespace MoSe2 = TMDC::MSe2;
 namespace WSe2  = TMDC::MSe2;
+
 #endif

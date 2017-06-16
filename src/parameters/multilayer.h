@@ -6,8 +6,8 @@
  */
 
 
-#ifndef MULTILAYER_H
-#define MULTILAYER_H
+#ifndef moire__parameters_multilayer_h
+#define moire__parameters_multilayer_h
 #include <vector>
 #include <array>
 #include <algorithm>
@@ -351,4 +351,4 @@ Multilayer<dim,n_layers>::interlayer_term(const int orbital_row, const int orbit
 }
 
 
-#endif /* MULTILAYER_H */
+#endif

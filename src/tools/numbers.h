@@ -5,8 +5,8 @@
  * Created on April 22, 2017, 12:28AM
  */
 
-#ifndef NUMBERS_H
-#define NUMBERS_H
+#ifndef moire__tools_numbers_h
+#define moire__tools_numbers_h
 
 namespace numbers
 {

@@ -5,8 +5,8 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#ifndef MATERIALS_H
-#define MATERIALS_H
+#ifndef moire__materials_h
+#define moire__materials_h
 
 #include <array>
 #include <string>

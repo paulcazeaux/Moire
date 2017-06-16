@@ -7,8 +7,8 @@
 
 
 
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef moire__tools_types_h
+#define moire__tools_types_h
 
 namespace types 
 {
@@ -25,4 +25,4 @@ namespace types
 }
 
 
-#endif /* TYPES_H */
+#endif

@@ -5,8 +5,8 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#ifndef STRAINED_GRAPHENE_H
-#define STRAINED_GRAPHENE_H
+#ifndef moire__materials_strained_graphene_h
+#define moire__materials_strained_graphene_h
 
 
 #include <cmath>

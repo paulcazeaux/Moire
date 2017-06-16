@@ -7,8 +7,8 @@
 
 
 
-#ifndef BILAYER_COMPUTEDOS_H
-#define BILAYER_COMPUTEDOS_H
+#ifndef moire__bilayer_computedos_h
+#define moire__bilayer_computedos_h
 
 #include <memory>
 #include <vector>
@@ -807,6 +807,5 @@ ComputeDoS<dim,degree>::trace(const Vec& A)
     return result;
 }   
 
-
 }/* End namespace Bilayer */
-#endif /* BILAYER_COMPUTEDOS_H */
+#endif

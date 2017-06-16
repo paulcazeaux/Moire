@@ -5,8 +5,8 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#ifndef GRAPHENE_H
-#define GRAPHENE_H
+#ifndef moire__materials_graphene_h
+#define moire__materials_graphene_h
 
 #include <array>
 #include <algorithm>

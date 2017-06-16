@@ -6,8 +6,8 @@
 */
 
 
-#ifndef GRID_TO_INDEX_MAP_H
-#define GRID_TO_INDEX_MAP_H
+#ifndef moire__tools_grid_to_index_map_h
+#define moire__tools_grid_to_index_map_h
 #include <vector>
 #include <array>
 
@@ -172,5 +172,4 @@ GridToIndexMap<dim>::find(  std::array<int, dim> search_range_min,
     return neighborhood;
 }
 
-
-#endif /* GRID_TO_INDEX_MAP_H */
+#endif

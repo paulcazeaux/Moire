@@ -7,8 +7,8 @@
 
 
 
-#ifndef BILAYER_DOFHANDLER_H
-#define BILAYER_DOFHANDLER_H
+#ifndef moire__bilayer_dofhandler_h
+#define moire__bilayer_dofhandler_h
 
 #include <memory>
 #include <string>
@@ -1018,4 +1018,4 @@ DoFHandler<dim,degree>::get_dof_range(const unsigned char block_id, const unsign
 
 } /* End namespace Bilayer */
 
-#endif /* BILAYER_DOFHANDLER_H */
+#endif

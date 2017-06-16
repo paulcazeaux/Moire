@@ -6,8 +6,8 @@
 */
 
 
-#ifndef LATTICE_H
-#define LATTICE_H
+#ifndef moire__geometry_lattice_h
+#define moire__geometry_lattice_h
 
 #include <algorithm>
 #include <exception>
@@ -188,4 +188,4 @@ Lattice<dim>::compute_unit_cell_inscribed_radius(const dealii::Tensor<2,dim>& ba
 }
 
 
-#endif /* LATTICE_H */
+#endif

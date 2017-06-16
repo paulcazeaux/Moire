@@ -7,8 +7,8 @@
 
 
 
-#ifndef ELEMENT_H
-#define ELEMENT_H
+#ifndef moire__fe_element_h
+#define moire__fe_element_h
 
 #include <array>
 #include <vector>
@@ -316,4 +316,4 @@ void	Element<2,3>::get_interpolation_weights(
 }
 
 
-#endif /* ELEMENT_H */
+#endif

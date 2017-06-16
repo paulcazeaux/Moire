@@ -7,8 +7,8 @@
  */
 
 
-#ifndef LAYERDATA_H
-#define LAYERDATA_H
+#ifndef moire__parameters_layerdata_h
+#define moire__parameters_layerdata_h
 #include <vector>
 #include <string>
 #include "deal.II/base/tensor.h"
@@ -84,4 +84,4 @@ LayerData<dim>::LayerData(const LayerData<dim>& layerdata) {
     dilation           = layerdata.dilation;
 }
 
-#endif /* LAYERDATA_H */
+#endif

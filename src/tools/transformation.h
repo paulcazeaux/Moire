@@ -6,8 +6,8 @@
  */
 
 
-#ifndef TRANSFORMATION_H
-#define TRANSFORMATION_H
+#ifndef moire__tools_transformation_h
+#define moire__tools_transformation_h
 
 
 #include "deal.II/base/tensor.h"
@@ -29,7 +29,4 @@ struct Transformation<2>{
                         { return scaling * dealii::Physics::Transformations::Rotations::rotation_matrix_2d<double>(angle); };
 };
 
-
-
-
-#endif /* TRANSFORMATION_H */
+#endif

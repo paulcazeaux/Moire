@@ -6,8 +6,8 @@
  */
 
 
-#ifndef UNITCELL_H
-#define UNITCELL_H
+#ifndef moire__geometry_unitcell_h
+#define moire__geometry_unitcell_h
 
 
 
@@ -348,4 +348,4 @@ UnitCell<dim,degree>::compute_bounding_radius(const dealii::Tensor<2,dim>& basis
 
 
 
-#endif /* UNITCELL_H */
+#endif

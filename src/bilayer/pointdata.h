@@ -7,8 +7,8 @@
 
 
 
-#ifndef BILAYER_POINTDATA_H
-#define BILAYER_POINTDATA_H
+#ifndef moire__bilayer_pointdata_h
+#define moire__bilayer_pointdata_h
 
 #include <vector>
 #include <array>
@@ -79,4 +79,4 @@ PointData::PointData(unsigned char block_id, unsigned int index_in_block, types:
 {}
 
 } /* End namespace Bilayer */
-#endif /* BILAYER_POINTDATA_H */
+#endif

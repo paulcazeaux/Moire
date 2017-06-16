@@ -5,8 +5,8 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#ifndef TOY_MODEL_1D_H
-#define TOY_MODEL_1D_H
+#ifndef moire__materials_toy_model_1d_h
+#define moire__materials_toy_model_1d_h
 
 #include <array>
 #include <cmath>

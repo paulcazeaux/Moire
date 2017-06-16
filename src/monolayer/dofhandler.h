@@ -7,8 +7,8 @@
 
 
 
-#ifndef MONOLAYER_DOFHANDLER_H
-#define MONOLAYER_DOFHANDLER_H
+#ifndef moire__monolayer_dofhandler_h
+#define moire__monolayer_dofhandler_h
 
 #include <memory>
 #include "deal.II/base/mpi.h"
@@ -86,4 +86,4 @@ DoFHandler<dim,degree>::make_sparsity_pattern()
 };
 }
 
-#endif /* MONOLAYER_DOFHANDLER_H */
+#endif
