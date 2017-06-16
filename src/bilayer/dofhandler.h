@@ -1,5 +1,5 @@
 /* 
-* File:   dofhandler.h
+* File:   bilayer/dof_handler.h
 * Author: Paul Cazeaux
 *
 * Created on April 24, 2017, 12:15 PM
@@ -53,7 +53,7 @@ public:
     DoFHandler(const Multilayer<dim, 2>& bilayer);
     ~DoFHandler() {};
 
-    const LayerData<dim>&               layer(const int & idx)      const { return this->layer_data[idx]; }
+    const LayerData<dim>&               layer(const int & idx)      const { return *(this->layer_data[idx]); }
     const Lattice<dim>&                 lattice(const int & idx)    const { return *lattices_[idx]; };
     const UnitCell<dim,degree>&         unit_cell(const int & idx)  const { return *unit_cells_[idx]; };
 
@@ -146,7 +146,7 @@ private:
      */
 
     std::array<unsigned int, 4>                             point_size_per_block_;
-    std::array<std::array<int ,3>, 4>               strides_per_block_;
+    std::array<std::array<int ,3>, 4>                       strides_per_block_;
 
     std::vector<types::global_index>                        lattice_point_dof_range_;
     std::vector<PointData>                                  lattice_points_;
@@ -165,11 +165,8 @@ DoFHandler<dim,degree>::DoFHandler(const Multilayer<dim, 2>& bilayer)
 {
     for (unsigned int i = 0; i<2; ++i)
     {
-        dealii::Tensor<2,dim>
-        rotated_basis = layer(i).lattice_basis;
-            
-        lattices_[i]   = std::make_unique<Lattice<dim>>(rotated_basis, bilayer.cutoff_radius);
-        unit_cells_[i] = std::make_unique<UnitCell<dim,degree>>(rotated_basis, bilayer.refinement_level);
+        lattices_[i]   = std::make_unique<Lattice<dim>>(layer(i).lattice_basis, bilayer.cutoff_radius);
+        unit_cells_[i] = std::make_unique<UnitCell<dim,degree>>(layer(i).lattice_basis, bilayer.refinement_level);
     }
     n_lattice_points_ = 2*(lattice(0).n_vertices + lattice(1).n_vertices);
 

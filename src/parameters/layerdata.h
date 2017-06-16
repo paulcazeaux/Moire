@@ -1,5 +1,5 @@
 /* 
- * File:   layerdata.h
+ * File:   layer_data.h
  * Author: Stephen Carr
  * Modified by Paul Cazeaux
  *
@@ -7,8 +7,8 @@
  */
 
 
-#ifndef moire__parameters_layerdata_h
-#define moire__parameters_layerdata_h
+#ifndef moire__parameters_layer_data_h
+#define moire__parameters_layer_data_h
 #include <vector>
 #include <string>
 #include "deal.II/base/tensor.h"
@@ -37,27 +37,34 @@ struct LayerData {
         LayerData(const LayerData&);
         ~LayerData() {}
 
-        Materials::Mat             material;
-        dealii::Tensor<2,dim>     lattice_basis;
-        int                       n_orbitals;
-        double                    intra_search_radius;
+        Materials::Mat              material;
+        int                         n_orbitals;
+        double                      height;
 
-        double              height;
-        std::vector<double> orbital_height;
+        dealii::Tensor<2,dim>       lattice_basis;
+        double                      intra_search_radius;
+        std::vector<double>         orbital_height;
+
+        /* dilation and angle should be handled carefuly because their value modify implicitely */
+        /* the lattice basis and intralayer search radius, and should not be changed directly.  */
+
         double              angle;
         double              dilation;
+
+        void                set_angle(const double new_angle);
+        void                set_dilation(const double new_dilation);
 };
 
 template<int dim>
-LayerData<dim>::LayerData(): material(Materials::Mat::Invalid), n_orbitals(0), intra_search_radius(0), height(0), angle(0), dilation(1.) {}
+LayerData<dim>::LayerData(): material(Materials::Mat::Invalid), n_orbitals(0), height(0), intra_search_radius(0), angle(0), dilation(1.) {}
 
 template<int dim>
 LayerData<dim>::LayerData(      Materials::Mat material,
                                 double height, double angle, double dilation):
                         material(material),
                         n_orbitals(Materials::n_orbitals(material)),
-                        intra_search_radius(dilation * Materials::intra_search_radius(material)),
                         height(height),
+                        intra_search_radius(dilation * Materials::intra_search_radius(material)),
                         angle(angle),
                         dilation(dilation)  
 {
@@ -73,15 +80,44 @@ LayerData<dim>::LayerData(      Materials::Mat material,
 }
 
 template<int dim>
-LayerData<dim>::LayerData(const LayerData<dim>& layerdata) {
-    material           = layerdata.material;
-    lattice_basis      = layerdata.lattice_basis;
-    n_orbitals         = layerdata.n_orbitals;
-    intra_search_radius= layerdata.intra_search_radius;
-    height             = layerdata.height;
-    orbital_height     = layerdata.orbital_height;
-    angle              = layerdata.angle;
-    dilation           = layerdata.dilation;
+LayerData<dim>::LayerData(const LayerData<dim>& ld):
+    material        (ld.material),
+    n_orbitals      (ld.n_orbitals),
+    height          (ld.height),
+    lattice_basis   (ld.lattice_basis),
+    intra_search_radius (ld.intra_search_radius),
+    orbital_height  (ld.orbital_height),
+    angle           (ld.angle),
+    dilation        (ld.dilation)
+    {}
+
+template<int dim>
+void
+LayerData<dim>::set_angle(const double angle)
+{
+    std::array<std::array<double, dim>, dim> 
+    lattice = Materials::lattice<dim>(this->material);
+    for (int i=0; i<dim; ++i)
+        for (int j=0; j<dim; ++j)
+            this->lattice_basis[i][j] = lattice[i][j];
+
+    this->angle              = angle;
+    this->lattice_basis       = Transformation<dim>::matrix(this->dilation, angle) * this->lattice_basis;
+}
+
+template<int dim>
+void
+LayerData<dim>::set_dilation(const double dilation)
+{
+    std::array<std::array<double, dim>, dim> 
+    lattice = Materials::lattice<dim>(material);
+    for (int i=0; i<dim; ++i)
+        for (int j=0; j<dim; ++j)
+            this->lattice_basis[i][j] = lattice[i][j];
+
+    this->dilation            = dilation;
+    this->lattice_basis       = Transformation<dim>::matrix(dilation, this->angle) * this->lattice_basis;
+    this->intra_search_radius = dilation * Materials::intra_search_radius(this->material);
 }
 
 #endif

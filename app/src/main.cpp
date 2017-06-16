@@ -52,8 +52,7 @@ int main(int argc, char** argv) {
 		for (int i=0; i<N; ++i)
 		{
 			double t = .2 + static_cast<double>(i) * (.375 - .2 ) / static_cast<double>(N-1);
-			bilayer.layer_data[0].dilation = std::sqrt(t/(1.-t));
-			bilayer.layer_data[1].dilation = std::sqrt((1.-t)/t);
+			bilayer.set_dilation_factors ({{std::sqrt(t/(1.-t)), std::sqrt((1.-t)/t)}} );
 			Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
 			compute_dos.run();
 			std::vector<PetscScalar> moments = compute_dos.output_results();

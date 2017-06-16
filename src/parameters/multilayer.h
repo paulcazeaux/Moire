@@ -50,14 +50,10 @@ public:
 
     double          B;
     double          E;
-            
-    
-    // Layer data
-    std::array<LayerData<dim>,n_layers >    layer_data;
 
-    // Determines the cutoff radius in real and reciprocal space (equal for now)
-    double  cutoff_radius;
-    int     refinement_level;
+    // Determines the cutoff radius in real space and refinement level
+    double          cutoff_radius;
+    int             refinement_level;
 
 
 
@@ -72,15 +68,20 @@ public:
                 double cutoff_radius = 0);
 
     Multilayer(int argc, char **argv);
+    Multilayer(const Multilayer&);
     ~Multilayer() {}
 
+    virtual
+    const LayerData<dim>&   layer(const int & idx) const;
+    void                    set_angles(std::array<double, n_layers> angles);
+    void                    set_dilation_factors(std::array<double, n_layers> factors);
 
-    Multilayer<dim,1>   extract_monolayer(const unsigned char layer_index) const;
+    Multilayer<dim,1>       extract_monolayer(const unsigned char layer_index) const;
 
-    double              intralayer_term(const int orbital_row, const int orbital_column, 
+    double                  intralayer_term(const int orbital_row, const int orbital_column, 
                                             const std::array<int, dim> grid_vector, 
                                             const unsigned char layer_index);
-    double              interlayer_term(const int orbital_row, const int orbital_col, 
+    double                  interlayer_term(const int orbital_row, const int orbital_col, 
                                             const dealii::Tensor<1, dim> arrow_vector, 
                                             const unsigned char layer_index_row, const unsigned char layer_index_col);
 
@@ -103,6 +104,10 @@ public:
 
             return os;
     }
+
+protected:
+    // Layer data
+    std::array<std::unique_ptr<const LayerData<dim>>, n_layers >    layer_data;
 };
 
 
@@ -221,7 +226,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
                 if (in_string == "END_LAYER" && current_layer < n_layers) {
                     std::getline(in_line,in_string,' ');
                     if (current_layer == std::stoi(in_string) - 1) {
-                        layer_data[current_layer] = LayerData<dim>(mat, height, angle, dilation);
+                        layer_data[current_layer] = std::make_unique<LayerData<dim>>(mat, height, angle, dilation);
                         if (inter_search_radius < Materials::inter_search_radius(mat))
                             inter_search_radius = Materials::inter_search_radius(mat);
                     }
@@ -298,6 +303,54 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
     }
 }
 
+/* copy constructor */
+template <int dim, int n_layers>
+Multilayer<dim,n_layers>::Multilayer(const Multilayer& ml)
+    :
+    job_name(ml.job_name),     output_file(ml.output_file),
+    observable_type(ml.observable_type),
+    inter_search_radius(ml.inter_search_radius),
+    poly_degree(ml.poly_degree),                       
+    energy_rescale(ml.energy_rescale),     energy_shift(ml.energy_shift),
+    B(ml.B),                               E(ml.E),
+    cutoff_radius(ml.cutoff_radius) 
+{
+    for (int n = 0; n<n_layers; ++n)
+        layer_data[n] = std::make_unique<LayerData<dim>> (ml.layer(n));
+}
+
+
+
+template<int dim,int n_layers>
+const LayerData<dim>&   
+Multilayer<dim, n_layers>::layer(const int & idx) const 
+{ return *layer_data[idx]; }
+
+template<int dim,int n_layers>
+void
+Multilayer<dim, n_layers>::set_angles(std::array<double, n_layers> angles)
+{
+    for (int n = 0; n<n_layers; ++n)
+    {
+        LayerData<dim> new_layer (layer(n));
+        new_layer.set_angle(angles[n]);
+        layer_data[n] = std::make_unique<LayerData<dim>> (new_layer);
+    }
+}
+
+template<int dim,int n_layers>
+void
+Multilayer<dim, n_layers>::set_dilation_factors(std::array<double, n_layers> factors)
+{
+    for (int n = 0; n<n_layers; ++n)
+    {
+        LayerData<dim> new_layer (layer(n));
+        new_layer.set_dilation(factors[n]);
+        layer_data[n] = std::make_unique<LayerData<dim>> (new_layer);
+    }
+}
+
+
 template<int dim,int n_layers>
 Multilayer<dim,1>
 Multilayer<dim,n_layers>::extract_monolayer(const unsigned char layer_index) const
@@ -310,7 +363,7 @@ Multilayer<dim,n_layers>::extract_monolayer(const unsigned char layer_index) con
                 this->energy_rescale,                   this->energy_shift,
                 this->B,                                this->E,
                 this->cutoff_radius);
-    monolayer.layer_data[0] = this->layer_data[layer_index];
+    monolayer.layer_data[0] = std::make_unique<LayerData<dim>> (this->layer_data[layer_index]);
     return monolayer;
 }
 
@@ -323,12 +376,11 @@ Multilayer<dim,n_layers>::intralayer_term(const int orbital_row, const int orbit
 {
     /* Check if diagonal element; if yes, add offset due to vertical electrical field */
     if (orbital_row == orbital_col && std::all_of(grid_vector.begin(), grid_vector.end(), [](int v) { return v==0; }))
-        return Materials::intralayer_term(orbital_row, orbital_col, grid_vector,
-                                                layer_data[layer_index].material)
-                    + this->E * this->layer_data[layer_index].orbital_height .at(orbital_row);
+        return Materials::intralayer_term(orbital_row, orbital_col, grid_vector, layer(layer_index).material)
+                    + this->E * layer(layer_index).orbital_height .at(orbital_row);
     else
         return Materials::intralayer_term(orbital_row, orbital_col, grid_vector,
-                                                layer_data[layer_index].material);
+                                                layer(layer_index).material);
 }
 
 
@@ -341,13 +393,13 @@ Multilayer<dim,n_layers>::interlayer_term(const int orbital_row, const int orbit
     std::array<double, dim+1> vector;
     for (int i=0; i<dim; ++i)
         vector[i] = arrow_vector[i];
-    vector[dim] = this->layer_data[layer_index_col].height - this->layer_data[layer_index_row].height;
+    vector[dim] = layer(layer_index_col).height - layer(layer_index_row).height;
 
     return Materials::interlayer_term(orbital_row, orbital_col, vector,
-                                                layer_data[layer_index_row].angle, 
-                                                layer_data[layer_index_col].angle,
-                                                layer_data[layer_index_row].material, 
-                                                layer_data[layer_index_col].material);
+                                                layer(layer_index_row).angle, 
+                                                layer(layer_index_col).angle,
+                                                layer(layer_index_row).material, 
+                                                layer(layer_index_col).material);
 }
 
 

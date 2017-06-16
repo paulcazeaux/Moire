@@ -1,13 +1,13 @@
 /* 
- * File:   unitcell.h
+ * File:   unit_cell.h
  * Author: Paul Cazeaux
  *
  * Created on May 4, 2017, 12:58AM
  */
 
 
-#ifndef moire__geometry_unitcell_h
-#define moire__geometry_unitcell_h
+#ifndef moire__geometry_unit_cell_h
+#define moire__geometry_unit_cell_h
 
 
 

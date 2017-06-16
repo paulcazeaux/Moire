@@ -1,5 +1,5 @@
 /* 
-* File:   pointdata.h
+* File:   point_data.h
 * Author: Paul Cazeaux
 *
 * Created on April 24, 2017, 12:15 PM
@@ -7,8 +7,8 @@
 
 
 
-#ifndef moire__bilayer_pointdata_h
-#define moire__bilayer_pointdata_h
+#ifndef moire__bilayer_point_data_h
+#define moire__bilayer_point_data_h
 
 #include <vector>
 #include <array>
