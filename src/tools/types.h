@@ -13,14 +13,14 @@
 namespace types 
 {
 
-	typedef unsigned int global_index;
-	typedef signed int   grid_index;
+    typedef unsigned int global_index;
+    typedef signed int   grid_index;
 
-	typedef unsigned int subdomain_id;
+    typedef unsigned int subdomain_id;
 
-	/* Definition of an invalid global index value used throughout the project */
-	const global_index 		invalid_global_index	= static_cast<global_index>(-1);
-	const unsigned int 		invalid_lattice_index	= static_cast<unsigned int>(-1);
+    /* Definition of an invalid global index value used throughout the project */
+    const global_index      invalid_global_index    = static_cast<global_index>(-1);
+    const unsigned int      invalid_lattice_index   = static_cast<unsigned int>(-1);
 
 }
 

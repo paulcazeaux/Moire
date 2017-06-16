@@ -67,7 +67,7 @@ DoFHandler<dim,degree>::DoFHandler(const Multilayer<dim, 1>& parameters)
 		
 	lattice_   = std::make_unique<Lattice<dim>>(rotated_basis, parameters.cutoff_radius);
 	brillouin_zone_ = std::make_unique<UnitCell<dim,degree>>(
-			2*dealii::numbers::PI*dealii::transpose(dealii::invert(rotated_basis)), parameters.refinement_level);
+			2*numbers::PI*dealii::transpose(dealii::invert(rotated_basis)), parameters.refinement_level);
 }
 
 template<int dim, int degree>
