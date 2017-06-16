@@ -21,7 +21,7 @@
 #include "deal.II/base/tensor.h"
 #include "deal.II/base/point.h"
 
-#include "parameters/layerdata.h"
+#include "parameters/layer_data.h"
 #include "materials/materials.h"
 
 
