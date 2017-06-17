@@ -247,7 +247,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
                 if (in_string == "ANGLE"){
                     std::getline(in_line,in_string,' ');
                     std::getline(in_line,in_string,' ');
-                    angle = std::stod(in_string);
+                    angle = (2.*numbers::PI /360.) * std::stod(in_string);
                 }
 
                 if (in_string == "DILATION"){
