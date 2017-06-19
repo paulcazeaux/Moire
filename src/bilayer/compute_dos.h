@@ -10,6 +10,7 @@
 #ifndef moire__bilayer_computedos_h
 #define moire__bilayer_computedos_h
 
+#include "deal.II/base/memory_consumption.h"
 #include "bilayer/base_algebra.h"
 
 /**
@@ -158,6 +159,12 @@ ComputeDoS<dim,degree>::assemble_matrices()
 
     MatShift(this->hamiltonian_action, this->dof_handler.energy_shift);
     MatScale(this->hamiltonian_action, 1./this->dof_handler.energy_rescale);
+
+    pcout   << "Assembly complete.\n"
+            << "Hamiltonian action matrix memory consumption: " 
+            << dealii::MemoryConsumption::memory_consumption (BaseAlgebra<dim,degree>::hamiltonian_action)/1024 
+            << " Mb.\n";
+
 }
 
 }/* End namespace Bilayer */
