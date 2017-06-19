@@ -16,8 +16,6 @@
 * This class encapsulates the DoS computation of a discretized Hamiltonian encoded by a C* algebra.
 */
 
-
-
 namespace Bilayer {
 
 template <int dim, int degree>
@@ -156,7 +154,7 @@ ComputeDoS<dim,degree>::assemble_matrices()
 {
     dealii::TimerOutput::Scope t(computing_timer, "Assembly");
 
-    BaseAlgebra<dim,degree>::assemble_base_matrices();
+    BaseAlgebra<dim,degree>::assemble_hamiltonian_action();
 
     MatShift(this->hamiltonian_action, this->dof_handler.energy_shift);
     MatScale(this->hamiltonian_action, 1./this->dof_handler.energy_rescale);

@@ -67,6 +67,8 @@ public:
 protected:
     void                base_setup();
     void                assemble_base_matrices();
+    void                assemble_hamiltonian_action();
+    void                assemble_adjoint_interpolant();
 
     /* Assemble identity observable */
     void                create_identity(Vec& Result);
@@ -84,7 +86,7 @@ protected:
     dealii::IndexSet            locally_relevant_dofs;
 
     /* Matrices representing the sparse linear action of the two main operations */
-    LA::MPI::SparseMatrix       adjoint_action;
+    LA::MPI::SparseMatrix       adjoint_interpolant;
     LA::MPI::SparseMatrix       hamiltonian_action;
 
     /* Data structures allocated for additional local computations in the adjoint operation */
@@ -156,7 +158,7 @@ BaseAlgebra<dim,degree>::base_setup()
                     dof_handler.n_locally_owned_dofs_per_processor(), 
                     mpi_communicator, locally_relevant_dofs);
 
-    adjoint_action.reinit(  locally_owned_dofs, 
+    adjoint_interpolant.reinit(  locally_owned_dofs, 
                                 locally_owned_dofs, 
                                 dsp, 
                                 mpi_communicator);
@@ -179,8 +181,14 @@ template<int dim, int degree>
 void
 BaseAlgebra<dim,degree>::assemble_base_matrices()
 {
-  /* First we assemble the matrix needed for the adjoint operation */
+    this->assemble_adjoint_interpolant();
+    this->assemble_hamiltonian_action();
+}    
 
+template<int dim, int degree>
+void
+BaseAlgebra<dim,degree>::assemble_adjoint_interpolant()
+{
     std::vector<double> interpolation_weights;
     for (unsigned int n=0; n<dof_handler.n_locally_owned_points(); ++n)
     {
@@ -197,7 +205,7 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
                 for (unsigned int cell_index = 0; cell_index < unit_cell(1).n_nodes; ++cell_index)
                     for (int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
                         for (int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
-                            adjoint_action.set(dof_handler.get_dof_index(0, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+                            adjoint_interpolant.set(dof_handler.get_dof_index(0, this_point.index_in_block, cell_index, orbital_row, orbital_column),
                                                 dof_handler.get_dof_index(0, neighbor_index_in_block, cell_index, orbital_column, orbital_row),
                                                 1.);
                 break;
@@ -221,7 +229,7 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
                         {
                             for (int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
                                 for (int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
-                                    adjoint_action.set(dof_handler.get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
+                                    adjoint_interpolant.set(dof_handler.get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
                                                         dof_handler.get_dof_index(1, this_point.index_in_block, cell_index, orbital_row, orbital_column),
                                                             interpolation_weights.at(j));
                         }
@@ -233,7 +241,7 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
                             if (column_index_in_block != types::invalid_lattice_index) 
                                 for (int orbital_row = 0; orbital_row < layer(0).n_orbitals; orbital_row++)
                                     for (int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
-                                        adjoint_action.set(dof_handler.get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
+                                        adjoint_interpolant.set(dof_handler.get_dof_index(2, row_index_in_block, row_cell_index, orbital_column, orbital_row),
                                                             dof_handler.get_dof_index(1, column_index_in_block, column_cell_index, orbital_row, orbital_column),
                                                                 interpolation_weights.at(j));
                         }
@@ -260,7 +268,7 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
                         if (unit_cell(0).is_node_interior(cell_index))
                             for (int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
                                 for (int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
-                                    adjoint_action.set(dof_handler.get_dof_index(1, row_index_in_block, row_cell_index, orbital_column, orbital_row),
+                                    adjoint_interpolant.set(dof_handler.get_dof_index(1, row_index_in_block, row_cell_index, orbital_column, orbital_row),
                                                         dof_handler.get_dof_index(2, this_point.index_in_block, cell_index, orbital_row, orbital_column),
                                                             interpolation_weights.at(j));
                         else // Boundary point!
@@ -270,7 +278,7 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
                             if (column_index_in_block != types::invalid_lattice_index) 
                                 for (int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
                                     for (int orbital_column = 0; orbital_column < layer(0).n_orbitals; orbital_column++)
-                                        adjoint_action.set(dof_handler.get_dof_index(1, row_index_in_block, row_cell_index, orbital_column, orbital_row),
+                                        adjoint_interpolant.set(dof_handler.get_dof_index(1, row_index_in_block, row_cell_index, orbital_column, orbital_row),
                                                             dof_handler.get_dof_index(2, column_index_in_block, column_cell_index, orbital_row, orbital_column),
                                                                 interpolation_weights.at(j));
                         }
@@ -288,7 +296,7 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
                 for (unsigned int cell_index = 0; cell_index < unit_cell(0).n_nodes; ++cell_index)
                     for (int orbital_row = 0; orbital_row < layer(1).n_orbitals; orbital_row++)
                         for (int orbital_column = 0; orbital_column < layer(1).n_orbitals; orbital_column++)
-                            adjoint_action.set(dof_handler.get_dof_index(3, this_point.index_in_block, cell_index, orbital_row, orbital_column),
+                            adjoint_interpolant.set(dof_handler.get_dof_index(3, this_point.index_in_block, cell_index, orbital_row, orbital_column),
                                                 dof_handler.get_dof_index(3, opposite_index_in_block, cell_index, orbital_column, orbital_row),
                                                 1.);
                 break;
@@ -296,13 +304,14 @@ BaseAlgebra<dim,degree>::assemble_base_matrices()
         }
     }
 
-    adjoint_action.compress(LA::VectorOperation::insert);
+    adjoint_interpolant.compress(LA::VectorOperation::insert);
+}
 
 
-
-    /* Finally the matrix needed for taking the product with the Hamiltonian */
-
-
+template<int dim, int degree>
+void
+BaseAlgebra<dim,degree>::assemble_hamiltonian_action()
+{
     for (unsigned int n=0; n< dof_handler.n_locally_owned_points(); ++n)
     {
         const PointData& this_point = dof_handler.locally_owned_point(n);
@@ -534,7 +543,7 @@ BaseAlgebra<dim,degree>::adjoint(const Vec&  A, Vec & Result)
         Assert(rangeA[i] == rangeResult[i],
                     dealii::ExcDimensionMismatch (rangeA[i], rangeResult[i]));
 
-    MatMult(adjoint_action, A, Result);
+    MatMult(adjoint_interpolant, A, Result);
 
     PetscInt begin, end;
     ierr = VecGetOwnershipRange (Result, &begin, &end);
