@@ -5,7 +5,7 @@ pygui(true)
 
 n, nratios, Cheb_Moments = Read_DoS("bi_graphene001.jld")
 
-Energies, DofS = DoS(10.5, -2, Cheb_Moments)
+Energies, DofS = DoS(11.5, -2, Cheb_Moments)
 
 plot(Energies, DofS)
 savefig("DoS.bi_graphene001.pdf")

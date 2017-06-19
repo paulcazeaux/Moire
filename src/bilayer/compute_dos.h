@@ -117,9 +117,24 @@ template<int dim, int degree>
 void
 ComputeDoS<dim,degree>::run()
 {
+    pcout   << "Starting setup...\t";
     setup();
+    pcout   << "\tComplete!\n"
+            << "Vectors memory consumption: " 
+            << 3 * sizeof(PetscScalar) * this->dof_handler.n_dofs() << " bytes.\n";
+
+    pcout   << "Starting assembly...\t";
     assemble_matrices();
+    MatInfo info;
+    MatGetInfo(this->hamiltonian_action, MAT_GLOBAL_SUM, &info);
+    pcout   << "\tComplete!\n"
+            << "Hamiltonian action matrix memory consumption: " 
+            << info.memory / (1024 * 1024 * 1024) << " Gb.\n";
+
+
+    pcout   << "Starting solve...\t";
     solve();
+    pcout   << "\tComplete!\n";
 }
 
 
@@ -159,12 +174,6 @@ ComputeDoS<dim,degree>::assemble_matrices()
 
     MatShift(this->hamiltonian_action, this->dof_handler.energy_shift);
     MatScale(this->hamiltonian_action, 1./this->dof_handler.energy_rescale);
-
-    pcout   << "Assembly complete.\n"
-            << "Hamiltonian action matrix memory consumption: " 
-            << dealii::MemoryConsumption::memory_consumption (BaseAlgebra<dim,degree>::hamiltonian_action)/1024 
-            << " Mb.\n";
-
 }
 
 }/* End namespace Bilayer */
