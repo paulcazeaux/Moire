@@ -1,13 +1,13 @@
 /* 
- * File:   unitcell.h
+ * File:   unit_cell.h
  * Author: Paul Cazeaux
  *
  * Created on May 4, 2017, 12:58AM
  */
 
 
-#ifndef UNITCELL_H
-#define UNITCELL_H
+#ifndef moire__geometry_unit_cell_h
+#define moire__geometry_unit_cell_h
 
 
 
@@ -153,7 +153,7 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 	/* Deduce the strides for each dimension in a corresponding flattened multi-dimensional array 
 	 * for the !! overall !! points grid 
 	 */
-	int  strides[dim+1];
+	unsigned int  strides[dim+1];
 	strides[0] = 1;
 	for (unsigned int i = 0; i<dim; i++)
 		strides[i+1] = strides[i] * (interior_line_count+1);
@@ -173,9 +173,9 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 		bool is_interior = true;
 		for (unsigned int i=0; i<dim; ++i)
 		{
-			indices[i] = (unrolled_index / strides[i]) % strides[i+1] - (interior_line_count/2);
-			node(i) = (double) indices[i] / (double) interior_line_count;
-			if (indices[i] == interior_line_count/2) 
+			indices[i] = static_cast<int>( (unrolled_index / strides[i]) % strides[i+1]) - static_cast<int>(interior_line_count/2);
+			node(i) = static_cast<double>( indices[i] ) / static_cast<double>( interior_line_count );
+			if (indices[i] == static_cast<int>( interior_line_count/2 )) 
 				is_interior = false; // Our grid point is on the boundary!
 		}
 		if (is_interior)
@@ -212,7 +212,7 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 		indices = boundary_index_to_grid_map[j];
 		std::array<int,dim> grid_offset;
 		for (unsigned int i=0; i<dim; ++i)
-			if (indices[i] == interior_line_count/2)
+			if (indices[i] == static_cast<int>( interior_line_count/2 ))
 			{
 				indices[i] = -indices[i];
 				grid_offset[i] = 1;
@@ -281,7 +281,7 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const unsigned
 			break;
 		}
 	}
-};
+}
 
 template<int dim,int degree>
 unsigned int
@@ -290,7 +290,7 @@ UnitCell<dim,degree>::find_element(const dealii::Tensor<1,dim>& X) const
 	dealii::Point<dim> Xg (inverse_basis * X);
 	bool test_in_cell = true;
 	for (unsigned int i=0; i<dim; ++i)
-		test_in_cell = test_in_cell && ( Xg(i) >= -.5) && ( Xg(i) < .5);
+		test_in_cell = test_in_cell && ( Xg(i) + .5 >= 0) && ( Xg(i) + .5 < 1);
 	if (test_in_cell)
 		switch (dim) {
 			case 1: 
@@ -309,25 +309,25 @@ unsigned int
 UnitCell<dim,degree>::get_node_global_index(const std::array<int, dim>& indices) const
 { 
 	return grid_to_index_map_.find(indices);
-};
+}
 
 
 template<int dim,int degree>
 std::array<int, dim> 	
 UnitCell<dim,degree>::get_node_grid_indices(const unsigned int& index) const
-{	return index_to_grid_map_.at(index);	};
+{	return index_to_grid_map_.at(index);	}
 
 
 template<int dim,int degree>
 dealii::Point<dim>
 UnitCell<dim,degree>::get_node_position(const unsigned int& index) const
-{	return nodes_.at(index);	};
+{	return nodes_.at(index);	}
 
 
 template<int dim,int degree>
 bool 
 UnitCell<dim,degree>::is_node_interior(const unsigned int& index) const
-{	return (index < n_nodes);	};
+{	return (index < n_nodes);	}
 
 template<int dim, int degree>
 std::tuple<unsigned int, std::array<int, dim>>
@@ -343,9 +343,9 @@ UnitCell<dim,degree>::compute_bounding_radius(const dealii::Tensor<2,dim>& basis
 		case 2: return .5 * std::sqrt(basis.norm_square() + 2. * std::abs(	basis[0][0] * basis[0][1] + basis[1][0] * basis[1][1]) );
 		default: return 0; // Should never happen (dimension is 1 or 2)
 	}
-};
+}
 
 
 
 
-#endif /* UNITCELL_H */
+#endif

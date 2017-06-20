@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.8)
 
 # Here define your project name
 project(Moire)
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 
 # Here define the name and the version of your package
 SET(PACKAGE_NAME “Moire” CACHE STRING "package_name" FORCE)
@@ -26,7 +26,6 @@ find_package(MPI)
 
 find_package(deal.II 8.5.0 REQUIRED
 		HINTS ${/usr/local/})
-DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 ######################################################################################
 
