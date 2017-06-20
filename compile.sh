@@ -4,8 +4,8 @@
 TARGET="Moire"
 
 # cmake parameters
-export CC=clang
-export CXX=clang++
+# export CC=/usr/lib/llvm/4/bin/clang
+# export CXX=/usr/lib/llvm/4/bin/clang++
 
 # build directory
 cd ./build
@@ -19,8 +19,7 @@ cmake ..
 echo "====================================================================================="
 echo "                                       MAKE                                          " 
 echo "====================================================================================="
-make ${TARGET}
-# make
+make ${TARGET} -j 44
 
 
 # additional run
@@ -28,9 +27,8 @@ echo "==========================================================================
 echo "                                     EXECUTION                                       "
 echo "====================================================================================="
 
-# InputFile=../app/cfg/twisted_blg.in
-InputFile=../app/cfg/1d_toymodel.in
+InputFile=../app/cfg/twisted_blg.in
 ExportFile=../output
+
 rm ${ExportFile}.out
-mpirun -n 8 ./app/${TARGET} -i ${InputFile} -draw_pause -1 > ${ExportFile}.out
-# open ${ExportFile}.out
+#mpirun -n 44 ./app/${TARGET} -i ${InputFile} #  > ${ExportFile}.out

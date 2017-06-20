@@ -7,8 +7,8 @@
 
 
 
-#ifndef ELEMENT_H
-#define ELEMENT_H
+#ifndef moire__fe_element_h
+#define moire__fe_element_h
 
 #include <array>
 #include <vector>
@@ -71,14 +71,14 @@ Element<1,degree>::Element(std::array<dealii::Point<1>,2> vertices)
 	vertices(vertices)
 	{
 		jacobian = 1./(vertices[1](0) - vertices[0](0));
-	};
+	}
 
 template <int degree>
 Element<1,degree>::Element(const Element<1,degree>& orig)
 	:
 	vertices(orig.vertices),
 	jacobian(orig.jacobian),
-	unit_cell_dof_index_map(orig.unit_cell_dof_index_map) {};
+	unit_cell_dof_index_map(orig.unit_cell_dof_index_map) {}
 
 /*		Order 1
  *
@@ -96,7 +96,7 @@ void	Element<1,1>::get_interpolation_weights(
 	double x = jacobian * (quadrature_point(0) - vertices[0](0));
 	weights[0] = -(x-1.);
 	weights[1] = x;
-};
+}
 
 
 /*		Order 2
@@ -116,7 +116,7 @@ void	Element<1,2>::get_interpolation_weights(
 	weights[0] = (x-1.)*(2.*x-1.);
 	weights[1] = -4. * x * (x-1.);
 	weights[2] = x * (2.*x-1.);
-};
+}
 
 /*		Order 3
  *
@@ -136,7 +136,7 @@ void	Element<1,3>::get_interpolation_weights(
 	weights[1] =  4.5 * x * (3.*x-2.) * (x-1.);
 	weights[2] = -4.5 * x * (3.*x-1.) * (x-1.);
 	weights[3] =  0.5 * x * (3.*x-1.) * (3.*x-2.);
-};
+}
 
 
 /*********************************/
@@ -188,7 +188,7 @@ Element<2,degree>::Element(std::array<dealii::Point<2>,4> vertices)
 		jacobian[0][1] = vertices[3](0) - vertices[0](0);
 		jacobian[1][1] = vertices[3](1) - vertices[0](1);
 		jacobian = dealii::invert(jacobian);
-	};
+	}
 
 
 template <int degree>
@@ -196,7 +196,7 @@ Element<2,degree>::Element(const Element<2,degree>& orig)
 	:
 	vertices(orig.vertices),
 	jacobian(orig.jacobian),
-	unit_cell_dof_index_map(orig.unit_cell_dof_index_map) {};
+	unit_cell_dof_index_map(orig.unit_cell_dof_index_map) {}
 
 /*		Order 1		
  *
@@ -225,7 +225,7 @@ void	Element<2,1>::get_interpolation_weights(
 	weights[1] = px[1] * py[0];
 	weights[2] = px[0] * py[1];
 	weights[3] = px[1] * py[1];
-};
+}
 
 /*		Order 2	
  *	   
@@ -264,7 +264,7 @@ void	Element<2,2>::get_interpolation_weights(
 	weights[6] = px[0] * py[2];
 	weights[7] = px[1] * py[2];
 	weights[8] = px[2] * py[2];
-};
+}
 
 /*		Order 3
  *	   
@@ -313,7 +313,7 @@ void	Element<2,3>::get_interpolation_weights(
 	weights[13] = px[1] * py[3];
 	weights[14] = px[2] * py[3];
 	weights[15] = px[3] * py[3];
-};
+}
 
 
-#endif /* ELEMENT_H */
+#endif

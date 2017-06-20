@@ -1,5 +1,5 @@
 /* 
-* File:   monolayer.h
+* File:   monolayer/dof_handler.h
 * Author: Paul Cazeaux
 *
 * Created on May 8, 2017, 14:15 PM
@@ -7,8 +7,8 @@
 
 
 
-#ifndef MONOLAYER_DOFHANDLER_H
-#define MONOLAYER_DOFHANDLER_H
+#ifndef moire__monolayer_dof_handler_h
+#define moire__monolayer_dof_handler_h
 
 #include <memory>
 #include "deal.II/base/mpi.h"
@@ -61,13 +61,10 @@ DoFHandler<dim,degree>::DoFHandler(const Multilayer<dim, 1>& parameters)
 	Multilayer<dim, 1>(parameters)
 {
 	const  LayerData<dim>& layer = parameters.layer_data[0];
-
-	dealii::Tensor<2,dim> rotated_basis = Transformation<dim>::matrix(layer.dilation, layer.angle)
-											* layer.lattice_basis;
 		
-	lattice_   = std::make_unique<Lattice<dim>>(rotated_basis, parameters.cutoff_radius);
+	lattice_   = std::make_unique<Lattice<dim>>(layer.lattice_basis, parameters.cutoff_radius);
 	brillouin_zone_ = std::make_unique<UnitCell<dim,degree>>(
-			2*dealii::numbers::PI*dealii::transpose(dealii::invert(rotated_basis)), parameters.refinement_level);
+			2*numbers::PI*dealii::transpose(dealii::invert(layer.lattice_basis)), parameters.refinement_level);
 }
 
 template<int dim, int degree>
@@ -86,4 +83,4 @@ DoFHandler<dim,degree>::make_sparsity_pattern()
 };
 }
 
-#endif /* MONOLAYER_DOFHANDLER_H */
+#endif

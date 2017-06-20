@@ -6,8 +6,8 @@
 */
 
 
-#ifndef LATTICE_H
-#define LATTICE_H
+#ifndef moire__geometry_lattice_h
+#define moire__geometry_lattice_h
 
 #include <algorithm>
 #include <exception>
@@ -150,7 +150,7 @@ Lattice<dim>::list_neighborhood_indices(const dealii::Point<dim>& X, const doubl
 			neighborhood.push_back(idx);
 	neighborhood.shrink_to_fit();
 	return neighborhood;
-};
+}
 
 /* Basic getters and setters */
 template<int dim>
@@ -158,19 +158,19 @@ unsigned int
 Lattice<dim>::get_vertex_global_index(const std::array<int, dim>& indices) const
 { 
 	return grid_to_index_map_.find(indices);
-};
+}
 
 
 template<int dim>
 std::array<int, dim> 	
 Lattice<dim>::get_vertex_grid_indices(const unsigned int& index) const
-{	return index_to_grid_map_.at(index);	};
+{	return index_to_grid_map_.at(index);	}
 
 
 template<int dim>
 dealii::Point<dim>
 Lattice<dim>::get_vertex_position(const unsigned int& index) const
-{	return vertices_.at(index);	};
+{	return vertices_.at(index);	}
 
 
 template<int dim>
@@ -185,7 +185,7 @@ Lattice<dim>::compute_unit_cell_inscribed_radius(const dealii::Tensor<2,dim>& ba
 																);
 		default: return 0; // Should never happen (dimension is 1 or 2)
 	}
-};
+}
 
 
-#endif /* LATTICE_H */
+#endif

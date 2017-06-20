@@ -12,12 +12,12 @@
 #include <Teuchos_GlobalMPISession.hpp>
 
 #include "parameters/multilayer.h"
-#include "bilayer/computedos.h"
+#include "bilayer/compute_dos.h"
 
 #include <iostream>
 #include <fstream>
 
-static const int dim = 1;
+static const int dim = 2;
 static const int degree = 3;
 static const int n_layers = 2;
 
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 		/*********************************************************/
 		Multilayer<dim, n_layers> 				bilayer(argc,argv);
 		int M = bilayer.poly_degree + 1;
-		int N = 100;
+		int N = 1;
 
 
 		int my_pid = comm->getRank ();
@@ -51,23 +51,18 @@ int main(int argc, char** argv) {
 			output_file.close();
 		}
 
-		for (int i=0; i<N; ++i)
+		Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
+		compute_dos.run();
+		std::vector<PetscScalar> moments = compute_dos.output_results();
+		if (my_pid == 0)
 		{
-			double t = .45 + .001 * static_cast<double>(i);
-			bilayer.layer_data[0].dilation = t;
-			bilayer.layer_data[1].dilation = 1./t;
-			Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
-			compute_dos.run();
-			std::vector<PetscScalar> moments = compute_dos.output_results();
-
-			if (my_pid == 0)
-				for (unsigned int i = 0; i<moments.size(); ++i)
-				{
-					std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::app);
-					double m = moments[i].real();
-					output_file.write((char*) & m, sizeof(double));
-					output_file.close();
-				}
+			std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::app);
+			for (unsigned int i = 0; i<moments.size(); ++i)
+			{
+				double m = moments[i].real();
+				output_file.write((char*) & m, sizeof(double));
+			}
+			output_file.close();
 		}
 	}
 	catch (std::exception &exc)
