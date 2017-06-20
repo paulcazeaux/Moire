@@ -53,7 +53,7 @@ namespace Graphene {
 
     /* Useful constants */
     const int               n_orbitals      = 2;
-    const double            intra_cutoff_radius = 5.7;
+    const double            intra_cutoff_radius = 4 * numbers::SQRT3_3 * a + 1e-5;
     const double            inter_cutoff_radius = 8.;
 
     const double            intra_search_radius = intra_cutoff_radius + a/3.;

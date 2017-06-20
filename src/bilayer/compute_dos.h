@@ -44,6 +44,103 @@ private:
     std::vector<PetscScalar>    chebyshev_moments;
 };
 
+template<int dim, int degree>
+ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
+    :
+    BaseAlgebra<dim, degree>(bilayer),
+    pcout(std::cout, (dealii::Utilities::MPI::this_mpi_process(this->mpi_communicator) == 0)),
+    computing_timer (this->mpi_communicator,
+                   pcout,
+                   dealii::TimerOutput::summary,
+                   dealii::TimerOutput::wall_times)
+    
+{
+    dealii::TimerOutput::Scope t(computing_timer, "Initialization");
+
+    VecCreate(this->mpi_communicator, &T);
+    VecCreate(this->mpi_communicator, &Tp);
+    VecCreate(this->mpi_communicator, &Tn);
+}
+
+template<int dim, int degree>
+ComputeDoS<dim,degree>::~ComputeDoS()
+{
+    VecDestroy(&T);
+    VecDestroy(&Tp);
+    VecDestroy(&Tn);
+}
+
+
+template<int dim, int degree>
+void
+ComputeDoS<dim,degree>::run()
+{
+    pcout   << "Starting setup...\n";
+    setup();
+    pcout   << "\tComplete!\n"
+            << "Vectors memory consumption: " 
+            << static_cast<double>(3 * sizeof(PetscScalar) * this->dof_handler.n_dofs()) / (1024 * 1024 * 1024) << " Gb.\n";
+
+    pcout   << "Starting assembly...\n";
+    assemble_matrices();
+    MatInfo info;
+    MatGetInfo(this->hamiltonian_action, MAT_GLOBAL_SUM, &info);
+    pcout   << "\tComplete!\n"
+            << "Hamiltonian action matrix memory consumption: " 
+            << info.memory / (1024 * 1024 * 1024) << " Gb.\n";
+
+
+    pcout   << "Starting solve...\n";
+    solve();
+    pcout   << "\tComplete!\n";
+}
+
+
+template<int dim, int degree>
+std::vector<PetscScalar>
+ComputeDoS<dim,degree>::output_results()
+{
+    return chebyshev_moments;
+}
+
+
+template<int dim, int degree>
+void
+ComputeDoS<dim,degree>::setup()
+{
+    dealii::TimerOutput::Scope t(computing_timer, "Setup");
+    BaseAlgebra<dim, degree>::base_setup();
+
+    VecDestroy(&T);
+    VecDestroy(&Tp);
+    VecDestroy(&Tn);
+
+    PetscErrorCode ierr = VecCreateMPI (this->mpi_communicator, this->locally_owned_dofs.n_elements(), PETSC_DETERMINE, &T);
+    AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
+    PetscInt sz;
+    VecGetSize (T, &sz);
+    Assert (static_cast<unsigned int>(sz) == this->dof_handler.n_dofs(), dealii::ExcDimensionMismatch (sz,  this->dof_handler.n_dofs()));
+
+    ierr = VecDuplicate(T, &Tp);
+    ierr = VecDuplicate(T, &Tn);
+    AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
+}
+
+
+
+
+template<int dim, int degree>
+void
+ComputeDoS<dim,degree>::assemble_matrices()
+{
+    dealii::TimerOutput::Scope t(computing_timer, "Assembly");
+
+    BaseAlgebra<dim,degree>::assemble_hamiltonian_action();
+
+    MatShift(this->hamiltonian_action, this->dof_handler.energy_shift);
+    MatScale(this->hamiltonian_action, 1./this->dof_handler.energy_rescale);
+}
+
 
 template<int dim, int degree>
 void
@@ -76,104 +173,6 @@ ComputeDoS<dim,degree>::solve()
         if (this->dof_handler.my_pid == 0)
             chebyshev_moments.push_back(m);
     }
-}
-
-template<int dim, int degree>
-std::vector<PetscScalar>
-ComputeDoS<dim,degree>::output_results()
-{
-    return chebyshev_moments;
-}
-
-
-template<int dim, int degree>
-ComputeDoS<dim,degree>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
-    :
-    BaseAlgebra<dim, degree>(bilayer),
-    pcout(std::cout, (dealii::Utilities::MPI::this_mpi_process(this->mpi_communicator) == 0)),
-    computing_timer (this->mpi_communicator,
-                   pcout,
-                   dealii::TimerOutput::summary,
-                   dealii::TimerOutput::wall_times)
-    
-{
-    dealii::TimerOutput::Scope t(computing_timer, "Initialization");
-
-    VecCreate(this->mpi_communicator, &T);
-    VecCreate(this->mpi_communicator, &Tp);
-    VecCreate(this->mpi_communicator, &Tn);
-}
-
-template<int dim, int degree>
-ComputeDoS<dim,degree>::~ComputeDoS()
-{
-    VecDestroy(&T);
-    VecDestroy(&Tp);
-    VecDestroy(&Tn);
-}
-
-
-template<int dim, int degree>
-void
-ComputeDoS<dim,degree>::run()
-{
-    pcout   << "Starting setup...\t";
-    setup();
-    pcout   << "\tComplete!\n"
-            << "Vectors memory consumption: " 
-            << 3 * sizeof(PetscScalar) * this->dof_handler.n_dofs() << " bytes.\n";
-
-    pcout   << "Starting assembly...\t";
-    assemble_matrices();
-    MatInfo info;
-    MatGetInfo(this->hamiltonian_action, MAT_GLOBAL_SUM, &info);
-    pcout   << "\tComplete!\n"
-            << "Hamiltonian action matrix memory consumption: " 
-            << info.memory / (1024 * 1024 * 1024) << " Gb.\n";
-
-
-    pcout   << "Starting solve...\t";
-    solve();
-    pcout   << "\tComplete!\n";
-}
-
-
-template<int dim, int degree>
-void
-ComputeDoS<dim,degree>::setup()
-{
-    dealii::TimerOutput::Scope t(computing_timer, "Setup");
-
-    VecDestroy(&T);
-    VecDestroy(&Tp);
-    VecDestroy(&Tn);
-
-    BaseAlgebra<dim, degree>::base_setup();
-
-    PetscErrorCode ierr = VecCreateMPI (this->mpi_communicator, this->locally_owned_dofs.n_elements(), PETSC_DETERMINE, &T);
-    AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
-    PetscInt sz;
-    VecGetSize (T, &sz);
-    Assert (static_cast<unsigned int>(sz) == this->dof_handler.n_dofs(), dealii::ExcDimensionMismatch (sz,  this->dof_handler.n_dofs()));
-
-    ierr = VecDuplicate(T, &Tp);
-    ierr = VecDuplicate(T, &Tn);
-    AssertThrow (ierr == 0, dealii::ExcPETScError(ierr));
-}
-
-
-
-
-template<int dim, int degree>
-void
-ComputeDoS<dim,degree>::assemble_matrices()
-{
-    dealii::TimerOutput::Scope t(computing_timer, "Assembly");
-
-    BaseAlgebra<dim,degree>::assemble_hamiltonian_action();
-
-    MatShift(this->hamiltonian_action, this->dof_handler.energy_shift);
-    MatScale(this->hamiltonian_action, 1./this->dof_handler.energy_rescale);
 }
 
 }/* End namespace Bilayer */
