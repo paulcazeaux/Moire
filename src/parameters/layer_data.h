@@ -16,6 +16,7 @@
 
 #include "materials/materials.h"
 #include "tools/transformation.h"
+#include "tools/types.h"
 
 /** 
  * A simple container for the information associated with a single layer of dimension dim:
@@ -38,7 +39,7 @@ struct LayerData {
         ~LayerData() {}
 
         Materials::Mat              material;
-        int                         n_orbitals;
+        types::loc_t                n_orbitals;
         double                      height;
 
         dealii::Tensor<2,dim>       lattice_basis;
@@ -70,12 +71,12 @@ LayerData<dim>::LayerData(      Materials::Mat material,
 {
     std::array<std::array<double, dim>, dim> 
     lattice = Materials::lattice<dim>(material);
-    for (int i=0; i<dim; ++i)
-        for (int j=0; j<dim; ++j)
+    for (size_t i=0; i<dim; ++i)
+        for (size_t j=0; j<dim; ++j)
             lattice_basis[i][j] = lattice[i][j];
     lattice_basis       = Transformation<dim>::matrix(dilation, angle) * lattice_basis;
 
-    for (int i=0; i<n_orbitals; ++i)
+    for (types::loc_t i=0; i<n_orbitals; ++i)
         orbital_height.push_back(height + Materials::orbital_height(material, i));
 }
 
@@ -97,8 +98,8 @@ LayerData<dim>::set_angle(const double angle)
 {
     std::array<std::array<double, dim>, dim> 
     lattice = Materials::lattice<dim>(this->material);
-    for (int i=0; i<dim; ++i)
-        for (int j=0; j<dim; ++j)
+    for (size_t i=0; i<dim; ++i)
+        for (size_t j=0; j<dim; ++j)
             this->lattice_basis[i][j] = lattice[i][j];
 
     this->angle              = angle;
@@ -111,8 +112,8 @@ LayerData<dim>::set_dilation(const double dilation)
 {
     std::array<std::array<double, dim>, dim> 
     lattice = Materials::lattice<dim>(material);
-    for (int i=0; i<dim; ++i)
-        for (int j=0; j<dim; ++j)
+    for (size_t i=0; i<dim; ++i)
+        for (size_t j=0; j<dim; ++j)
             this->lattice_basis[i][j] = lattice[i][j];
 
     this->dilation            = dilation;

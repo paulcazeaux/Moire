@@ -44,7 +44,7 @@ public:
     
     double          inter_search_radius;
     
-    unsigned int    poly_degree;
+    int             poly_degree;
     double          energy_rescale;
     double          energy_shift;
 
@@ -53,7 +53,7 @@ public:
 
     // Determines the cutoff radius in real space and refinement level
     double          cutoff_radius;
-    int             refinement_level;
+    types::loc_t    refinement_level;
 
 
 
@@ -78,12 +78,12 @@ public:
 
     Multilayer<dim,1>       extract_monolayer(const unsigned char layer_index) const;
 
-    double                  intralayer_term(const int orbital_row, const int orbital_column, 
-                                            const std::array<int, dim> grid_vector, 
-                                            const unsigned char layer_index);
-    double                  interlayer_term(const int orbital_row, const int orbital_col, 
+    double                  intralayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
+                                            const std::array<types::loc_t, dim> grid_vector, 
+                                            const int layer_index);
+    double                  interlayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
                                             const dealii::Tensor<1, dim> arrow_vector, 
-                                            const unsigned char layer_index_row, const unsigned char layer_index_col);
+                                            const int layer_index_row, const int layer_index_col);
 
     /* operator << ========================================================================== */
     friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, n_layers>& ml)
@@ -151,7 +151,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
     // Generate input for simulation.
     // ------------------------------
 
-    int current_layer = static_cast<unsigned int>(-1);
+    int current_layer = -1;
 
     // ---------------------------------------------------------
     // Next three Categories define a single layer's information
@@ -370,12 +370,12 @@ Multilayer<dim,n_layers>::extract_monolayer(const unsigned char layer_index) con
 
 template<int dim, int n_layers>
 double
-Multilayer<dim,n_layers>::intralayer_term(const int orbital_row, const int orbital_col, 
-                                            const std::array<int, dim> grid_vector, 
-                                            const unsigned char layer_index)
+Multilayer<dim,n_layers>::intralayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
+                                            const std::array<types::loc_t, dim> grid_vector, 
+                                            const int layer_index)
 {
     /* Check if diagonal element; if yes, add offset due to vertical electrical field */
-    if (orbital_row == orbital_col && std::all_of(grid_vector.begin(), grid_vector.end(), [](int v) { return v==0; }))
+    if (orbital_row == orbital_col && std::all_of(grid_vector.begin(), grid_vector.end(), [](types::block_t v) { return v==0; }))
         return Materials::intralayer_term(orbital_row, orbital_col, grid_vector, layer(layer_index).material)
                     + this->E * layer(layer_index).orbital_height .at(orbital_row);
     else
@@ -386,12 +386,12 @@ Multilayer<dim,n_layers>::intralayer_term(const int orbital_row, const int orbit
 
 template<int dim, int n_layers>
 double
-Multilayer<dim,n_layers>::interlayer_term(const int orbital_row, const int orbital_col, 
+Multilayer<dim,n_layers>::interlayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
                                             const dealii::Tensor<1, dim> arrow_vector, 
-                                            const unsigned char layer_index_row, const unsigned char layer_index_col)
+                                            const int layer_index_row, const int layer_index_col)
 {
     std::array<double, dim+1> vector;
-    for (int i=0; i<dim; ++i)
+    for (size_t i=0; i<dim; ++i)
         vector[i] = arrow_vector[i];
     vector[dim] = layer(layer_index_col).height - layer(layer_index_row).height;
 

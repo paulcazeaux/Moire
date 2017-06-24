@@ -5,23 +5,30 @@
 * Created on May 4, 2017, 5:00 PM
 */
 
-
-
 #ifndef moire__tools_types_h
 #define moire__tools_types_h
+
+#include <cstdint>
 
 namespace types 
 {
 
-    typedef unsigned int global_index;
-    typedef signed int   grid_index;
+    typedef int64_t     glob_t;
+    typedef int32_t     loc_t;
+    typedef int8_t      block_t;
 
-    typedef unsigned int subdomain_id;
+    typedef uint8_t subdomain_id;
 
     /* Definition of an invalid global index value used throughout the project */
-    const global_index      invalid_global_index    = static_cast<global_index>(-1);
-    const unsigned int      invalid_lattice_index   = static_cast<unsigned int>(-1);
+    const   glob_t      invalid_global_index    = static_cast< glob_t>(-1);
+    const   loc_t       invalid_local_index     = static_cast<loc_t>(-1);
 
+    typedef struct MemUsage {
+        size_t Vectors;
+        size_t Matrices;
+        size_t InitArrays;
+        size_t Static;
+    } MemUsage;
 }
 
 

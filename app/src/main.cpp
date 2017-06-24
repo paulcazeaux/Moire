@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 
 		Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
 		compute_dos.run();
-		std::vector<PetscScalar> moments = compute_dos.output_results();
+		std::vector<Bilayer::ComputeDoS<dim, degree>::scalar_type> moments = compute_dos.output_results();
 		if (my_pid == 0)
 		{
 			std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::app);

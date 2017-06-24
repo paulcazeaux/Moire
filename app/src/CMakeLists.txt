@@ -27,6 +27,7 @@ DEAL_II_SETUP_TARGET(Moire)
 ######################################################################################
 ### 4) Link the librairies for your executable
 ######################################################################################
-TARGET_LINK_LIBRARIES( Moire Calgebra ${FFTW_LIBRARIES} ${MPI_LIBRARIES})
+TARGET_LINK_LIBRARIES( Moire Calgebra ${FFTW_LIBRARIES} ${MPI_LIBRARIES} 
+								${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
 ######################################################################################

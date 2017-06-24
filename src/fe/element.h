@@ -45,13 +45,13 @@ struct Element
 template<int degree>
 struct Element<1,degree>
 {
-	static const unsigned int 					dofs_per_cell = degree+1;
-	static const unsigned int 					vertices_per_cell = 2;
+	static const types::loc_t 					dofs_per_cell = degree+1;
+	static const types::loc_t 					vertices_per_cell = 2;
 
 	std::array<dealii::Point<1>,2>				vertices;
 	double 										jacobian;
 
-	std::array<unsigned int, dofs_per_cell> 	unit_cell_dof_index_map;
+	std::array<types::loc_t, dofs_per_cell> 	unit_cell_dof_index_map;
 
 	Element(std::array<dealii::Point<1>,2> vertices);
 	Element(const Element&);
@@ -158,13 +158,13 @@ void	Element<1,3>::get_interpolation_weights(
 template<int degree>
 struct Element<2,degree>
 {
-	static const unsigned int 		dofs_per_cell = (degree+1)*(degree+1);
-	static const unsigned int 		vertices_per_cell = 4;
+	static const types::loc_t 		dofs_per_cell = (degree+1)*(degree+1);
+	static const types::loc_t 		vertices_per_cell = 4;
 
 	std::array<dealii::Point<2>,4>	vertices;
 	dealii::Tensor<2,2>				jacobian;
 
-	std::array<unsigned int, dofs_per_cell> 	unit_cell_dof_index_map;
+	std::array<types::loc_t, dofs_per_cell> 	unit_cell_dof_index_map;
 
 	Element(std::array<dealii::Point<2>,4> vertices);
 	Element(const Element&);

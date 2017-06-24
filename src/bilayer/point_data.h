@@ -14,69 +14,68 @@
 #include <array>
 #include <utility>
 
-#include "deal.II/base/index_set.h"
 #include "tools/types.h"
 
-/**
-* This class holds basic information about a lattice point (coarse discretization)
-*/
 
 namespace Bilayer {
+    using types::loc_t;
+    using types::glob_t;
+    using types::block_t;
 
-
-struct PointData 
-{
-public:
-    /**
-     * Type used to fully identify a grid point geometrically.
-     * First index is the block index, then the lattice point (within its block), 
-     * and the unit cell grid index.
-     */
-    typedef std::tuple< unsigned char,
-                        unsigned int, 
-                        unsigned int>           point_indices;
-
-    /* To which block [0-3] does the point belong? */
-    unsigned char                               block_id;
-
-    /* Within this block, which is its index on the corresponding lattice */
-    unsigned int                                index_in_block;
-
-    /* Range of global dofs owned by the lattice point (interior dofs) */
-    dealii::IndexSet                            owned_dofs;
-    /* Range of global dofs relevant to the lattice point (interior + boundary dofs) */
-    dealii::IndexSet                            relevant_dofs;
 
     /**
-     * Now we need to store details for the interpolation process.
-     * These vectors should remain empty if block_id is 0 or 3 
-     * (where cells have periodic boundary conditions).
-     *
-     *
-     *
-     * First some information about the unit cell's boundary.
-     * These points belong to the same block
-     */
-    std::vector<point_indices>                  boundary_lattice_points;
+    * A class holding basic information about a lattice point (coarse discretization)
+    */
+    struct PointData 
+    {
+    public:
+        /**
+         * To which block does the point belong? 
+         */
+        block_t range_block;
+        block_t domain_block;
 
-    /**
-     * Now some information about points we will interpolate to. 
-     * These points belong to the other middle block (2 if block_id = 1 and vice versa).
-     * First element of the pair is the element index, second the grid point information as above
-     */
-    std::vector<std::pair<unsigned int, point_indices>  >   interpolated_nodes;
+        /**
+         * Within this block, which is its index on the corresponding lattice 
+         */
+        loc_t lattice_index;
 
-    PointData(unsigned char, unsigned int, types::global_index);
+        /**
+         * Now we need to store details for the interpolation process.
+         * These vectors should remain empty if range_block and domain_block are the same
+         * (where cells have periodic boundary conditions).
+         *
+         *
+         * First some information about the unit cell's boundary.
+         * These points belong to the same block.
+         *
+         * The tuple fully identifies a point geometrically.
+         * First and second index are the block identifiers, 
+         * then the lattice point index (within its block), 
+         * and the unit cell grid index.
+         */
+        std::vector<std::tuple<block_t, block_t, loc_t, loc_t>>
+                                                    boundary_lattice_points;
 
-};
+        /**
+         * Now some information about points we will interpolate to. 
+         * These points belong to the other middle block (2 if range_block = 1 and vice versa).
+         * First element of the tuple is the element index, and then the grid point information as above
+         */
+        std::vector<std::tuple<loc_t, block_t, block_t, loc_t, loc_t> >   
+                                                    interpolated_nodes;
 
-PointData::PointData(unsigned char block_id, unsigned int index_in_block, types::global_index total_n_dofs)
-    :
-    block_id(block_id), 
-    index_in_block(index_in_block),
-    owned_dofs(total_n_dofs), 
-    relevant_dofs(total_n_dofs) 
-{}
+        PointData(const block_t, const block_t, const loc_t);
+
+    };
+
+    PointData::PointData(   const block_t range_block, const block_t domain_block, 
+                            const loc_t lattice_index)
+        :
+        range_block(range_block), 
+        domain_block(domain_block), 
+        lattice_index(lattice_index)
+    {}
 
 } /* End namespace Bilayer */
 #endif
