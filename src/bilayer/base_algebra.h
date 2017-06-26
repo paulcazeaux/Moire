@@ -22,13 +22,11 @@
 
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
+#include <Teuchos_Comm.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_Map_decl.hpp>
-#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
-#include <Tpetra_CrsGraph_def.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
-#include <Tpetra_CrsMatrix_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
@@ -38,6 +36,7 @@
 
 #include "tools/types.h"
 #include "tools/numbers.h"
+#include "tools/mpi_reduce.h"
 #include "bilayer/dof_handler.h"
 
 
@@ -621,7 +620,7 @@ namespace Bilayer {
         loc_trace = (LocTrace[0] + LocTrace[1]) / (unit_cell(0).area + unit_cell(1).area),
         result = 0.0;
         
-        Teuchos::reduce<int, Scalar>(&loc_trace, &result, 1, Teuchos::REDUCE_SUM, 0, * mpi_communicator);
+        MPI_reduce::sum(&loc_trace, &result, 1, 0, * mpi_communicator);
         return result;
     }   
 

@@ -21,9 +21,7 @@
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Tpetra_Map_decl.hpp>
-#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
-#include <Tpetra_CrsGraph_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
@@ -669,7 +667,7 @@ namespace Bilayer {
             }
         sparsity_pattern->fillComplete ();
         return sparsity_pattern.getConst ();
-    };
+    }
 
     template<int dim, int degree>
     Teuchos::RCP<const typename DoFHandler<dim,degree>::SparsityPattern>
@@ -751,7 +749,7 @@ namespace Bilayer {
         sparsity_pattern->fillComplete ( transpose_domain_maps_.at(range_block).at(domain_block),
                                         transpose_range_maps_.at(range_block).at(domain_block) );
         return sparsity_pattern.getConst ();
-    };
+    }
 
     /* Interface accessors */
 

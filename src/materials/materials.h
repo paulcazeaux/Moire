@@ -116,17 +116,17 @@ namespace Materials {
                     const std::array<double, 3>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
+
+    /**
+     * Explicit template specializations for the lattice method
+     */
+    template<>
+    const std::array<std::array<double, 1>, 1>&
+    lattice<1>(const Mat mat);
+
+    template<>
+    const std::array<std::array<double, 2>, 2>&
+    lattice<2>(const Mat mat);
+
 }   /* End namespace Materials */
-
-/**
- * Explicit template specializations for the lattice method
- */
-template<>
-const std::array<std::array<double, 1>, 1>&
-Materials::lattice<1>(const Materials::Mat mat);
-
-template<>
-const std::array<std::array<double, 2>, 2>&
-Materials::lattice<2>(const Materials::Mat mat);
-
 #endif
