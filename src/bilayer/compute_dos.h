@@ -10,7 +10,6 @@
 #ifndef moire__bilayer_computedos_h
 #define moire__bilayer_computedos_h
 
-#include "deal.II/base/memory_consumption.h"
 #include "tools/types.h"
 #include "bilayer/base_algebra.h"
 

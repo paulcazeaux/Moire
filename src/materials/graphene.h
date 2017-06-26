@@ -15,14 +15,22 @@
 #include <cassert>
 #include "tools/numbers.h"
 
+/**
+ * A namespace to group constants specific to the Graphene material.
+ */
 namespace Graphene {
-    /* Syntactic sugar to identify the orbital characters we are working with */
+    /**
+     * Syntactic sugar to identify the orbital characters we are working with 
+     */
     enum class Atom : int { A, B};
     enum class Orbital : int {A_pz = 0, B_pz = 1};
 
-}   /* End namespace Graphene */
+} /* End namespace Graphene */
 
-/* Common namespaces where to define the tight-binding hopping coefficient functions  */
+/** 
+ * Common namespaces where to define the tight-binding hopping coefficient functions,
+ * to which we add the graphene tight-binding coefficients.
+ */
 namespace Coupling {
 
     namespace Intralayer {
@@ -39,9 +47,12 @@ namespace Coupling {
 }   /* End namespace Coupling */
 
 
-
+/**
+ * We define here the library of useful constants for building the geometry
+ * of a graphene lattice, the positions of atoms and orbitals as well as
+ * intra- and inter-layer cutoff radii for the tight-binding Hamiltonian.
+ */
 namespace Graphene {
-    /* Geometry library */
     const double a = 2.4768;
     const std::array<std::array<double, 2>, 2>
     lattice = {{ {{1. * a, 0.}}, {{.5 * a, numbers::SQRT3_2 * a}} }};
@@ -51,7 +62,9 @@ namespace Graphene {
         {Atom::A, {{0., 0., 0.}} },
         {Atom::B, {{0.5 * a, numbers::SQRT3_6 * a, 0}} } };
 
-    /* Useful constants */
+    /**
+     * Useful constants
+     */
     const int               n_orbitals      = 2;
     const double            intra_cutoff_radius = 4 * numbers::SQRT3_3 * a + 1e-5;
     const double            inter_cutoff_radius = 8.;
@@ -60,7 +73,10 @@ namespace Graphene {
     const double            inter_search_radius = inter_cutoff_radius + a/3.;
 
 
-    /* Utility functions to go from Orbital type to its integer index */
+/**
+ * Methods definitions.
+ * Utility functions to go from Orbital type to its integer index.
+ */
     inline 
     Orbital 
     orbital(const int idx)

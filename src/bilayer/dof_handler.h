@@ -21,7 +21,9 @@
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Tpetra_Map_decl.hpp>
+#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
+#include <Tpetra_CrsGraph_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
@@ -224,6 +226,8 @@ namespace Bilayer {
         std::array<std::array<Teuchos::RCP<const Map>, 2>, 2>   transpose_domain_maps_;
         std::array<std::array<Teuchos::RCP<const Map>, 2>, 2>   transpose_range_maps_;
     };
+
+
 
 
     template<int dim, int degree>

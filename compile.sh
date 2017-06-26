@@ -6,6 +6,8 @@ TARGET="Moire"
 # cmake parameters
 # export CC=/usr/lib/llvm/4/bin/clang
 # export CXX=/usr/lib/llvm/4/bin/clang++
+export CC=gcc-7
+export CXX=g++-7
 
 # build directory
 cd ./build

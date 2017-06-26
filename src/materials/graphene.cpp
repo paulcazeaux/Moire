@@ -14,7 +14,8 @@ double Coupling::Intralayer::graphene(
                         const Orbital orbit_row, const Orbital orbit_col, 
                         const std::array<int, 2>& vector)
 {
-    /* Compute hexagonal homogeneous coordinates from grid coordinates.
+    /**
+     * Compute hexagonal homogeneous coordinates from grid coordinates.
      * We use the following system:
      *
      *                A                   A                 |             (-1,2,-1)            (1,1,-2)              
@@ -50,7 +51,8 @@ double Coupling::Intralayer::graphene(
         hom_vec[0] +=  1;
         // hom_vec[2] += -1;
     }
-    /* Compute the distance to the origin: 
+    /**
+     * Compute the distance to the origin: 
      * we use the identity r = x^2 + y^2 + z^2 = x^2 + y^2 + (x+y)^2 = 2 * (x * (x+y) + y^2) 
      */
     int r = hom_vec[0] * (hom_vec[0] + hom_vec[1]) + hom_vec[1]*hom_vec[1];
@@ -127,7 +129,9 @@ double Coupling::Interlayer::C_to_C(const Orbital orbit_row, const Orbital orbit
         
         double t = V0+V3*(std::cos(3*theta12)+std::cos(3*theta21)) + V6*(std::cos(6*theta12)+std::cos(6*theta21));
 
-        /* Smooth cutoff */
+        /**
+         * Smooth cutoff 
+         */
         double d = Graphene::inter_cutoff_radius - r;
         if (d < 1. && d > 0.)
         {

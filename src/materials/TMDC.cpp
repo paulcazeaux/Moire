@@ -196,7 +196,8 @@ double Coupling::Intralayer::MoS2(const Orbital orbit_row,  const Orbital orbit_
             { 0.000000, 0.000000, 0.062872, 0.089087,-0.051435, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000},
             { 0.000000, 0.000000, 0.057583, 0.160292,-0.092545, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000}
        };
-    /* Compute hexagonal homogeneous coordinates from grid coordinates.
+    /**
+     * Compute hexagonal homogeneous coordinates from grid coordinates.
      * We use the following system:
      *
      *                M                   M                 |             (-1,2,-1)            (1,1,-2)              

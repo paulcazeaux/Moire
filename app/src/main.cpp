@@ -17,9 +17,8 @@
 #include <iostream>
 #include <fstream>
 
-static const int dim = 2;
+static const int dim = 1;
 static const int degree = 3;
-static const int n_layers = 2;
 
 
 int main(int argc, char** argv) {
@@ -30,13 +29,13 @@ int main(int argc, char** argv) {
 		/*					Initialize MPI 						 */
 		/*********************************************************/
 		Teuchos::GlobalMPISession mpiSession (&argc, &argv, NULL);
-		Teuchos::RCP<const Teuchos::Comm<int> > comm =
-    			Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ();
+		Teuchos::RCP<const Teuchos::Comm<int> > 
+    	comm = Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ();
 
 		/*********************************************************/
 		/*	 Read input file, and initialize params and vars. 	 */
 		/*********************************************************/
-		Multilayer<dim, n_layers> 				bilayer(argc,argv);
+		Multilayer<dim, 2> 					bilayer(argc,argv);
 		int M = bilayer.poly_degree + 1;
 		int N = 1;
 
@@ -51,7 +50,8 @@ int main(int argc, char** argv) {
 			output_file.close();
 		}
 
-		Bilayer::ComputeDoS<dim, degree> 		compute_dos(bilayer);
+		Bilayer::ComputeDoS<dim, degree>
+		compute_dos(bilayer);
 		compute_dos.run();
 		std::vector<Bilayer::ComputeDoS<dim, degree>::scalar_type> moments = compute_dos.output_results();
 		if (my_pid == 0)
