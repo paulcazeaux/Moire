@@ -53,8 +53,8 @@ namespace Bilayer {
     static_assert( (dim == 1 || dim == 2), "UnitCell dimension must be 1 or 2!\n");
 
     public:
-        typedef typename Tpetra::Map<types::loc_t, types::glob_t>       Map;
-        typedef typename Tpetra::CrsGraph<types::loc_t, types::glob_t>  SparsityPattern;
+        typedef typename Tpetra::Map<types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>       Map;
+        typedef typename Tpetra::CrsGraph<types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>  SparsityPattern;
 
 
         /**
@@ -109,14 +109,16 @@ namespace Bilayer {
         types::loc_t    n_cell_nodes(           const types::block_t range_block, const types::block_t domain_block) const;
         types::loc_t    n_domain_orbitals(      const types::block_t range_block, const types::block_t domain_block) const;
         types::loc_t    n_range_orbitals(       const types::block_t range_block, const types::block_t domain_block) const;
+
+        
+        bool                 is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
+                                                     const types::loc_t lattice_index) const;
   
         /**
          * Accessors to traverse the lattice points level of discretization.
          */
         const PointData &    locally_owned_point(    const types::block_t range_block,  const types::block_t domain_block, 
-                                                     const types::loc_t lattice_index) const;
-        bool                 is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
-                                                     const types::loc_t lattice_index) const;
+                                                     const types::loc_t local_index) const;
 
         /**
          * Some basic information about the DoF repartition, available after their distribution.
@@ -168,11 +170,6 @@ namespace Bilayer {
          *  [   Lattice 2   (intralayer terms of layer 2)   ]   -> block (1,1)
          *
          */
-
-        /**
-         * Total number of lattice points: 
-         */
-        types::loc_t    n_lattice_points_;
 
         /**
          * The subdomain ID for each lattice point, determined by the setup() function
@@ -240,7 +237,6 @@ namespace Bilayer {
             lattices_[i]   = std::make_unique<Lattice<dim>>(layer(i).lattice_basis, bilayer.cutoff_radius);
             unit_cells_[i] = std::make_unique<UnitCell<dim,degree>>(layer(i).lattice_basis, bilayer.refinement_level);
         }
-        n_lattice_points_ = lattice(0).n_vertices + lattice(1).n_vertices;
     }
 
 
@@ -475,7 +471,7 @@ namespace Bilayer {
         /* Initialize basic #dofs information for each block separately and each lattice point */
         for (types::block_t range_block = 0; range_block < 2; ++range_block)
         {
-            owned_dofs_.at(range_block) = Tpetra::createContigMap<Map::local_ordinal_type, Map::global_ordinal_type>(  
+            owned_dofs_.at(range_block) = Tpetra::createContigMapWithNode<Map::local_ordinal_type, Map::global_ordinal_type, Kokkos::Compat::KokkosSerialWrapperNode>(  
                                                             n_dofs_each_point(range_block, 0) * n_lattice_points(range_block, 0)
                                                                 + n_dofs_each_point(range_block, 1) * n_lattice_points(range_block, 1), 
                                                             n_dofs_each_point(range_block, 0) * n_locally_owned_points(range_block, 0)
@@ -484,7 +480,7 @@ namespace Bilayer {
 
             for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
                 transpose_domain_maps_.at(range_block).at(domain_block) 
-                                    = Tpetra::createContigMap<Map::local_ordinal_type, Map::global_ordinal_type>(  
+                                    = Tpetra::createContigMapWithNode<Map::local_ordinal_type, Map::global_ordinal_type, Kokkos::Compat::KokkosSerialWrapperNode>(  
                                                             n_dofs_each_point(range_block, domain_block) * n_lattice_points(range_block, domain_block), 
                                                             n_dofs_each_point(range_block, domain_block) * n_locally_owned_points(range_block, domain_block),
                                                             mpi_communicator);
@@ -513,11 +509,11 @@ namespace Bilayer {
          */
 
         transpose_range_maps_.at(0).at(0) = transpose_domain_maps_.at(0).at(0);
-        transpose_range_maps_.at(0).at(1) = Tpetra::createContigMap<Map::local_ordinal_type, Map::global_ordinal_type>(
+        transpose_range_maps_.at(0).at(1) = Tpetra::createContigMapWithNode<Map::local_ordinal_type, Map::global_ordinal_type, Kokkos::Compat::KokkosSerialWrapperNode>(
                                                                 (transpose_domain_maps_.at(1).at(0)->getGlobalNumElements () / n_domain_orbitals(1, 0)) * n_range_orbitals(1, 0),
                                                                 (transpose_domain_maps_.at(1).at(0)->getNodeNumElements () / n_domain_orbitals(1, 0)) * n_range_orbitals(1, 0),
                                                                 mpi_communicator);
-        transpose_range_maps_.at(1).at(0) = Tpetra::createContigMap<Map::local_ordinal_type, Map::global_ordinal_type>(
+        transpose_range_maps_.at(1).at(0) = Tpetra::createContigMapWithNode<Map::local_ordinal_type, Map::global_ordinal_type, Kokkos::Compat::KokkosSerialWrapperNode>(
                                                                 (transpose_domain_maps_.at(0).at(1)->getGlobalNumElements () / n_domain_orbitals(0, 1)) * n_range_orbitals(0, 1),
                                                                 (transpose_domain_maps_.at(0).at(1)->getNodeNumElements () / n_domain_orbitals(0, 1)) * n_range_orbitals(0, 1),
                                                                 mpi_communicator);
@@ -792,18 +788,13 @@ namespace Bilayer {
     const PointData &
     DoFHandler<dim,degree>::locally_owned_point(const types::block_t range_block, 
                                                 const types::block_t domain_block,
-                                                const types::loc_t lattice_index) const
+                                                const types::loc_t local_index) const
     {
         /* Bounds checking */
         assert(range_block < 2);
         assert(domain_block < 2);
-        assert(lattice_index < n_lattice_points(range_block, domain_block));
-
-        types::loc_t idx = reordered_indices_.at(domain_block).at(lattice_index);
-
-        assert( (idx >= locally_owned_points_partition_.at(domain_block).at(my_pid) 
-                    && idx < locally_owned_points_partition_.at(domain_block).at(my_pid+1)) );
-        return lattice_points_.at(range_block).at(domain_block).at(idx - locally_owned_points_partition_.at(domain_block).at(my_pid)); 
+        assert(local_index < n_locally_owned_points(range_block, domain_block));
+        return lattice_points_.at(range_block).at(domain_block).at(local_index); 
     }
 
     template<int dim, int degree>

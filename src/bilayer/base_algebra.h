@@ -39,7 +39,6 @@
 
 #include "tools/types.h"
 #include "tools/numbers.h"
-#include "tools/mpi_reduce.h"
 #include "bilayer/dof_handler.h"
 
 
@@ -60,8 +59,8 @@ namespace Bilayer {
          * These types correspond to the main Trilinos containers
          * used in the discretization.
          */
-        typedef typename Tpetra::MultiVector<Scalar,types::loc_t, types::glob_t>  MultiVector;
-        typedef typename Tpetra::CrsMatrix<Scalar, types::loc_t, types::glob_t>   Matrix;
+        typedef typename Tpetra::MultiVector<Scalar,types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>  MultiVector;
+        typedef typename Tpetra::CrsMatrix<Scalar, types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>   Matrix;
 
         /**
          *  Default constructor.
@@ -623,7 +622,7 @@ namespace Bilayer {
         loc_trace = (LocTrace[0] + LocTrace[1]) / (unit_cell(0).area + unit_cell(1).area),
         result = 0.0;
         
-        Utilities::MPI::sum<Scalar>(&loc_trace, &result, 1, * mpi_communicator);
+        Teuchos::reduceAll<int, Scalar>(* mpi_communicator, Teuchos::REDUCE_SUM, 1, &loc_trace, &result);
         return result;
     }   
 
