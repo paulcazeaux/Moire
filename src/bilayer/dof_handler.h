@@ -246,20 +246,8 @@ namespace Bilayer {
     void
     DoFHandler<dim,degree>::initialize(Teuchos::RCP<const Teuchos::Comm<int> > mpi_communicator)
     {
-        dealii::ConditionalOStream pcout = dealii::ConditionalOStream(std::cout, (mpi_communicator->getRank () == 0) );
-        dealii::TimerOutput computing_timer = dealii::TimerOutput(MPI_COMM_WORLD,
-                       pcout,
-                       dealii::TimerOutput::summary,
-                       dealii::TimerOutput::wall_times);
-
-        {
-        dealii::TimerOutput::Scope t(computing_timer, "Setup: DoFHandler coarse setup");
-            this->coarse_setup(mpi_communicator);
-        }
-        {
-        dealii::TimerOutput::Scope t(computing_timer, "Setup: DoFHandler DoF distribution");
-            this->distribute_dofs(mpi_communicator);
-        }
+        this->coarse_setup(mpi_communicator);
+        this->distribute_dofs(mpi_communicator);
     }
 
     template<int dim, int degree>
@@ -308,44 +296,59 @@ namespace Bilayer {
     void
     DoFHandler<dim,degree>::coarse_setup(Teuchos::RCP<const Teuchos::Comm<int> > mpi_communicator)
     {
+        dealii::ConditionalOStream pcout = dealii::ConditionalOStream(std::cout, (mpi_communicator->getRank () == 0) );
+        dealii::TimerOutput computing_timer = dealii::TimerOutput(MPI_COMM_WORLD,
+                       pcout,
+                       dealii::TimerOutput::summary,
+                       dealii::TimerOutput::wall_times);
+
         my_pid = mpi_communicator->getRank ();
         n_procs = mpi_communicator->getSize ();
         partition_indices_.resize(lattice(0).n_vertices + lattice(1).n_vertices);
         if (n_procs > 1)
         {
-            if (!my_pid) // Use Parmetis in the future?
-                this->make_coarse_partition(partition_indices_);
+            {
+            dealii::TimerOutput::Scope t(computing_timer, "Coarse partition");
+                if (!my_pid) // Use Parmetis in the future?
+                    this->make_coarse_partition(partition_indices_);
+            }
+            {
+            dealii::TimerOutput::Scope t(computing_timer, "Partition broadcast");
             /* Broadcast the result of this operation */
-            Teuchos::broadcast<int, types::subdomain_id>(* mpi_communicator, 0, partition_indices_.size(), partition_indices_.data());
+                Teuchos::broadcast<int, types::subdomain_id>(* mpi_communicator, 0, partition_indices_.size(), partition_indices_.data());
+            }
         }
         else
             std::fill(partition_indices_.begin(), partition_indices_.end(), 0);
         
-        /* Compute the reordering of the indices into contiguous range for each processor */
-        for (types::block_t domain_block = 0; domain_block < 2; ++domain_block){
-            reordered_indices_.at(domain_block).resize(lattice(domain_block).n_vertices);
-            original_indices_.at(domain_block).resize(lattice(domain_block).n_vertices);
-            locally_owned_points_partition_.at(domain_block).resize(n_procs+1);
+        {
+        dealii::TimerOutput::Scope t(computing_timer, "Compute reordering");
+            /* Compute the reordering of the indices into contiguous range for each processor */
+            for (types::block_t domain_block = 0; domain_block < 2; ++domain_block){
+                reordered_indices_.at(domain_block).resize(lattice(domain_block).n_vertices);
+                original_indices_.at(domain_block).resize(lattice(domain_block).n_vertices);
+                locally_owned_points_partition_.at(domain_block).resize(n_procs+1);
 
-            types::loc_t next_free_index = 0;
-            for (types::subdomain_id m = 0; m<n_procs; ++m)
-            {
-                locally_owned_points_partition_.at(domain_block).at(m) = next_free_index;
+                types::loc_t next_free_index = 0;
+                for (types::subdomain_id m = 0; m<n_procs; ++m)
+                {
+                    locally_owned_points_partition_.at(domain_block).at(m) = next_free_index;
 
-                types::loc_t offset = (domain_block == 1 ? lattice(0).n_vertices : 0);
-                for (types::loc_t i = 0; i<lattice(domain_block).n_vertices; ++i)
-                    if (partition_indices_.at(i+offset) == m)
-                    {
-                        reordered_indices_.at(domain_block).at(i) = next_free_index;
-                        original_indices_.at(domain_block).at(next_free_index) = i;
-                        ++next_free_index;
-                    }
+                    types::loc_t offset = (domain_block == 1 ? lattice(0).n_vertices : 0);
+                    for (types::loc_t i = 0; i<lattice(domain_block).n_vertices; ++i)
+                        if (partition_indices_.at(i+offset) == m)
+                        {
+                            reordered_indices_.at(domain_block).at(i) = next_free_index;
+                            original_indices_.at(domain_block).at(next_free_index) = i;
+                            ++next_free_index;
+                        }
+                }
+
+                locally_owned_points_partition_.at(domain_block).at(n_procs) = next_free_index;
+                n_locally_owned_points_.at(domain_block) = locally_owned_points_partition_.at(domain_block).at(my_pid+1)
+                                                            - locally_owned_points_partition_.at(domain_block).at(my_pid);
             }
-
-            locally_owned_points_partition_.at(domain_block).at(n_procs) = next_free_index;
-            n_locally_owned_points_.at(domain_block) = locally_owned_points_partition_.at(domain_block).at(my_pid+1)
-                                                        - locally_owned_points_partition_.at(domain_block).at(my_pid);
-        }   
+        }
     }
 
     template<int dim, int degree>
