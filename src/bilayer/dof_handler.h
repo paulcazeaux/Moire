@@ -28,6 +28,8 @@
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
 #include "deal.II/base/tensor.h"
+#include "deal.II/base/conditional_ostream.h"
+#include "deal.II/base/timer.h"
 
 #include "tools/types.h"
 #include "parameters/multilayer.h"
@@ -110,7 +112,7 @@ namespace Bilayer {
         types::loc_t    n_domain_orbitals(      const types::block_t range_block, const types::block_t domain_block) const;
         types::loc_t    n_range_orbitals(       const types::block_t range_block, const types::block_t domain_block) const;
 
-        
+
         bool                 is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
                                                      const types::loc_t lattice_index) const;
   
@@ -244,8 +246,20 @@ namespace Bilayer {
     void
     DoFHandler<dim,degree>::initialize(Teuchos::RCP<const Teuchos::Comm<int> > mpi_communicator)
     {
-        this->coarse_setup(mpi_communicator);
-        this->distribute_dofs(mpi_communicator);
+        dealii::ConditionalOStream pcout = dealii::ConditionalOStream(std::cout, (mpi_communicator->getRank () == 0) );
+        dealii::TimerOutput computing_timer = dealii::TimerOutput(MPI_COMM_WORLD,
+                       pcout,
+                       dealii::TimerOutput::summary,
+                       dealii::TimerOutput::wall_times);
+
+        {
+        dealii::TimerOutput::Scope t(computing_timer, "Setup: DoFHandler coarse setup");
+            this->coarse_setup(mpi_communicator);
+        }
+        {
+        dealii::TimerOutput::Scope t(computing_timer, "Setup: DoFHandler DoF distribution");
+            this->distribute_dofs(mpi_communicator);
+        }
     }
 
     template<int dim, int degree>
