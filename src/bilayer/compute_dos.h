@@ -201,6 +201,7 @@ namespace Bilayer {
     ComputeDoS<dim,degree,Scalar>::setup()
     {
         dealii::TimerOutput::Scope t(computing_timer, "Setup");
+        LA::base_setup();
         
         Tp = {{ MultiVector( this->dof_handler.locally_owned_dofs(0), this->dof_handler.n_range_orbitals(0,0) ), 
                 MultiVector( this->dof_handler.locally_owned_dofs(1), this->dof_handler.n_range_orbitals(1,1) ) }};
