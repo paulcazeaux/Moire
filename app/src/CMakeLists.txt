@@ -22,7 +22,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/app)
 ADD_EXECUTABLE(Moire main.cpp)
 ADD_DEPENDENCIES(Moire Calgebra)
 
-# DEAL_II_SETUP_TARGET(Moire)
+DEAL_II_SETUP_TARGET(Moire)
 
 ######################################################################################
 ### 4) Link the librairies for your executable

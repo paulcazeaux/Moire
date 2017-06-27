@@ -200,17 +200,12 @@ namespace Bilayer {
     void
     ComputeDoS<dim,degree,Scalar>::setup()
     {
-        {
-        dealii::TimerOutput::Scope t(computing_timer, "Setup: Base");
-            LA::base_setup();
-        }
-        {
-        dealii::TimerOutput::Scope t(computing_timer, "Setup: Vector allocations");
-            Tp = {{ MultiVector( this->dof_handler.locally_owned_dofs(0), this->dof_handler.n_range_orbitals(0,0) ), 
-                    MultiVector( this->dof_handler.locally_owned_dofs(1), this->dof_handler.n_range_orbitals(1,1) ) }};
-            T  = {{ Tpetra::createCopy(Tp[0]),  Tpetra::createCopy(Tp[1]) }};
-            Tn = {{ Tpetra::createCopy(Tp[0]),  Tpetra::createCopy(Tp[1]) }};
-        }
+        dealii::TimerOutput::Scope t(computing_timer, "Setup");
+        
+        Tp = {{ MultiVector( this->dof_handler.locally_owned_dofs(0), this->dof_handler.n_range_orbitals(0,0) ), 
+                MultiVector( this->dof_handler.locally_owned_dofs(1), this->dof_handler.n_range_orbitals(1,1) ) }};
+        T  = {{ Tpetra::createCopy(Tp[0]),  Tpetra::createCopy(Tp[1]) }};
+        Tn = {{ Tpetra::createCopy(Tp[0]),  Tpetra::createCopy(Tp[1]) }};
     }
 
 
