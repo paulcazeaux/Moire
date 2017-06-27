@@ -25,8 +25,11 @@
 #include <Teuchos_Comm.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_Map_decl.hpp>
+#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
+#include <Tpetra_CrsGraph_def.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
+#include <Tpetra_CrsMatrix_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
@@ -620,7 +623,7 @@ namespace Bilayer {
         loc_trace = (LocTrace[0] + LocTrace[1]) / (unit_cell(0).area + unit_cell(1).area),
         result = 0.0;
         
-        MPI_reduce::sum(&loc_trace, &result, 1, 0, * mpi_communicator);
+        Utilities::MPI::sum<Scalar>(&loc_trace, &result, 1, * mpi_communicator);
         return result;
     }   
 
