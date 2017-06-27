@@ -340,27 +340,19 @@ namespace Bilayer {
     void
     DoFHandler<dim,degree>::make_coarse_partition(std::vector<types::subdomain_id>& partition_indices)
     {
-        dealii::TimerOutput timer = dealii::TimerOutput(
-                       std::cout,
-                       dealii::TimerOutput::summary,
-                       dealii::TimerOutput::wall_times);
-
-        timer.enter_subsection("Reserve array memory");
         /* Produce a sparsity pattern in CSR format and pass it to the METIS partitioner */
         std::vector<idx_t> int_rowstart(1);
             int_rowstart.reserve(lattice(0).n_vertices + lattice(1).n_vertices);
         std::vector<idx_t> int_colnums;
             int_colnums.reserve(50 * (lattice(0).n_vertices + lattice(1).n_vertices));
-        timer.leave_subsection();
             /*******************/
             /* Rows in block 0 */
             /*******************/
-        timer.enter_subsection("Fill coarse graph");
-        Teuchos::Array<types::glob_t> col_indices;
         for (types::loc_t m = 0; m<lattice(0).n_vertices; ++m)
         {   /**
              * Start with entries corresponding to the right-product by the Hamiltonian.
              */
+            Teuchos::Array<types::glob_t> col_indices;
                 /* Block 0 <-> 0 */
             std::vector<types::loc_t>   
             neighbors = lattice(0).list_neighborhood_indices(
@@ -408,6 +400,7 @@ namespace Bilayer {
         {   /**
              * Start with entries corresponding to the right-product by the Hamiltonian.
              */
+            Teuchos::Array<types::glob_t> col_indices;
                 /* Block 0 -> 1 */
             std::vector<types::loc_t>   
             neighbors = lattice(0).list_neighborhood_indices(
@@ -446,9 +439,7 @@ namespace Bilayer {
                 int_colnums.push_back(col);
             int_rowstart.push_back(int_colnums.size());
         }
-        timer.leave_subsection();
 
-        timer.enter_subsection("Setup Metis");
         idx_t
         n = static_cast<idx_t>(lattice(0).n_vertices + lattice(1).n_vertices),
         ncon = 1,
@@ -460,9 +451,7 @@ namespace Bilayer {
         METIS_SetDefaultOptions (options);
         options[METIS_OPTION_OBJTYPE] = METIS_OBJTYPE_VOL;
         options[METIS_OPTION_MINCONN] = 1;
-        timer.leave_subsection();
 
-        timer.enter_subsection("METIS call");
           /* Call Metis */
         std::vector<idx_t> int_partition_indices (lattice(0).n_vertices + lattice(1).n_vertices);
         int ierr = 
@@ -471,12 +460,9 @@ namespace Bilayer {
                                      &nparts,nullptr,nullptr,&options[0],
                                      &dummy,&int_partition_indices[0]);
 
-        timer.leave_subsection();
-        timer.enter_subsection("Final copy");
         std::copy (int_partition_indices.begin(),
                    int_partition_indices.end(),
                    partition_indices.begin());
-        timer.leave_subsection();
     }
 
     template<int dim, int degree>

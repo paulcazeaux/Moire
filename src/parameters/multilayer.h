@@ -139,7 +139,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
     job_name = "UNKNOWN_JOB"; 
     output_file = "UNKNOWN_JOB_DATA.jld";
     observable_type = 0;
-    inter_search_radius = 12.5;
+    inter_search_radius = 0.;
     poly_degree = 20;
     energy_rescale = 20;
     energy_shift = 0;
