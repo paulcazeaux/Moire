@@ -25,9 +25,7 @@
 #include <Teuchos_Comm.hpp>
 #include <Tpetra_Vector.hpp>
 #include <Tpetra_Map_decl.hpp>
-#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
-#include <Tpetra_CrsGraph_def.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
 #include <Tpetra_CrsMatrix_def.hpp>
 
@@ -98,7 +96,7 @@ namespace Bilayer {
         /* Assemble identity observable */
         void                create_identity(std::array<MultiVector, 2>& Id);
         /* Application of the hamiltonian action, representing the right-product in the C* algebra */
-        void                hamiltonian_rproduct(const std::array<MultiVector, 2> A, std::array<MultiVector, 2> & B, Scalar scaling = 1.0, Scalar shift = 0.0);
+        void                hamiltonian_rproduct(const std::array<MultiVector, 2> A, std::array<MultiVector, 2> & B);
         /* Adjoint operation on an observable */
         void                adjoint(const std::array<MultiVector, 2> A, std::array<MultiVector, 2>& tA);
         /* Trace of an observable, returned on root process (pid = 0, returns 0 on other processes) */
@@ -415,10 +413,10 @@ namespace Bilayer {
     }
     template<int dim, int degree, typename Scalar>
     void
-    BaseAlgebra<dim,degree,Scalar>::hamiltonian_rproduct(const std::array<MultiVector, 2>  A, std::array<MultiVector, 2> & B, Scalar scaling, Scalar shift)
+    BaseAlgebra<dim,degree,Scalar>::hamiltonian_rproduct(const std::array<MultiVector, 2>  A, std::array<MultiVector, 2> & B)
     {
         for (types::block_t block = 0; block < 2; ++block)
-            hamiltonian_action.at(block)->apply(A.at(block), B.at(block), Teuchos::NO_TRANS, scaling, shift);
+            hamiltonian_action.at(block)->apply(A.at(block), B.at(block), Teuchos::NO_TRANS);
     }
 
     template<int dim, int degree, typename Scalar>

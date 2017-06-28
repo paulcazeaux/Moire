@@ -226,13 +226,10 @@ namespace Bilayer {
     {
         dealii::TimerOutput::Scope t(computing_timer, "Solve");
 
-        const Scalar 
-        a = 1./this->dof_handler.energy_rescale,
-        b = this->dof_handler.energy_shift/this->dof_handler.energy_rescale;
         /* Initialization of the vector to the identity */
 
         LA::create_identity(Tp);
-        LA::hamiltonian_rproduct(Tp, T, a, b);
+        LA::hamiltonian_rproduct(Tp, T);
 
         Scalar
         m0 = LA::trace(Tp), 
@@ -247,7 +244,7 @@ namespace Bilayer {
 
         for (int i=2; i <= this->dof_handler.poly_degree; ++i)
         {
-            LA::hamiltonian_rproduct(T, Tn, a, b);
+            LA::hamiltonian_rproduct(T, Tn);
             LA::linear_combination(-1, Tp, 2., Tn);
 
             std::swap(Tn, Tp);

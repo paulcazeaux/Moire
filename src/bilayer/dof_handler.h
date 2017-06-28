@@ -21,9 +21,7 @@
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Tpetra_Map_decl.hpp>
-#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
-#include <Tpetra_CrsGraph_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
