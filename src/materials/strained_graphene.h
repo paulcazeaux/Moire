@@ -22,6 +22,15 @@ namespace Coupling {
 
 }   /* End namespace Coupling */
 
+namespace IsNonZero {
+
+    namespace Intralayer {
+        bool strained_graphene(const Graphene::Orbital orbit_row, const Graphene::Orbital orbit_col, 
+                            const std::array<int, 2>& vector);
+    }   /* End namespace Intralayer */
+
+}   /* End namespace IsNonZero */
+
 namespace StrainedGraphene {
     
     /* Geometry library */

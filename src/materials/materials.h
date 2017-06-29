@@ -82,6 +82,10 @@ namespace Materials {
     intralayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat);
+    bool
+    is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+                    const std::array<int, 1>& vector, 
+                    const Mat mat);
     /**
      * Returns an intra-layer tight-binding hopping term for a two dimensional material,
      * for a given pair of orbitals and a lattice vector in grid coordinates computed 
@@ -89,6 +93,10 @@ namespace Materials {
      */
     double
     intralayer_term(const int orbital_row, const int orbital_col, 
+                    const std::array<int, 2>& vector, 
+                    const Mat mat);
+    bool
+    is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat);
     /**
@@ -104,6 +112,11 @@ namespace Materials {
                     const std::array<double, 2>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
+    bool
+    is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+                    const std::array<double, 2>& vector, 
+                    const double angle_row, const double angle_col,
+                    const Mat mat_row, const Mat mat_col);
     /**
      * Returns an inter-layer tight-binding hopping term between a pair of two dimensional 
      * materials, for a given pair of orbitals and a real-space vector in cartesian coordinates.
@@ -113,6 +126,11 @@ namespace Materials {
      */
     double
     interlayer_term(const int orbital_row, const int orbital_col, 
+                    const std::array<double, 3>& vector, 
+                    const double angle_row, const double angle_col,
+                    const Mat mat_row, const Mat mat_col);
+    bool
+    is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
                     const std::array<double, 3>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);

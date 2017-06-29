@@ -40,4 +40,18 @@ namespace Interlayer {
 }   /* End namespace Interlayer */
 
 }   /* End namespace Coupling */
+
+namespace IsNonZero {
+
+namespace Intralayer {
+    bool one_d_model(const int vector);
+
+}   /* End namespace Intralayer */
+
+namespace Interlayer {
+    bool one_d_model(const double vector);
+
+}   /* End namespace Interlayer */
+
+}   /* End namespace IsNonZero */
 #endif

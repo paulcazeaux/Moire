@@ -8,10 +8,10 @@ using Interpolations
 function DoS(a, b, mu)
     N = size(mu,1)
     nratios = size(mu,2)
-    M = 2*N
+    M = 4*N
 
     g = ((N-(0:N-1)).*cos(pi*(0:N-1)/N) + sin(pi*(0:N-1)/N)*cot(pi/N))/N
-    g = sqrt(M) * [g[1]/sqrt(2); g[2:end]]
+    g = sqrt(M) * [g[1]/sqrt(2); g[2:N]]
     Y = cos(pi/M*(0.5:M))
     Y = repmat(Y, 1, nratios)
     Z = zeros(Float64, M, nratios)

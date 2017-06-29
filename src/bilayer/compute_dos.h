@@ -28,12 +28,11 @@ namespace Bilayer {
     *       and interpolate the functions over the unit cell,
     *       (which can take the values 1, 2 or 3),
     * - Scalar: the main number type used in the computation.
-    *       This should be a complex double at the moment due the
-    *       implementation of the FFTW computations, but we could
-    *       also implement real types (and then use the appropriate
-    *       FFT operations specialized for reals.)
+    *       This should be a double when no magnetic field is involved
+    *       and a complex<double> otherwise, since there is no need
+    *       for adjoint calculations (see BaseAlgebra documentation).
     */
-    template <int dim, int degree, typename Scalar = std::complex<double> >
+    template <int dim, int degree, typename Scalar = double >
     class ComputeDoS : private BaseAlgebra<dim, degree, Scalar>
     {
     public:
@@ -66,11 +65,19 @@ namespace Bilayer {
         void run();
 
         /**
+         *  Output the Chebyshev moments of the diagonal elements
+         * (Local Density of States) of the Tight-Binding 
+         * bilayer Hamiltonian after it is computed by 
+         * the above run() call.
+         */
+        std::vector<std::array<std::vector<Scalar>,2>> output_LDoS();
+
+        /**
          *  Output the Chebyshev moments of the Density of States
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
-        std::vector<Scalar> output_results();
+        std::vector<Scalar> output_DoS();
 
         /**
          *  Determine an estimate of the current memory usage
@@ -131,11 +138,11 @@ namespace Bilayer {
         std::array<MultiVector, 2> Tp, T, Tn;
 
         /**
-         * Array of Scalars holding the Chebyshev moments of the Density
-         * of States of the Hamiltonian, computed using the Kernel 
-         * Polynomial Method in the solve() method above.
+         * Array of Scalars holding the Chebyshev moments of the 
+         * local Density of States of the Hamiltonian, computed 
+         * using the Kernel Polynomial Method in the solve() method above.
          */
-        std::vector<Scalar>         chebyshev_moments;
+        std::vector<std::array<std::vector<Scalar>,2>> chebyshev_moments;
     };
 
 
@@ -172,10 +179,28 @@ namespace Bilayer {
 
 
     template<int dim, int degree, typename Scalar>
-    std::vector<Scalar>
-    ComputeDoS<dim,degree,Scalar>::output_results()
+    std::vector<std::array<std::vector<Scalar>,2>>
+    ComputeDoS<dim,degree,Scalar>::output_LDoS()
     {
         return chebyshev_moments;
+    }
+
+     template<int dim, int degree, typename Scalar>
+    std::vector<Scalar>
+    ComputeDoS<dim,degree,Scalar>::output_DoS()
+    {
+        std::vector<Scalar> DoS;
+        for ( const auto diag_moments : chebyshev_moments)
+        {
+            Scalar T = std::accumulate(diag_moments.at(0).begin(), diag_moments.at(0).end(), 0.0)
+                                    * this->unit_cell(1).area / (this->unit_cell(0).area + this->unit_cell(1).area)
+                                    / static_cast<double>( this->dof_handler.n_domain_orbitals(0,0) * this->dof_handler.n_cell_nodes(0,0) )
+                        + std::accumulate(diag_moments.at(1).begin(), diag_moments.at(1).end(), 0.0)
+                                    * this->unit_cell(0).area / (this->unit_cell(0).area + this->unit_cell(1).area)
+                                    / static_cast<double>( this->dof_handler.n_domain_orbitals(1,1) * this->dof_handler.n_cell_nodes(1,1) );
+            DoS.push_back(T);
+        }
+        return DoS;
     }
 
     template<int dim, int degree, typename Scalar>
@@ -231,13 +256,12 @@ namespace Bilayer {
         LA::create_identity(Tp);
         LA::hamiltonian_rproduct(Tp, T);
 
-        Scalar
-        m0 = LA::trace(Tp), 
-        m = LA::trace(T);
+        std::array<std::vector<Scalar>,2> 
+        m0 = LA::diagonal(Tp), 
+        m = LA::diagonal(T);
 
         if (this->dof_handler.my_pid == 0)
         {
-          chebyshev_moments.reserve(this->dof_handler.poly_degree+1);
           chebyshev_moments.push_back(m0);
           chebyshev_moments.push_back(m);
         }
@@ -250,7 +274,7 @@ namespace Bilayer {
             std::swap(Tn, Tp);
             std::swap(T, Tp);
 
-            m = LA::trace(T);
+            m = LA::diagonal(T);
             if (this->dof_handler.my_pid == 0)
                 chebyshev_moments.push_back(m);
         }

@@ -24,8 +24,8 @@ namespace TMDC {
                     X_B_px = 8, X_B_py = 9, X_B_pz = 10};
 
     const int       n_orbitals          = 11;
-    const double    inter_search_radius = 3.;
-    const double    intra_search_radius = 3.;
+    const double    inter_cutoff_radius = 4.;
+    const double    intra_cutoff_radius = 3.;
 }   /* End namespace TMDC */
 
 namespace Coupling {
@@ -48,6 +48,23 @@ namespace Coupling {
 
 }   /* End namespace Coupling */
 
+namespace IsNonZero {
+
+    namespace Intralayer {
+        bool TMDC(    const TMDC::Orbital orbit_row,  const TMDC::Orbital orbit_col, std::array<int, 2> vector);
+    }   /* End namespace Intralayer */
+
+    namespace Interlayer {
+        bool S_to_S(  const TMDC::Orbital orbit_row,  const TMDC::Orbital orbit_col, 
+                            std::array<double, 3> vector, 
+                            const double theta_row, const double theta_col);
+        bool Se_to_Se(  const TMDC::Orbital orbit_row,  const TMDC::Orbital orbit_col, 
+                            std::array<double, 3> vector, 
+                            const double theta_row, const double theta_col);
+    }   /* End namespace Interlayer */
+
+}   /* End namespace IsNonZero */
+
 /* We define here a library of geometric constants for each TMDC material category (M = Mo / W) */
 namespace TMDC {
     namespace MS2 {
@@ -62,8 +79,12 @@ namespace TMDC {
                 { Atom::X_B,    {{0.5 * a, numbers::SQRT3_6 * a,  0.492138365 * a}} }  };
         /* Useful constants */
         using TMDC::n_orbitals;
-        using TMDC::intra_search_radius;
-        using TMDC::inter_search_radius;
+        using TMDC::intra_cutoff_radius;
+        using TMDC::inter_cutoff_radius;
+
+        const double  intra_search_radius = intra_cutoff_radius + a * numbers::SQRT3_3;
+        const double  inter_search_radius = inter_cutoff_radius + a * numbers::SQRT3_3;
+
     }
 
     namespace MSe2 {
@@ -79,8 +100,11 @@ namespace TMDC {
             };
         /* Useful constants */
         using TMDC::n_orbitals;
-        using TMDC::intra_search_radius;
-        using TMDC::inter_search_radius;
+        using TMDC::intra_cutoff_radius;
+        using TMDC::inter_cutoff_radius;
+
+        const double  intra_search_radius = intra_cutoff_radius + a * numbers::SQRT3_3;
+        const double  inter_search_radius = inter_cutoff_radius + a * numbers::SQRT3_3;
     }
 
 

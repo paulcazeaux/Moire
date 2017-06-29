@@ -46,6 +46,21 @@ namespace Coupling {
 
 }   /* End namespace Coupling */
 
+namespace IsNonZero {
+
+    namespace Intralayer {
+        bool graphene(const Graphene::Orbital orbit_row, const Graphene::Orbital orbit_col, 
+                            const std::array<int, 2>& vector);
+    }   /* End namespace Intralayer */
+
+    namespace Interlayer {
+        bool C_to_C(const Graphene::Orbital orbit_row, const Graphene::Orbital orbit_col,
+                        std::array<double, 3> vector, 
+                        const double theta_row, const double theta_col);
+    }   /* End namespace Interlayer */
+
+}   /* End namespace IsNonZero */
+
 
 /**
  * We define here the library of useful constants for building the geometry
@@ -65,12 +80,12 @@ namespace Graphene {
     /**
      * Useful constants
      */
-    const int               n_orbitals      = 2;
+    const int               n_orbitals = 2;
     const double            intra_cutoff_radius = 4 * numbers::SQRT3_3 * a + 1e-5;
     const double            inter_cutoff_radius = 8.;
 
-    const double            intra_search_radius = intra_cutoff_radius + a/3.;
-    const double            inter_search_radius = inter_cutoff_radius + a/3.;
+    const double            intra_search_radius = intra_cutoff_radius + a * numbers::SQRT3_3;
+    const double            inter_search_radius = inter_cutoff_radius + a * numbers::SQRT3_3;
 
 
 /**

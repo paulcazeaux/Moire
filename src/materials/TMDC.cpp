@@ -1176,13 +1176,15 @@ double Coupling::Interlayer::S_to_S(const Orbital orbit_row,    const Orbital or
             break;
         }
     }
-    double r_sq = vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2];
-    double r = std::sqrt(r_sq);
     
-    if (r < 7. || std::abs(std::abs(vector[3]) - XX_sep) < 0.05)
+    if ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
+                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05))
     {
         assert( (atom(orbit_row) == Atom::X_A && atom(orbit_col) == Atom::X_B) 
                 || (atom(orbit_row) == Atom::X_B && atom(orbit_col) == Atom::X_A) );
+
+        double r_sq = vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2];
+        double r = std::sqrt(r_sq);
         /* Determine character of p orbit */
         int p_row = (index(orbit_row) - 5) % 3;
         int p_col = (index(orbit_col) - 5) % 3;
@@ -1277,13 +1279,15 @@ double Coupling::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital or
             break;
         }
     }
-    double r_sq = vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2];
-    double r = std::sqrt(r_sq);
     
-    if (r < 7. || std::abs(std::abs(vector[3]) - XX_sep) < 0.05)
+    if ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
+                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05))
     {
         assert( (atom(orbit_row) == Atom::X_A && atom(orbit_col) == Atom::X_B) 
                 || (atom(orbit_row) == Atom::X_B && atom(orbit_col) == Atom::X_A) );
+
+        double r_sq = vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2];
+        double r = std::sqrt(r_sq);
         /* Determine character of p orbit */
         int p_row = (index(orbit_row) - 5) % 3;
         int p_col = (index(orbit_col) - 5) % 3;
@@ -1295,4 +1299,322 @@ double Coupling::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital or
     }
     else
         return 0;
+}
+
+
+bool IsNonZero::Intralayer::TMDC(const Orbital orbit_row,  const Orbital orbit_col, 
+                                        std::array<int, 2> vector)
+{
+    /* Lookup table of coefficients */
+    const bool onsite[11][11] = 
+       {
+            { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0},
+            { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+            { 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0},
+            { 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1}
+       };
+    const bool next_nearest[11][11] = 
+       {
+            { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1}
+       };
+    const bool nearest[11][11] = 
+       {
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}
+       };
+    const bool nearest_vert[11][11] = 
+       {
+            { 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1},
+            { 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1},
+            { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0} 
+       };
+    const bool next_next_nearest[11][11] = 
+       {
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0}
+       };
+    const bool next_next_nearest_vert[11][11] = 
+       {
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1},
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1},
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+            { 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0}
+       };
+    /**
+     * Compute hexagonal homogeneous coordinates from grid coordinates.
+     * We use the following system:
+     *
+     *                M                   M                 |             (-1,2,-1)            (1,1,-2)              
+     *         (-1/2, sqrt(3)/2)                            |                                                       
+     *                          .                           |                        (0,1,-1)                        
+     *                                                      |                                                       
+     *                X                   X                 |              (-1,1,0)            (1,0,-1)             
+     *                                                      |                                                       
+     *                                                      |                                                       
+     *      M                   M                    M      |   (-2,1,1)             (0,0,0)              (2,-1,-1)   
+     *                        (0,0)                (1,0)    |                                                       
+     *                                                      |                                                       
+     *                .                   .                 |              (-1,0,1)            (1,-1,0)              
+     *                                                      |                                                       
+     *                          X                           |                        (0,-1,1)                       
+     *                                                      |                                                       
+     *                M                   M                 |             (-1,-1,2)            (1,-2,1)             
+     *                                                                    
+     * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
+     */
+    std::array<int, 2> hom_vec = {   2 * vector[0] +  -1 * vector[1],
+                                    -1 * vector[0] +   2 * vector[1] };
+       // redundant 3rd coordinate: -1 * vector[0] -   1 * vector[1]
+
+    /* Shift the arrow vector by the orbital coordinates */
+    if (atom(orbit_col) == Atom::M && (atom(orbit_row) == Atom::X_A || atom(orbit_row) == Atom::X_B))
+    {
+        hom_vec[0] -=  1;
+        // hom_vec[2] -= -1;
+    }
+    else if ((atom(orbit_col) == Atom::X_A || atom(orbit_col) == Atom::X_B) && atom(orbit_row) == Atom::M)
+    {
+        hom_vec[0] +=  1;
+        // hom_vec[2] += -1;
+    }
+
+    /* Compute the distance to the origin: 
+     * we use the identity r^2 = x^2 + y^2 + z^2 = x^2 + y^2 + (x+y)^2 = 2 * (x * (x+y) + y^2) 
+     */
+    int r = hom_vec[0] * (hom_vec[0] + hom_vec[1]) + hom_vec[1]*hom_vec[1];
+    
+    switch (r)
+    {
+        case 0:
+            return onsite[index(orbit_row)][index(orbit_col)];
+        case 1:
+        {
+            if (hom_vec[0] == 0) 
+                return nearest_vert[index(orbit_row)][index(orbit_col)];
+            else
+                return nearest[index(orbit_row)][index(orbit_col)];
+        }
+        case 3:
+            return next_nearest[index(orbit_row)][index(orbit_col)];
+        case 4:
+        {
+            if (hom_vec[0] == 0)
+                return next_next_nearest_vert[index(orbit_row)][index(orbit_col)];
+            else
+                return next_next_nearest[index(orbit_row)][index(orbit_col)];
+        }
+        default:
+            return false;
+    }   
+}
+
+
+bool IsNonZero::Interlayer::S_to_S(const Orbital orbit_row,  const Orbital orbit_col, 
+                                        std::array<double, 3> vector, 
+                                        const double theta_row, const double theta_col) 
+{       
+
+    /*                          Shift the arrow vector by the orbital coordinates                               */
+    /* Simplification: we assume that Atom M is at the origin, and X_A / X_B have the same in-plane coordinates */
+    switch (atom(orbit_col))
+    {
+        case Atom::M:
+        {
+            switch (atom(orbit_row))
+            {
+                case Atom::M: 
+                    break;
+                case Atom::X_A:
+                {
+                    vector[0] -=  cos(theta_row) * MSe2::atom_pos.at (Atom::X_A)[0] + sin(theta_row) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[1] -= -sin(theta_row) * MSe2::atom_pos.at (Atom::X_A)[0] + cos(theta_row) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[2] -= MSe2::atom_pos.at (Atom::X_A)[2];
+                    break;
+                }
+                case Atom::X_B:
+                {
+                    vector[0] -=  cos(theta_row) * MSe2::atom_pos.at (Atom::X_B)[0] + sin(theta_row) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[1] -= -sin(theta_row) * MSe2::atom_pos.at (Atom::X_B)[0] + cos(theta_row) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[2] -= MSe2::atom_pos.at (Atom::X_B)[2];
+                    break;
+                }
+            }
+            break;
+        }
+        case Atom::X_A:
+        {
+            switch (atom(orbit_row))
+            {
+                case Atom::M:
+                {
+                    vector[0] +=  cos(theta_col) * MSe2::atom_pos.at (Atom::X_A)[0] + sin(theta_col) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[1] += -sin(theta_col) * MSe2::atom_pos.at (Atom::X_A)[0] + cos(theta_col) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[2] += MSe2::atom_pos.at (Atom::X_A)[2];
+                    break;
+                }
+                case Atom::X_A:
+                    break;
+                case Atom::X_B:
+                {
+                    vector[2] += MSe2::atom_pos.at (Atom::X_A)[2] - MSe2::atom_pos.at (Atom::X_B)[2];
+                    break;
+                }
+            }
+            break;
+        }
+        case Atom::X_B:
+        {
+            switch (atom(orbit_row))
+            {
+                case Atom::M:
+                {
+                    vector[0] +=  cos(theta_col) * MSe2::atom_pos.at (Atom::X_B)[0] + sin(theta_col) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[1] += -sin(theta_col) * MSe2::atom_pos.at (Atom::X_B)[0] + cos(theta_col) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[2] += MSe2::atom_pos.at (Atom::X_B)[2];
+                    break;
+                }
+                case Atom::X_A:
+                {
+                    vector[2] += MSe2::atom_pos.at (Atom::X_B)[2] - MSe2::atom_pos.at (Atom::X_A)[2];
+                    break;
+                }
+                case Atom::X_B:
+                    break;
+            }
+            break;
+        }
+    }
+    const double XX_sep = (12.29/2.0) - 3.130;
+    return ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
+                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05));
+}
+
+bool IsNonZero::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital orbit_col, 
+                                        std::array<double, 3> vector, 
+                                        const double theta_row, const double theta_col) 
+{       
+
+    /*                          Shift the arrow vector by the orbital coordinates                               */
+    /* Simplification: we assume that Atom M is at the origin, and X_A / X_B have the same in-plane coordinates */
+    switch (atom(orbit_col))
+    {
+        case Atom::M:
+        {
+            switch (atom(orbit_row))
+            {
+                case Atom::M: 
+                    break;
+                case Atom::X_A:
+                {
+                    vector[0] -=  cos(theta_row) * MSe2::atom_pos.at (Atom::X_A)[0] + sin(theta_row) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[1] -= -sin(theta_row) * MSe2::atom_pos.at (Atom::X_A)[0] + cos(theta_row) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[2] -= MSe2::atom_pos.at (Atom::X_A)[2];
+                    break;
+                }
+                case Atom::X_B:
+                {
+                    vector[0] -=  cos(theta_row) * MSe2::atom_pos.at (Atom::X_B)[0] + sin(theta_row) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[1] -= -sin(theta_row) * MSe2::atom_pos.at (Atom::X_B)[0] + cos(theta_row) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[2] -= MSe2::atom_pos.at (Atom::X_B)[2];
+                    break;
+                }
+            }
+            break;
+        }
+        case Atom::X_A:
+        {
+            switch (atom(orbit_row))
+            {
+                case Atom::M:
+                {
+                    vector[0] +=  cos(theta_col) * MSe2::atom_pos.at (Atom::X_A)[0] + sin(theta_col) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[1] += -sin(theta_col) * MSe2::atom_pos.at (Atom::X_A)[0] + cos(theta_col) * MSe2::atom_pos.at (Atom::X_A)[1];
+                    vector[2] += MSe2::atom_pos.at (Atom::X_A)[2];
+                    break;
+                }
+                case Atom::X_A:
+                    break;
+                case Atom::X_B:
+                {
+                    vector[2] += MSe2::atom_pos.at (Atom::X_A)[2] - MSe2::atom_pos.at (Atom::X_B)[2];
+                    break;
+                }
+            }
+            break;
+        }
+        case Atom::X_B:
+        {
+            switch (atom(orbit_row))
+            {
+                case Atom::M:
+                {
+                    vector[0] +=  cos(theta_col) * MSe2::atom_pos.at (Atom::X_B)[0] + sin(theta_col) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[1] += -sin(theta_col) * MSe2::atom_pos.at (Atom::X_B)[0] + cos(theta_col) * MSe2::atom_pos.at (Atom::X_B)[1];
+                    vector[2] += MSe2::atom_pos.at (Atom::X_B)[2];
+                    break;
+                }
+                case Atom::X_A:
+                {
+                    vector[2] += MSe2::atom_pos.at (Atom::X_B)[2] - MSe2::atom_pos.at (Atom::X_A)[2];
+                    break;
+                }
+                case Atom::X_B:
+                    break;
+            }
+            break;
+        }
+    }
+    const double XX_sep = (12.96/2.0) - 3.350;
+    return ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
+                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05));
 }

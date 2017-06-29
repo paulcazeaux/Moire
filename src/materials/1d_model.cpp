@@ -21,3 +21,16 @@ double Coupling::Interlayer::one_d_model(const double vector)
     double r = std::abs(vector)/Toy1D::r0;
     return Toy1D::W * std::exp(-(r*r));
 }
+
+bool IsNonZero::Intralayer::one_d_model(const int vector)
+{
+    if (vector == 1 || vector == -1)
+        return true;
+    else 
+        return false;
+}
+
+bool IsNonZero::Interlayer::one_d_model(const double vector)
+{
+    return (std::abs(vector) < Toy1D::inter_search_radius ); 
+}

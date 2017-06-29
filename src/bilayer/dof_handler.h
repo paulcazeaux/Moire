@@ -111,7 +111,9 @@ namespace Bilayer {
         types::loc_t    n_range_orbitals(       const types::block_t range_block, const types::block_t domain_block) const;
 
 
-        bool                 is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
+        bool                is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
+                                                     const types::loc_t lattice_index) const;
+        types::subdomain_id point_owner( const types::block_t range_block,  const types::block_t domain_block, 
                                                      const types::loc_t lattice_index) const;
   
         /**
@@ -606,7 +608,8 @@ namespace Bilayer {
     DoFHandler<dim,degree>::make_sparsity_pattern_hamiltonian_action(const types::block_t range_block) const
     {
         Teuchos::RCP<SparsityPattern> sparsity_pattern = Tpetra::createCrsGraph(owned_dofs_.at(range_block));
-        Teuchos::Array<types::glob_t> ColIndices;
+        std::vector<types::glob_t> globalRows;
+        std::vector<Teuchos::Array<types::glob_t>> ColIndices;
 
         /* Each range block has a specific unit cell attached */
         const auto& cell = unit_cell(1-range_block);
@@ -619,48 +622,68 @@ namespace Bilayer {
                 assert(this_point.domain_block == domain_block);
 
                 dealii::Point<dim> this_point_position = lattice(domain_block).get_vertex_position(this_point.lattice_index);
+                std::array<types::loc_t, dim> 
+                this_point_grid_indices = lattice(domain_block).get_vertex_grid_indices(this_point.lattice_index);
 
                         /* Block b <-> b */
+                globalRows.clear();
+                for (types::loc_t cell_index = 0; cell_index < n_cell_nodes(range_block, domain_block); ++cell_index)
+                    for (types::loc_t orbital = 0; orbital <  n_domain_orbitals(range_block, domain_block); orbital++)
+                        globalRows.push_back(get_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital));
+
+                ColIndices.resize(globalRows.size());
+                for (auto & cols : ColIndices) 
+                    cols.clear();
+
                 std::vector<types::loc_t>   
                 neighbors = lattice(domain_block).list_neighborhood_indices(this_point_position, layer(domain_block).intra_search_radius);
-                
-                for (types::loc_t cell_index = 0; cell_index < n_cell_nodes(range_block, domain_block); ++cell_index)
+                for (auto neighbor_lattice_index : neighbors)
                 {
-                    ColIndices.clear();
-                    for (auto neighbor_lattice_index : neighbors)
-                        for (types::loc_t orbital_middle = 0; orbital_middle <  n_domain_orbitals(range_block, domain_block); orbital_middle++)
-                            ColIndices.push_back(
-                                get_dof_index(range_block, domain_block, neighbor_lattice_index, cell_index, orbital_middle));
-                    for (types::loc_t orbital = 0; orbital <  n_domain_orbitals(range_block, domain_block); orbital++)
-                        sparsity_pattern->insertGlobalIndices(
-                            get_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital), ColIndices);
+                    std::array<types::loc_t,dim> 
+                    grid_vector = lattice(0).get_vertex_grid_indices(neighbor_lattice_index);
+                    for (size_t j=0; j<dim; ++j)
+                        grid_vector[j] -= this_point_grid_indices[j];
+
+                    auto it_cols = ColIndices.begin();
+                    for (types::loc_t cell_index = 0; cell_index < n_cell_nodes(range_block, domain_block); ++cell_index)
+                        for (types::loc_t orbital = 0; orbital <  n_domain_orbitals(range_block, domain_block); orbital++)
+                        {
+                            for (types::loc_t orbital_middle = 0; orbital_middle <  n_domain_orbitals(range_block, domain_block); orbital_middle++)
+                                if (this->is_intralayer_term_nonzero(orbital_middle, orbital, grid_vector, domain_block ))
+                                    it_cols->push_back(get_dof_index(range_block, domain_block, neighbor_lattice_index, cell_index, orbital_middle));
+                            it_cols++; 
+                        }
                 }
+
 
                         /* Block a -> b, a != b */
                 types::block_t other_domain_block = 1-this_point.domain_block;
                 neighbors = lattice(other_domain_block).list_neighborhood_indices( this_point_position, 
-                                            this->inter_search_radius + cell.bounding_radius);
+                                            this->inter_search_radius + unit_cell(1-range_block).bounding_radius);
                         
                 for (auto neighbor_lattice_index : neighbors)
+                {
+                    auto it_cols = ColIndices.begin();
                     for (types::loc_t cell_index = 0; cell_index < n_cell_nodes(range_block, domain_block); ++cell_index)
                     {
                         /* Note: the unit cell node displacement follows the point which is in the interlayer block */
                         dealii::Tensor<1,dim> arrow_vector = lattice(other_domain_block).get_vertex_position(neighbor_lattice_index)
                                                             + (other_domain_block != range_block ? 1. : -1.) 
-                                                                * cell.get_node_position(cell_index)
+                                                                * unit_cell(1-range_block).get_node_position(cell_index)
                                                                     - this_point_position;
                         
-                        if ( arrow_vector.norm() < this->inter_search_radius)
+                        for (types::loc_t orbital = 0; orbital <  n_domain_orbitals(range_block, domain_block); orbital++)
                         {
-                            ColIndices.clear();
                             for (types::loc_t orbital_middle = 0; orbital_middle < n_domain_orbitals(range_block, other_domain_block); orbital_middle++)
-                                ColIndices.push_back(
-                                    get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
-                            for (types::loc_t orbital = 0; orbital < n_domain_orbitals(range_block, domain_block); orbital++)
-                                sparsity_pattern->insertGlobalIndices(
-                                    get_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital), ColIndices);
+                                if (this->is_interlayer_term_nonzero(orbital_middle, orbital, arrow_vector, other_domain_block, domain_block ))
+                                    it_cols[orbital].push_back(get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
                         }
+                        it_cols += n_domain_orbitals(range_block, other_domain_block); 
                     }
+                }
+
+                for (size_t i = 0; i < globalRows.size(); ++i)
+                    sparsity_pattern->insertGlobalIndices(globalRows.at(i), ColIndices.at(i));
             }
         sparsity_pattern->fillComplete ();
         return sparsity_pattern.getConst ();
@@ -814,6 +837,25 @@ namespace Bilayer {
 
             return (idx >= locally_owned_points_partition_.at(domain_block).at(my_pid) 
                     && idx < locally_owned_points_partition_.at(domain_block).at(my_pid+1));
+        }
+    }
+
+    template<int dim, int degree>
+    types::subdomain_id
+    DoFHandler<dim,degree>::point_owner(const types::block_t range_block, 
+                                                    const types::block_t domain_block,
+                                                   const types::loc_t lattice_index) const
+    {
+        assert(range_block < 2);
+        assert(domain_block < 2);
+        if (lattice_index == types::invalid_local_index)
+            return types::invalid_id;
+        else
+        {
+            assert(lattice_index < n_lattice_points(range_block, domain_block) );
+            types::loc_t idx = reordered_indices_.at(domain_block).at(lattice_index)
+                                    + (domain_block == 1 ? lattice(0).n_vertices : 0);
+            return partition_indices_.at(idx);
         }
     }
 

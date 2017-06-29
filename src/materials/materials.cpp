@@ -178,6 +178,15 @@ Materials::intralayer_term(const int orbital_row, const int orbital_col,
     return Coupling::Intralayer::one_d_model(vector[0]);
 }
 
+bool
+Materials::is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+                    const std::array<int, 1>& vector, 
+                    const Mat mat)
+{
+    assert(mat == Mat::Toy1D);
+    return IsNonZero::Intralayer::one_d_model(vector[0]);
+}
+
 double
 Materials::interlayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<double, 2>& vector,
@@ -186,6 +195,16 @@ Materials::interlayer_term(const int orbital_row, const int orbital_col,
 {
     assert(mat_row == Mat::Toy1D && mat_col == Mat::Toy1D);
     return Coupling::Interlayer::one_d_model(vector[0]);
+}
+
+bool
+Materials::is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+                    const std::array<double, 2>& vector,
+                    const double angle_row, const double angle_col,
+                    const Mat mat_row, const Mat mat_col)
+{
+    assert(mat_row == Mat::Toy1D && mat_col == Mat::Toy1D);
+    return IsNonZero::Interlayer::one_d_model(vector[0]);
 }
 
 double
@@ -227,6 +246,36 @@ Materials::intralayer_term(const int orbital_row, const int orbital_col,
     return 0.;
 }
 
+bool
+Materials::is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+                    const std::array<int, 2>& vector, 
+                    const Mat mat)
+{
+    switch (mat)
+    {
+        case Mat::Graphene: // graphene
+            return IsNonZero::Intralayer::graphene( 
+                        Graphene::orbital(orbital_row), Graphene::orbital(orbital_col),
+                            vector);
+        case Mat::StrainedGraphene: // strained graphene
+            return IsNonZero::Intralayer::strained_graphene(
+                        Graphene::orbital(orbital_row), Graphene::orbital(orbital_col),
+                            vector);
+
+        case Mat::MoS2:
+        case Mat::WSe2:
+        case Mat::MoSe2:
+        case Mat::WS2:
+            return IsNonZero::Intralayer::TMDC(
+                        TMDC::orbital(orbital_row), TMDC::orbital(orbital_col),
+                            vector);
+
+        default:
+            throw std::runtime_error("Failed to find material. \n");    
+    }
+    return false;
+}
+
 double
 Materials::interlayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<double, 3>& vector,
@@ -253,4 +302,30 @@ Materials::interlayer_term(const int orbital_row, const int orbital_col,
 
     throw std::runtime_error("Failed to find interlayer term for the selected materials. \n");
     return 0.;
+}
+
+bool
+Materials::is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+                    const std::array<double, 3>& vector,
+                    const double angle_row, const double angle_col,
+                    const Mat mat_row, const Mat mat_col)
+{
+    // graphene case
+    if ( (mat_row == Mat::Graphene || mat_row == Mat::StrainedGraphene) && (mat_col == Mat::Graphene || mat_col == Mat::StrainedGraphene) )
+        return IsNonZero::Interlayer::C_to_C( 
+                        Graphene::orbital(orbital_row), Graphene::orbital(orbital_col), vector,
+                             angle_row, angle_col);
+
+    // MoS2 and WS2 cases
+    if ( (mat_row == Mat::MoS2 || mat_row == Mat::WS2) && (mat_col == Mat::MoS2 || mat_col == Mat::WS2) )
+        return IsNonZero::Interlayer::S_to_S( 
+                        TMDC::orbital(orbital_row), TMDC::orbital(orbital_col), vector,
+                             angle_row, angle_col);
+    if ( (mat_row == Mat::MoSe2 || mat_row == Mat::WSe2) && (mat_col == Mat::MoSe2 || mat_col == Mat::WSe2) )
+        return IsNonZero::Interlayer::Se_to_Se( 
+                        TMDC::orbital(orbital_row), TMDC::orbital(orbital_col), vector,
+                             angle_row, angle_col);
+
+    throw std::runtime_error("Failed to find interlayer term for the selected materials. \n");
+    return false;
 }

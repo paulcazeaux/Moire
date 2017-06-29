@@ -47,6 +47,19 @@ namespace Bilayer {
     * A class encapsulating the basic operations in a C* algebra equipped with a discretized Hamiltonian.
     * It is intended as a base class creating the necessary operations for use in further computations 
     * (density of states, conductivity, etc.)
+    *
+    * Its three template parameters are respectively 
+    * - dim: the dimension of the problem at hand 
+    *       (required to be 1 or 2 at the moment),
+    * - degree: the degree of the finite elements used to discretize
+    *       and interpolate the functions over the unit cell,
+    *       (which can take the values 1, 2 or 3),
+    * - Scalar: the main number type used in the computation.
+    *       This should be a complex double at the moment when the
+    *       computation of the adjoint is needed due the implementation 
+    *       details of the FFTW computations, but we could also 
+    *       implement real types (and then use the appropriate
+    *       FFT operations specialized for reals.)
     */
     template <int dim, int degree, typename Scalar = std::complex<double> >
     class BaseAlgebra
@@ -99,7 +112,10 @@ namespace Bilayer {
         void                hamiltonian_rproduct(const std::array<MultiVector, 2> A, std::array<MultiVector, 2> & B);
         /* Adjoint operation on an observable */
         void                adjoint(const std::array<MultiVector, 2> A, std::array<MultiVector, 2>& tA);
-        /* Trace of an observable, returned on root process (pid = 0, returns 0 on other processes) */
+        /* Diagonal of an observable, available on all processes */
+        std::array<std::vector<Scalar>,2>
+                            diagonal(const std::array<MultiVector, 2> A);
+        /* Trace of an observable, available on all processes */
         Scalar              trace(const std::array<MultiVector, 2> A);
 
         /* MPI communication environment and utilities */
@@ -304,14 +320,6 @@ namespace Bilayer {
         helper.at(0).at(1) = MultiVector(dof_handler.transpose_range_map(0,1), dof_handler.n_range_orbitals(0,1));
         helper.at(1).at(0) = MultiVector(dof_handler.transpose_range_map(1,0), dof_handler.n_range_orbitals(1,0));
         helper.at(1).at(1) = MultiVector(dof_handler.transpose_range_map(1,1), dof_handler.n_range_orbitals(1,1));
-            /* If critical, we can avoid using the helper array when the number of orbitals is the same for both layers,
-             * At the cost of computing the hermitian transpose in-place
-             *
-        if !(dof_handler.transpose_domain_map(0,1) == dof_handler.transpose_range_map(1,0) 
-            && dof_handler.transpose_domain_map(1,0) == dof_handler.transpose_range_map(0,1))
-        {
-        }
-        */
     }
 
 
@@ -391,15 +399,14 @@ namespace Bilayer {
                                                                     * unit_cell(1-range_block).get_node_position(cell_index)
                                                                         - this_point_position;
                             
-                            if ( arrow_vector.norm() < dof_handler.inter_search_radius)
-                                for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
+                            for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
+                            {
+                                for (types::loc_t orbital_middle = 0; orbital_middle < dof_handler.n_domain_orbitals(range_block, other_domain_block); orbital_middle++)
                                 {
-                                    for (types::loc_t orbital_middle = 0; orbital_middle < dof_handler.n_domain_orbitals(range_block, other_domain_block); orbital_middle++)
-                                    {
-                                        it_cols[orbital].push_back(dof_handler.get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
-                                        it_vals[orbital].push_back(dof_handler.interlayer_term(orbital_middle, orbital, arrow_vector, other_domain_block, domain_block ));
-                                    }
+                                    it_cols[orbital].push_back(dof_handler.get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
+                                    it_vals[orbital].push_back(dof_handler.interlayer_term(orbital_middle, orbital, arrow_vector, other_domain_block, domain_block ));
                                 }
+                            }
                             it_cols += dof_handler.n_domain_orbitals(range_block, other_domain_block); 
                             it_vals += dof_handler.n_domain_orbitals(range_block, other_domain_block);
                         }
@@ -523,33 +530,6 @@ namespace Bilayer {
                         for (types::loc_t o2 = 0; o2 < n_orbitals_2; ++o2)
                             tA_View(o2 + n_orbitals_2 * i, o1) = Kokkos::conj( helperView_const(o1 + n_orbitals_1 * i, o2) );
                 });  
-                /* Possible code for the case layer(0).n_orbitals == layer(1).n_orbitals : in-place transpose
-            if (* dof_handler.transpose_range_map(b,1-b) == * dof_handler.transpose_domain_map(1-b,b)) 
-            {
-                adjoint_interpolant.at(b).at(1-b)->apply (A_blocks.at(b).at(1-b), tA_blocks.at(1-b).at(b));
-
-                const types::loc_t n_orbitals = layer(b).n_orbitals;
-                Kokkos::View<Scalar *, Kokkos::Serial> blockView = tA_blocks.at(1-b).at(b).getLocalView<Kokkos::Serial>();
-
-                Kokkos::parallel_for (dof_handler.n_cell_nodes(1-b,b) * dof_handler.n_locally_owned_points(1-b,b), KOKKOS_LAMBDA (const types::loc_t i) {
-                        for (types::loc_t o1 = 0; o1 < n_orbitals; ++o1)
-                        {
-                            for (types::loc_t o2 = 0; o2 < o1; ++o2)
-                            {
-                                const Scalar tmp = Kokkos::conj( blockView(o2 + n_orbitals * i, o1) );
-                                blockView(o2 + n_orbitals * i, o1) = Kokkos::conj( blockView(o1 + n_orbitals * i, o2) );
-                                blockView(o1 + n_orbitals * i, o2) = tmp;
-                            }
-                            blockView(o1 + n_orbitals * i, o1) = Kokkos::conj( blockView(o1 + n_orbitals * i, o1) );
-                        }
-                            
-                    }); 
-            }
-            else
-            {
-                // Case layer(0).n_orbitals != layer(1).n_orbitals : as before
-
-            }*/
         }
     }
 
@@ -589,13 +569,15 @@ namespace Bilayer {
 
 
     template<int dim, int degree, typename Scalar>
-    Scalar
-    BaseAlgebra<dim,degree,Scalar>::trace(const std::array<MultiVector, 2> A)
+    std::array<std::vector<Scalar>,2>
+    BaseAlgebra<dim,degree,Scalar>::diagonal(const std::array<MultiVector, 2> A)
     {
-        std::array<Scalar,2> LocTrace = {{0, 0}};
+        std::array<std::vector<Scalar>,2> Diag;
 
         for (types::block_t b = 0; b<2; ++b)
         {
+            Diag.at(b).resize(dof_handler.n_cell_nodes(b,b) * dof_handler.n_domain_orbitals(b,b), 0.0);
+
             typename MultiVector::dual_view_type::t_dev_const 
             View = A.at(b). template getLocalView<Kokkos::Serial>();
 
@@ -604,25 +586,40 @@ namespace Bilayer {
                 lattice_indices_0[i] = 0;
             /* Add diagonal values on the current process */
             types::loc_t lattice_index_0 = lattice(b).get_vertex_global_index(lattice_indices_0);
-            if (dof_handler.is_locally_owned_point(b,b,lattice_index_0))
+
+            int origin_owner = dof_handler.point_owner(b, b, lattice_index_0);
+
+            if (dof_handler.my_pid == origin_owner)
             {
                 types::loc_t start_zero = dof_handler.locally_owned_dofs(b)->
                                                             getLocalElement( 
                                                             dof_handler.get_dof_index(b, b, lattice_index_0, 0, 0) );
                 for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(b,b); ++cell_index)
                     for (types::loc_t orbital = 0; orbital < dof_handler.n_domain_orbitals(b,b); ++orbital)
-                        LocTrace.at(b) += Scalar(View(start_zero + cell_index * dof_handler.n_domain_orbitals(b,b) + orbital, orbital));
+                    {
+                        size_t idx = cell_index * dof_handler.n_domain_orbitals(b,b) + orbital;
+                        Diag.at(b).at(idx) = static_cast<Scalar>(View(start_zero + idx, orbital));
+                    }
             }
-            LocTrace.at(b) *= unit_cell(1-b).area / static_cast<double>( dof_handler.n_cell_nodes(b,b) );
+            Teuchos::broadcast<int, Scalar>(* mpi_communicator, origin_owner, Diag.at(b).size(), Diag.at(b).data());
         }
+        return Diag;
+    }
 
-        Scalar 
-        loc_trace = (LocTrace[0] + LocTrace[1]) / (unit_cell(0).area + unit_cell(1).area),
-        result = 0.0;
-        
-        Teuchos::reduceAll<int, Scalar>(* mpi_communicator, Teuchos::REDUCE_SUM, 1, &loc_trace, &result);
-        return result;
-    }   
+    template<int dim, int degree, typename Scalar>
+    Scalar
+    BaseAlgebra<dim,degree,Scalar>::trace(const std::array<MultiVector, 2> A)
+    {
+        std::array<std::vector<Scalar>,2> Diag = diagonal(A);
+
+        return std::accumulate(Diag.at(0).begin(), Diag.at(0).end(), 0.0)
+                                    * unit_cell(1).area / (unit_cell(0).area + unit_cell(1).area)
+                                    / static_cast<double>( dof_handler.n_domain_orbitals(0,0) * dof_handler.n_cell_nodes(0,0) )
+                        + std::accumulate(Diag.at(1).begin(), Diag.at(1).end(), 0.0)
+                                    * unit_cell(0).area / (unit_cell(0).area + unit_cell(1).area)
+                                    / static_cast<double>( dof_handler.n_domain_orbitals(1,1) * dof_handler.n_cell_nodes(1,1) );
+    }
+
 
 }/* End namespace Bilayer */
 #endif

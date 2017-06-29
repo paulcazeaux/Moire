@@ -80,10 +80,17 @@ public:
 
     double                  intralayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
                                             const std::array<types::loc_t, dim> grid_vector, 
-                                            const int layer_index);
+                                            const int layer_index) const;
     double                  interlayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
                                             const dealii::Tensor<1, dim> arrow_vector, 
-                                            const int layer_index_row, const int layer_index_col);
+                                            const int layer_index_row, const int layer_index_col) const;
+
+    bool                    is_intralayer_term_nonzero(const types::loc_t orbital_row, const types::loc_t orbital_col, 
+                                            const std::array<types::loc_t, dim> grid_vector, 
+                                            const int layer_index) const;
+    bool                    is_interlayer_term_nonzero(const types::loc_t orbital_row, const types::loc_t orbital_col, 
+                                            const dealii::Tensor<1, dim> arrow_vector, 
+                                            const int layer_index_row, const int layer_index_col) const;
 
     /* operator << ========================================================================== */
     friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, n_layers>& ml)
@@ -172,7 +179,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
     in_file.open(argv[2]);
     if (in_file.is_open())
     {
-        while ( getline(in_file,line) )
+        while ( std::getline(in_file,line) )
         {
             
             std::istringstream in_line(line);
@@ -372,7 +379,7 @@ template<int dim, int n_layers>
 double
 Multilayer<dim,n_layers>::intralayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
                                             const std::array<types::loc_t, dim> grid_vector, 
-                                            const int layer_index)
+                                            const int layer_index) const
 {
     /* Check if diagonal element; if yes, add offset due to vertical electrical field */
     if (orbital_row == orbital_col && std::all_of(grid_vector.begin(), grid_vector.end(), [](types::block_t v) { return v==0; }))
@@ -389,7 +396,7 @@ template<int dim, int n_layers>
 double
 Multilayer<dim,n_layers>::interlayer_term(const types::loc_t orbital_row, const types::loc_t orbital_col, 
                                             const dealii::Tensor<1, dim> arrow_vector, 
-                                            const int layer_index_row, const int layer_index_col)
+                                            const int layer_index_row, const int layer_index_col) const
 {
     std::array<double, dim+1> vector;
     for (size_t i=0; i<dim; ++i)
@@ -404,5 +411,34 @@ Multilayer<dim,n_layers>::interlayer_term(const types::loc_t orbital_row, const 
 				/ this->energy_rescale;
 }
 
+
+template<int dim, int n_layers>
+bool
+Multilayer<dim,n_layers>::is_intralayer_term_nonzero(const types::loc_t orbital_row, const types::loc_t orbital_col, 
+                                            const std::array<types::loc_t, dim> grid_vector, 
+                                            const int layer_index) const
+{
+    return Materials::is_intralayer_term_nonzero(orbital_row, orbital_col, grid_vector,
+                                                layer(layer_index).material) / this->energy_rescale;
+}
+
+
+template<int dim, int n_layers>
+bool
+Multilayer<dim,n_layers>::is_interlayer_term_nonzero(const types::loc_t orbital_row, const types::loc_t orbital_col, 
+                                            const dealii::Tensor<1, dim> arrow_vector, 
+                                            const int layer_index_row, const int layer_index_col) const
+{
+    std::array<double, dim+1> vector;
+    for (size_t i=0; i<dim; ++i)
+        vector[i] = arrow_vector[i];
+    vector[dim] = layer(layer_index_col).height - layer(layer_index_row).height;
+
+    return Materials::is_interlayer_term_nonzero(orbital_row, orbital_col, vector,
+                                                layer(layer_index_row).angle, 
+                                                layer(layer_index_col).angle,
+                                                layer(layer_index_row).material, 
+                                                layer(layer_index_col).material);
+}
 
 #endif

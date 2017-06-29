@@ -50,16 +50,16 @@ int main(int argc, char** argv) {
 			output_file.close();
 		}
 
-		Bilayer::ComputeDoS<dim, degree>
+		Bilayer::ComputeDoS<dim, degree, double>
 		compute_dos(bilayer);
 		compute_dos.run();
-		std::vector<Bilayer::ComputeDoS<dim, degree>::scalar_type> moments = compute_dos.output_results();
+		std::vector<double> moments = compute_dos.output_DoS();
 		if (my_pid == 0)
 		{
 			std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::app);
 			for (unsigned int i = 0; i<moments.size(); ++i)
 			{
-				double m = moments[i].real();
+				double m = moments[i];
 				output_file.write((char*) & m, sizeof(double));
 			}
 			output_file.close();

@@ -22,6 +22,7 @@ namespace types
     /* Definition of an invalid global index value used throughout the project */
     const   glob_t      invalid_global_index    = static_cast< glob_t>(-1);
     const   loc_t       invalid_local_index     = static_cast<loc_t>(-1);
+    const   subdomain_id invalid_id             = static_cast<subdomain_id>(-1);
 
     typedef struct MemUsage {
         size_t Vectors;
