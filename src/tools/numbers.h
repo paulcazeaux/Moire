@@ -5,6 +5,8 @@
  * Created on April 22, 2017, 12:28AM
  */
 
+#include <complex>
+
 #ifndef moire__tools_numbers_h
 #define moire__tools_numbers_h
 
@@ -88,6 +90,21 @@ namespace numbers
      * sqrt(3)/6
      */
     static const double  SQRT3_6 = 0.288675134594812882255;
+
+
+
+    /* Auxiliary function for conjugation */
+    template<typename Scalar>
+    Scalar
+    conjugate(Scalar x) {return x;};
+
+    template<>
+    double
+    conjugate(double x) {return x;};
+    
+    template<class T>
+    std::complex<T>
+    conjugate(std::complex<T> x) {return std::conj(x); };
 }
 
 #endif

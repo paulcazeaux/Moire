@@ -12,10 +12,10 @@
 #include <string>
 #include <map>
 
-#include "1d_model.h"
-#include "graphene.h"
-#include "strained_graphene.h"
-#include "TMDC.h"
+#include "materials/1d_model.h"
+#include "materials/graphene.h"
+#include "materials/strained_graphene.h"
+#include "materials/TMDC.h"
 
 
 /**

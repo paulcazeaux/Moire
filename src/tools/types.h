@@ -8,6 +8,7 @@
 #ifndef moire__tools_types_h
 #define moire__tools_types_h
 
+#include <cstddef>
 #include <cstdint>
 
 namespace types 

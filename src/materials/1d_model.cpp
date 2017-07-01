@@ -6,7 +6,7 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#include "1d_model.h"
+#include "materials/1d_model.h"
 
 double Coupling::Intralayer::one_d_model(const int vector)
 {

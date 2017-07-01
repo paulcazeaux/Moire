@@ -5,7 +5,7 @@
  * Created on June 13, 2017, 10:00 AM
  */
 
-#include "materials.h"
+#include "materials/materials.h"
 using namespace Materials;
 
 /* Utility function for translating strings to material type */

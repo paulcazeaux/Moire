@@ -6,7 +6,7 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#include "TMDC.h"
+#include "materials/TMDC.h"
 
 using namespace TMDC;
 

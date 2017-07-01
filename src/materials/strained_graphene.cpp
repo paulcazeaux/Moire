@@ -6,7 +6,7 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#include "strained_graphene.h"
+#include "materials/strained_graphene.h"
 
 using Graphene::Atom;
 using Graphene::Orbital;

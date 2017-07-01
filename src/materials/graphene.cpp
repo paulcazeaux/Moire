@@ -5,7 +5,7 @@
  * Created on June 12, 2017, 9:00 AM
  */
 
-#include "graphene.h"
+#include "materials/graphene.h"
 
 using Graphene::Atom;
 using Graphene::Orbital;
@@ -89,12 +89,12 @@ double Coupling::Interlayer::C_to_C(const Orbital orbit_row, const Orbital orbit
                     const double theta_row, const double theta_col)
 {
     /* Shift the arrow vector by the orbital coordinates */
-    if (atom(orbit_col) == Atom::A && atom(orbit_row) == Atom::B)
+    if (atom(orbit_row) == Atom::B)
     {
         vector[0] -=  std::cos(theta_row) * Graphene::atom_pos.at (Atom::B)[0] + std::sin(theta_row) * Graphene::atom_pos.at (Atom::B)[1];
         vector[1] -= -std::sin(theta_row) * Graphene::atom_pos.at (Atom::B)[0] + std::cos(theta_row) * Graphene::atom_pos.at (Atom::B)[1];
     }
-    else if (atom(orbit_col) == Atom::B && atom(orbit_row) == Atom::A)
+    if (atom(orbit_col) == Atom::B)
     {
         vector[0] +=  std::cos(theta_col) * Graphene::atom_pos.at (Atom::B)[0] + std::sin(theta_col) * Graphene::atom_pos.at (Atom::B)[1];
         vector[1] += -std::sin(theta_col) * Graphene::atom_pos.at (Atom::B)[0] + std::cos(theta_col) * Graphene::atom_pos.at (Atom::B)[1];

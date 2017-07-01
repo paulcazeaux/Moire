@@ -10,7 +10,7 @@
 
 
 #include <cmath>
-#include "graphene.h"
+#include "materials/graphene.h"
 
 namespace Coupling {
 
