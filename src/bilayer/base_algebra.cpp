@@ -279,19 +279,19 @@ namespace Bilayer {
             {{
                 {{  * A.at(0).offsetView(dof_handler.transpose_domain_map(0, 0), 0),
                     * A.at(0).offsetView(dof_handler.transpose_domain_map(0, 1),
-                                                                            A_blocks.at(0).at(0).getLocalLength())   }},
+                                                                            dof_handler.transpose_domain_map(0, 0)->getNodeNumElements())   }},
                 {{  * A.at(1).offsetView(dof_handler.transpose_domain_map(1, 0), 0),
                     * A.at(1).offsetView(dof_handler.transpose_domain_map(1, 1),
-                                                                            A_blocks.at(1).at(0).getLocalLength())   }}
+                                                                            dof_handler.transpose_domain_map(1, 0)->getNodeNumElements())   }}
             }};
         std::array<std::array<MultiVector, 2>, 2> tA_blocks = 
             {{
                 {{  * tA.at(0).offsetView(dof_handler.transpose_domain_map(0, 0), 0),
                     * tA.at(0).offsetView(dof_handler.transpose_domain_map(0, 1),
-                                                                            tA_blocks.at(0).at(0).getLocalLength())   }},
+                                                                            dof_handler.transpose_domain_map(0, 0)->getNodeNumElements())   }},
                 {{  * tA.at(1).offsetView(dof_handler.transpose_domain_map(1, 0), 0),
                     * tA.at(1).offsetView(dof_handler.transpose_domain_map(1, 1),
-                                                                            tA_blocks.at(1).at(0).getLocalLength())   }}
+                                                                            dof_handler.transpose_domain_map(1, 0)->getNodeNumElements())   }}
             }};
 
 

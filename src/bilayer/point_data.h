@@ -13,6 +13,7 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <tuple>
 
 #include "tools/types.h"
 
@@ -68,14 +69,6 @@ namespace Bilayer {
         PointData(const block_t, const block_t, const loc_t);
 
     };
-
-    PointData::PointData(   const block_t range_block, const block_t domain_block, 
-                            const loc_t lattice_index)
-        :
-        range_block(range_block), 
-        domain_block(domain_block), 
-        lattice_index(lattice_index)
-    {}
 
 } /* End namespace Bilayer */
 #endif

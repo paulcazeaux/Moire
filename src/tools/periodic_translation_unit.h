@@ -83,31 +83,15 @@ private:
  */
 
 template<>
-Kokkos::View<double *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-PeriodicTranslationUnit<1, double>::view() const;
-template<>
 void
 PeriodicTranslationUnit<1, double>::translate(dealii::Tensor<1, 1> vector);
-
-
-template<>
-Kokkos::View<double *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-PeriodicTranslationUnit<2, double>::view() const;
 template<>
 void
 PeriodicTranslationUnit<2, double>::translate(dealii::Tensor<1, 2> vector);
 
 template<>
-Kokkos::View<std::complex<double> *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-PeriodicTranslationUnit<1, std::complex<double>>::view() const;
-template<>
 void
 PeriodicTranslationUnit<1, std::complex<double>>::translate(dealii::Tensor<1, 1> vector);
-
-
-template<>
-Kokkos::View<std::complex<double> *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-PeriodicTranslationUnit<2, std::complex<double>>::view() const;
 template<>
 void
 PeriodicTranslationUnit<2, std::complex<double>>::translate(dealii::Tensor<1, 2> vector);
