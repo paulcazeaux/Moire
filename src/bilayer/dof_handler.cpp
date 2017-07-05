@@ -632,8 +632,7 @@ namespace Bilayer {
         else
         {
             assert(lattice_index < n_lattice_points(range_block, domain_block) );
-            types::loc_t idx = reordered_indices_.at(domain_block).at(lattice_index)
-                                    + (domain_block == 1 ? lattice(0).n_vertices : 0);
+            types::loc_t idx = lattice_index + (domain_block == 1 ? lattice(0).n_vertices : 0);
             return partition_indices_.at(idx);
         }
     }

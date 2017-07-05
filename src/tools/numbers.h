@@ -93,14 +93,17 @@ namespace numbers
 
 
 
-    /* Auxiliary function for complex conjugation, working for doubles also */
+    /**
+     * Auxiliary function for complex conjugation,
+     * working for non-complex scalar types also 
+     */
     template<typename Scalar>
     Scalar
-    conjugate(const Scalar x) {return x;};
+    conjugate(const Scalar x) {return x;}
     
     template<class T>
     std::complex<T>
-    conjugate(const std::complex<T> x) {return std::conj(x); };
+    conjugate(const std::complex<T> x) {return std::conj(x); }
 }
 
 #endif

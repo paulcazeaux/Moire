@@ -4,10 +4,8 @@
 TARGET="Moire"
 
 # cmake parameters
-export CC=/usr/lib/llvm/4/bin/clang
-export CXX=/usr/lib/llvm/4/bin/clang++
-# export CC=gcc-7
-# export CXX=g++-7
+export CC=mpicc
+export CXX=mpic++
 
 # build directory
 cd ./build
@@ -33,4 +31,4 @@ InputFile=../app/cfg/twisted_blg.in
 ExportFile=../output
 
 rm ${ExportFile}.out
-mpirun -n 44 ./app/${TARGET} -i ${InputFile} #  > ${ExportFile}.out
+mpirun -n 2 ./app/${TARGET} -i ${InputFile} #  > ${ExportFile}.out

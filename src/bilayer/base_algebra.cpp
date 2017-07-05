@@ -427,7 +427,7 @@ namespace Bilayer {
                     for (types::loc_t orbital = 0; orbital < dof_handler.n_domain_orbitals(b,b); ++orbital)
                     {
                         size_t idx = cell_index * dof_handler.n_domain_orbitals(b,b) + orbital;
-                        Diag.at(b).at(idx) = static_cast<Scalar>(View(start_zero + idx, orbital));
+                        Diag.at(b).at(idx) = View(start_zero + idx, orbital);
                     }
             }
             Teuchos::broadcast<int, Scalar>(* mpi_communicator, origin_owner, Diag.at(b).size(), Diag.at(b).data());
