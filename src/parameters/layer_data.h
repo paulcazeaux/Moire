@@ -18,6 +18,7 @@
 #include "materials/materials.h"
 #include "tools/transformation.h"
 #include "tools/types.h"
+#include "tools/numbers.h"
 
 /** 
  * A simple container for the information associated with a single layer of dimension dim:
@@ -37,7 +38,6 @@ struct LayerData {
         LayerData(Materials::Mat material,
                     double height, double angle, double dilation);
         LayerData(const LayerData&);
-        ~LayerData() {}
 
         Materials::Mat              material;
         types::loc_t                n_orbitals;
@@ -55,6 +55,16 @@ struct LayerData {
 
         void                set_angle(const double new_angle);
         void                set_dilation(const double new_dilation);
+
+        friend std::ostream& operator<<( std::ostream& os, const LayerData<dim>& l)
+        {
+            os << " | Material type: "                  << Materials::mat_to_string(l.material)           << std::endl;
+            os << " | Number of orbitals: "             << l.n_orbitals                                   << std::endl;
+            os << " | Dilation parameter: "             << l.dilation                                     << std::endl;
+            os << " | Vertical position: "              << l.height                                       << std::endl;
+            os << " | Twist angle (counterclockwise): " << l.angle * 180/ numbers::PI  << "°"             << std::endl;
+            return os;
+        };
 };
 
 

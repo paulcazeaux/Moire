@@ -37,11 +37,17 @@ namespace Materials {
      * An enum type reflecting known materials in this library 
      */
     enum class Mat {Toy1D, Graphene, StrainedGraphene, MoS2, WS2, MoSe2, WSe2, Invalid};
-    /** A utility function to translate the name of the material (as a string) into
+    /** 
+     * A utility function to translate the name of the material (as a string) into
      * a member of the enum type above.
      * This is e.g. for use when initializing from file.
      */
     Mat string_to_mat(std::string in_str);
+    /** 
+     * A utility function to translate a member of the enum type above into a string
+     * containing the name of the material.
+     */
+    std::string mat_to_string(Mat mat);
 
     /*********************************************************************/
     /* Methods for returning each material's geometry and overall useful */

@@ -233,7 +233,6 @@ namespace Bilayer {
 
           /* Call Metis */
         std::vector<idx_t> int_partition_indices (lattice(0).n_vertices + lattice(1).n_vertices);
-        int ierr = 
         METIS_PartGraphKway(&n, &ncon, &int_rowstart[0], &int_colnums[0],
                                      nullptr, nullptr, nullptr,
                                      &nparts,nullptr,nullptr,&options[0],
@@ -391,7 +390,6 @@ namespace Bilayer {
         std::vector<Teuchos::Array<types::glob_t>> ColIndices;
 
         /* Each range block has a specific unit cell attached */
-        const auto& cell = unit_cell(1-range_block);
 
         for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
             for (types::loc_t n=0; n < n_locally_owned_points(range_block, domain_block); ++n)
@@ -481,7 +479,6 @@ namespace Bilayer {
             if (range_block == domain_block)
             {
             /* First, the case of diagonal blocks */
-                const types::glob_t n_orbitals = n_domain_orbitals(range_block, domain_block); 
                 const types::glob_t n_nodes    = n_cell_nodes(range_block, domain_block);
                 /* We simply exchange the point with its opposite */
                 std::array<types::loc_t, dim> on_grid = lattice(domain_block).get_vertex_grid_indices(this_point.lattice_index);
@@ -689,8 +686,6 @@ namespace Bilayer {
         assert( lattice_index < n_lattice_points(range_block, domain_block)  );
         assert( cell_index    < n_cell_nodes(range_block, domain_block) );
         assert( orbital       < n_domain_orbitals(range_block, domain_block) );
-
-        types::loc_t idx = reordered_indices_.at(domain_block).at(lattice_index);
 
         return ( reordered_indices_.at(domain_block).at(lattice_index) * n_dofs_each_point(range_block, domain_block)
                     + cell_index) * n_domain_orbitals(range_block, domain_block)

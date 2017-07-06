@@ -35,32 +35,36 @@ int main(int argc, char** argv) {
 		/*********************************************************/
 		/*	 Read input file, and initialize params and vars. 	 */
 		/*********************************************************/
-		Multilayer<dim, 2> 					bilayer(argc,argv);
-		int M = bilayer.poly_degree + 1;
-		int N = 1;
+        Multilayer<dim, 2> bilayer(argc, argv);
+        if (comm->getRank () == 0)
+            std::cout << bilayer;
 
+        /*********************************************************/
+        /*   Run the Chebyshev recurrence and output moments.    */
+        /*********************************************************/
+        Bilayer::ComputeDoS<dim, degree, double>  
+        compute_dos(bilayer);
+        compute_dos.run();
+        std::vector<std::array<std::vector<double>,2>> 
+        moments = compute_dos.output_LDoS();
 
-		int my_pid = comm->getRank ();
-
-		if (my_pid == 0)
+        /*********************************************************/
+        /*                  Output to file                       */
+        /*********************************************************/
+		if (comm->getRank () == 0)
 		{
 			std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+            int M = moments.size();
+            int N = moments.at(0).at(0).size() + moments.at(0).at(1).size();
+
 			output_file.write((char*) &M, sizeof(int));
 			output_file.write((char*) &N, sizeof(int));
-			output_file.close();
-		}
-
-		Bilayer::ComputeDoS<dim, degree, double>
-		compute_dos(bilayer);
-		compute_dos.run();
-		std::vector<double> moments = compute_dos.output_DoS();
-		if (my_pid == 0)
-		{
-			std::ofstream output_file(bilayer.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::app);
-			for (unsigned int i = 0; i<moments.size(); ++i)
+			for (const auto & moment : moments)
 			{
-				double m = moments[i];
-				output_file.write((char*) & m, sizeof(double));
+				for (const double m : moment.at(0))
+                    output_file.write((char*) & m, sizeof(double));
+                for (const double m : moment.at(1))
+                    output_file.write((char*) & m, sizeof(double));
 			}
 			output_file.close();
 		}

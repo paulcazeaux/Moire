@@ -32,6 +32,31 @@ Materials::string_to_mat(std::string in_str)
     return Mat::Invalid;
 }
 
+/* Utility function for translating material type to strings */
+std::string 
+Materials::mat_to_string(Mat mat)
+{
+    switch (mat)
+    {
+        case Mat::Toy1D:
+            return "1D Toy Model";
+        case Mat::Graphene:
+            return "Graphene";
+        case Mat::StrainedGraphene:
+            return "Strained Graphene";
+        case Mat::MoS2:
+            return "MoS_2";
+        case Mat::WS2:
+            return "WS_2";
+        case Mat::MoSe2:
+            return "MoSe_2";
+        case Mat::WSe2:
+            return "WSe_2";
+        default:
+            throw std::runtime_error("Failed to find material. \n");
+    }
+}
+
 /* Methods for returning each material's geometry and overall tight-binding space */
 
 template<>

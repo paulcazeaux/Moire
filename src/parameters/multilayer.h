@@ -25,6 +25,10 @@
 #include "parameters/layer_data.h"
 #include "materials/materials.h"
 
+/** 
+ * An enum class listing the available observable types (DoS, conductivity)
+ */
+enum class ObservableType {DoS, Invalid};
 
 /**
  * This class holds the data read from input file at the start of the program. 
@@ -63,7 +67,7 @@ public:
     // Generic job information
     std::string     job_name;
     std::string     output_file;
-    int             observable_type;
+    ObservableType observable_type;
     
     double          inter_search_radius;
     
@@ -85,37 +89,59 @@ public:
     /* constuctors and destructor ============================================================ */
     Multilayer( std::string job_name = "UNKNOWN_JOB", 
                 std::string output_file = "UNKNOWN_JOB_DATA.jld",
-                int observable_type = 0,
-                double inter_search_radius = 5,
-                int poly_degree = 20,   
-                double energy_rescale = 20, double energy_shift = 0,
+                ObservableType observable_type = ObservableType::Invalid,
+                double inter_search_radius = 0,
+                int poly_degree = 0,   
+                double energy_rescale = 0, double energy_shift = 0,
                 double B = 0,           double E = 0,
                 double cutoff_radius = 0);
 
     Multilayer(int argc, char **argv);
     Multilayer(const Multilayer&);
-    ~Multilayer() {}
 
         /* operator << ========================================================================== */
     friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, n_layers>& ml)
     {
-            os << " T Input parameters for multilayer object:"                      << std::endl;
-            os << " | observable_type = "           << ml.observable_type           << std::endl;
-            os << " | poly_degree = "               << ml.poly_degree               << std::endl;
-            os << " | cutoff_radius = "             << ml.cutoff_radius             << std::endl;
-            os << " | refinement_level = "          << ml.refinement_level          << std::endl;
-            os << " | inter_search_radius = "       << ml.inter_search_radius       << std::endl;
+            os                                                                              << std::endl;
+            os << " T Job_name: "                   << ml.job_name                          << std::endl;
+            os << " |"                                                                      << std::endl;
+            os << " | Input parameters for multilayer object:"                              << std::endl;
+            os << " | ------------"                                                         << std::endl;
+            os << " | Observable type: "            << obs_to_string(ml.observable_type)    << std::endl;
+            os << " | Refinement level: "           << ml.refinement_level                  << std::endl;
+            os << " | Interlayer search radius: "   << ml.inter_search_radius               << std::endl;
             
-            os << " | energy_rescale = "            << ml.energy_rescale            << std::endl;
-            os << " | energy_shift = "              << ml.energy_shift              << std::endl;
-            os << " | B = "                         << ml.B                         << std::endl;
-            os << " | E = "                         << ml.E                         << std::endl;
+            os << " | B = "                         << ml.B                                 << std::endl;
+            os << " | E = "                         << ml.E                                 << std::endl;
             
-            os << " L job_name = "                  << ml.job_name                  << std::endl;
+            os << " | Energy rescaling: "           << ml.energy_rescale                    << std::endl;
+            os << " | Energy shift: "               << ml.energy_shift                      << std::endl;
+            os << " | Polynomial degree: "          << ml.poly_degree                       << std::endl;
+            os << " | Cutoff radius: "              << ml.cutoff_radius                     << std::endl;
+            os << " L ------------"                                                         << std::endl;
+
+            for (int i=0; i<n_layers; ++i)
+            {
+            os << " T Layer " << i+1 << " data:"                                            << std::endl; 
+            os << * (ml.layer_data .at(i));
+            os << " L ------------"                                                         << std::endl;
+            os                                                                              << std::endl;
+            }
 
             return os;
     }
 };
 
+/** 
+ * A utility function to translate the name of the observable type (as a string) 
+ * into a member of the enum type above.
+ * This is e.g. for use when initializing from file.
+ */
+ObservableType string_to_obs(std::string in_str);
+/** 
+ * A utility function to translate a member of the enum type above into a string
+ * containing the human-readable name of the observable type.
+ */
+std::string obs_to_string(ObservableType obs);
 
 #endif

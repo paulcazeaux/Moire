@@ -11,7 +11,7 @@
 template <int dim, int n_layers>
 Multilayer<dim,n_layers>::Multilayer(   std::string job_name, 
                 std::string output_file,
-                int observable_type,
+                ObservableType observable_type,
                 double inter_search_radius,
                 int poly_degree,    
                 double energy_rescale,              double energy_shift,
@@ -34,10 +34,10 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
     /* Generate default values */
     job_name = "UNKNOWN_JOB"; 
     output_file = "UNKNOWN_JOB_DATA.jld";
-    observable_type = 0;
+    observable_type = ObservableType::Invalid;
     inter_search_radius = 0.;
-    poly_degree = 20;
-    energy_rescale = 20;
+    poly_degree = 0;
+    energy_rescale = 1;
     energy_shift = 0;
     B = 0;
     E = 0;
@@ -143,7 +143,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
                 if (in_string == "ANGLE"){
                     std::getline(in_line,in_string,' ');
                     std::getline(in_line,in_string,' ');
-                    angle = (2.*numbers::PI /360.) * std::stod(in_string);
+                    angle = (numbers::PI /180.) * std::stod(in_string);
                 }
 
                 if (in_string == "DILATION"){
@@ -162,12 +162,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
                 if (in_string == "OBSERVABLE_TYPE"){
                     std::getline(in_line,in_string,' ');
                     std::getline(in_line,in_string,' ');
-                    if (in_string == "DOS"){
-                        observable_type = 0;
-                    } 
-                    else if (in_string == "COND"){
-                        observable_type = 1;
-                    }
+                    observable_type = string_to_obs(in_string);
                 }
 
                 if (in_string == "B_FIELD"){
@@ -331,6 +326,43 @@ Multilayer<dim,n_layers>::is_interlayer_term_nonzero(const types::loc_t orbital_
                                                 layer(layer_index_col).material);
 }
 
+/** 
+ * A utility function to translate the name of the observable type (as a string) 
+ * into a member of the enum type ObservableType.
+ */
+ObservableType string_to_obs(std::string in_str)
+{
+    const std::map<std::string, ObservableType> obs_map {
+        {"DOS", ObservableType::DoS},
+        {"DoS", ObservableType::DoS},
+        {"Density of States", ObservableType::DoS} };
+    try 
+    {
+        return obs_map.at(in_str);
+    }
+    catch (...)
+    {
+        throw std::runtime_error("Failed to find observable type! Unknown " + in_str + ". Aborting... \n");
+    }
+
+    return ObservableType::Invalid;
+}
+/** 
+ * A utility function to translate a member of the enum type above into a string
+ * containing the human-readable name of the observable type.
+ */
+std::string obs_to_string(ObservableType obs)
+{
+    switch (obs)
+    {
+        case ObservableType::DoS:
+            return "Density of States";
+        case ObservableType::Invalid:
+            return "Invalid observable!";
+        default:
+            throw std::runtime_error("Failed to find material. \n");
+    }
+}
 
 /**
  * Explicit instantiations
