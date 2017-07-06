@@ -29,6 +29,17 @@
  * An enum class listing the available observable types (DoS, conductivity)
  */
 enum class ObservableType {DoS, Invalid};
+/** 
+ * A utility function to translate the name of the observable type (as a string) 
+ * into a member of the enum type above.
+ * This is e.g. for use when initializing from file.
+ */
+ObservableType string_to_obs(std::string in_str);
+/** 
+ * A utility function to translate a member of the enum type above into a string
+ * containing the human-readable name of the observable type.
+ */
+std::string obs_to_string(ObservableType obs);
 
 /**
  * This class holds the data read from input file at the start of the program. 
@@ -132,16 +143,5 @@ public:
     }
 };
 
-/** 
- * A utility function to translate the name of the observable type (as a string) 
- * into a member of the enum type above.
- * This is e.g. for use when initializing from file.
- */
-ObservableType string_to_obs(std::string in_str);
-/** 
- * A utility function to translate a member of the enum type above into a string
- * containing the human-readable name of the observable type.
- */
-std::string obs_to_string(ObservableType obs);
 
 #endif
