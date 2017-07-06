@@ -38,6 +38,10 @@ namespace Coupling {
                             const std::array<int, 2>& vector);
     }   /* End namespace Intralayer */
 
+    /**
+     * !!!!!!!!    Counterclockwise rotation angles theta_row and theta_col !!!!!!!!
+     *                      ToDo: discuss with Stephen to harmonize
+     */
     namespace Interlayer {
         double C_to_C(const Graphene::Orbital orbit_row, const Graphene::Orbital orbit_col,
                         std::array<double, 3> vector, 
@@ -52,7 +56,10 @@ namespace IsNonZero {
         bool graphene(const Graphene::Orbital orbit_row, const Graphene::Orbital orbit_col, 
                             const std::array<int, 2>& vector);
     }   /* End namespace Intralayer */
-
+    /**
+     * !!!!!!!!    Counterclockwise rotation angles theta_row and theta_col !!!!!!!!
+     *                      ToDo: discuss with Stephen to harmonize
+     */
     namespace Interlayer {
         bool C_to_C(const Graphene::Orbital orbit_row, const Graphene::Orbital orbit_col,
                         std::array<double, 3> vector, 

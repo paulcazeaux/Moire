@@ -76,5 +76,5 @@ LayerData<dim>::set_dilation(const double dilation)
  * Explicit instantiations
  */
 
-template class LayerData<1>;
-template class LayerData<2>;
+template struct LayerData<1>;
+template struct LayerData<2>;

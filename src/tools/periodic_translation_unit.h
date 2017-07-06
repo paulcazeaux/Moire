@@ -6,6 +6,9 @@
  */
 
 
+#ifndef moire__tools_periodic_translation_unit_h
+#define moire__tools_periodic_translation_unit_h
+
 #include <string>
 #include <array>
 #include <numeric>
@@ -16,9 +19,6 @@
 #include "deal.II/base/tensor.h"
 
 #include "tools/numbers.h"
-
-#ifndef moire__tools_periodic_translation_unit_h
-#define moire__tools_periodic_translation_unit_h
 
 template<int dim, typename Scalar>
 class PeriodicTranslationUnit

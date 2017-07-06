@@ -1,0 +1,3 @@
+SEPARATE_ARGUMENTS(ALL_TESTS)
+
+EXECUTE_PROCESS(COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process -O tests.log)

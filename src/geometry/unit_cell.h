@@ -9,8 +9,6 @@
 #ifndef moire__geometry_unit_cell_h
 #define moire__geometry_unit_cell_h
 
-
-
 #include <algorithm>
 #include <exception>
 #include <cmath>

@@ -252,9 +252,9 @@ void	Element<2,3>::get_interpolation_weights(
  */
 
 
-template class Element<1,1>;
-template class Element<1,2>;
-template class Element<1,3>;
-template class Element<2,1>;
-template class Element<2,2>;
-template class Element<2,3>;
+template struct Element<1,1>;
+template struct Element<1,2>;
+template struct Element<1,3>;
+template struct Element<2,1>;
+template struct Element<2,2>;
+template struct Element<2,3>;

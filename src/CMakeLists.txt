@@ -19,6 +19,8 @@ ADD_LIBRARY( Calgebra STATIC ${source_files})
 ######################################################################################
 ### 3) Link the librairies for your library
 ######################################################################################
-TARGET_LINK_LIBRARIES( Calgebra ${FFTW_LIBRARIES})
+DEAL_II_SETUP_TARGET(Calgebra)
+TARGET_LINK_LIBRARIES( Calgebra ${FFTW_LIBRARIES} ${MPI_LIBRARIES} 
+                                ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
 ######################################################################################

@@ -336,8 +336,8 @@ Multilayer<dim,n_layers>::is_interlayer_term_nonzero(const types::loc_t orbital_
  * Explicit instantiations
  */
 
-template class Multilayer<1, 1>;
-template class Multilayer<1, 2>;
-template class Multilayer<2, 1>;
-template class Multilayer<2, 2>;
+template struct Multilayer<1, 1>;
+template struct Multilayer<1, 2>;
+template struct Multilayer<2, 1>;
+template struct Multilayer<2, 2>;
 

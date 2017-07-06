@@ -8,6 +8,7 @@
 
 #ifndef moire__tools_grid_to_index_map_h
 #define moire__tools_grid_to_index_map_h
+
 #include <vector>
 #include <array>
 

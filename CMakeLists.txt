@@ -17,7 +17,7 @@ enable_language(CXX)
 
 # Add first is for debugging second is for performance
 # SET(GCC_COMPILE_FLAGS "-std=c++1z -O0 -g")
-SET(GCC_COMPILE_FLAGS "-std=c++1z -DNDEBUG -O3 -funroll-loops")
+SET(GCC_COMPILE_FLAGS "-std=c++1z")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COMPILE_FLAGS}")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
@@ -34,7 +34,7 @@ find_package(deal.II 8.5.0 REQUIRED
 ### include required modules & utilities
 #####################################################################################
 include_directories(${FFTW_INCLUDES} ${MPI_INCLUDES} ${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
-LINK_DIRECTORIES(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
+link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 include(CMakeBackwardCompatibilityCXX)
 include(CheckLibraryExists)
 
@@ -48,4 +48,10 @@ add_subdirectory(src)
 add_subdirectory(app)
 
 ######################################################################################
+### 4) Enable testing
+######################################################################################
+
+enable_testing()
+add_subdirectory(tests)
+
 

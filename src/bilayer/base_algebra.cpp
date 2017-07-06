@@ -146,7 +146,7 @@ namespace Bilayer {
                         }
                     }
 
-                    for (types::loc_t i = 0; i < globalRows.size(); ++i)
+                    for (size_t i = 0; i < globalRows.size(); ++i)
                         adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
                 }
                 adjoint_interpolant.at(range_block).at(domain_block)->fillComplete ();

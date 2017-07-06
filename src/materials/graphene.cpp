@@ -36,8 +36,8 @@ double Coupling::Intralayer::graphene(
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +     vector[1],
-                                    -1 * vector[0] +     vector[1] };
+    std::array<int, 2> hom_vec {{   2 * vector[0] +     vector[1],
+                                   -1 * vector[0] +     vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] - 2 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */
@@ -89,6 +89,12 @@ double Coupling::Interlayer::C_to_C(const Orbital orbit_row, const Orbital orbit
                     const double theta_row, const double theta_col)
 {
     /* Shift the arrow vector by the orbital coordinates */
+
+        /**
+         * !!!!!!!!    Counterclockwise rotation angles theta_row and theta_col !!!!!!!!
+         *                      ToDo: discuss with Stephen to harmonize
+         */
+
     if (atom(orbit_row) == Atom::B)
     {
         vector[0] -=  std::cos(theta_row) * Graphene::atom_pos.at (Atom::B)[0] + std::sin(theta_row) * Graphene::atom_pos.at (Atom::B)[1];
@@ -107,27 +113,27 @@ double Coupling::Interlayer::C_to_C(const Orbital orbit_row, const Orbital orbit
 
         // theta21 (angle to bond on sheet 1)
 
-        double theta21 = ac - theta_row;
+        double theta21 = ac + theta_row;
         if (orbit_row == Orbital::B_pz)
             theta21 += numbers::PI_6;
-        else // (orbit1 == Orbital::A_pz)
+        else // (orbit_row == Orbital::A_pz)
             theta21 -= numbers::PI_6;
 
         // theta12 (angle to bond on sheet 2)
         
-        double theta12 = ac - theta_col + numbers::PI;
+        double theta12 = ac + theta_col + numbers::PI;
         if (orbit_col == Orbital::B_pz)
             theta12 += numbers::PI_6;
-        else // (orbit2 == Orbital::A_pz)
+        else // (orbit2_col == Orbital::A_pz)
             theta12 -= numbers::PI_6;
 
         double rs = r/Graphene::a;
 
-        double V0 = .315 * std::exp(-1.7543*rs*rs) * std::cos(2.001*rs);
+        double V0 = .3155 * std::exp(-1.7543*rs*rs) * std::cos(2.001*rs);
         double V3 = -.0688 * rs*rs * std::exp(-3.4692*(rs - .5212)*(rs-.5212));
         double V6 = -.0083 * std::exp(-2.8764*(rs-1.5206)*(rs-1.5206)) * std::sin(1.5731*rs);
         
-        double t = V0+V3*(std::cos(3*theta12)+std::cos(3*theta21)) + V6*(std::cos(6*theta12)+std::cos(6*theta21));
+        double t = V0 + V3*(std::cos(3*theta12)+std::cos(3*theta21)) + V6*(std::cos(6*theta12)+std::cos(6*theta21));
 
         /**
          * Smooth cutoff 
@@ -169,8 +175,8 @@ bool IsNonZero::Intralayer::graphene(
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +     vector[1],
-                                    -1 * vector[0] +     vector[1] };
+    std::array<int, 2> hom_vec  {{   2 * vector[0] +     vector[1],
+                                    -1 * vector[0] +     vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] - 2 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */

@@ -1,5 +1,5 @@
 module TB1
-export DoS, Image, GradientImage, Read_DoS
+export DoS, Image, GradientImage, Read_DoS, Read_LDoS
 
 using PyCall
 using PyPlot
@@ -201,4 +201,12 @@ function Read_DoS(filename)
 end
 
 
+function Read_LDoS(filename)
+  stream = open(filename)
+  n = convert(Int, read(stream, Int32))
+  n_nodes = convert(Int, read(stream, Int32))
+  S = read(stream, Float64, (n_nodes, n))
+  close(stream)
+  return n, n_nodes, S
+end
 end

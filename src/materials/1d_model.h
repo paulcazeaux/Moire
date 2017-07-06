@@ -18,13 +18,13 @@ namespace Toy1D {
                             lattice = {{ {{1.}} }};
     const double            atom_pos = 0.;
 
-    const double            intra_search_radius = 1.1;
-    const double            inter_search_radius = 6.;
-
     const int               n_orbitals      = 1;
 
     const double            W = .5;
     const double            r0 = .25;
+
+    const double            intra_search_radius = 1.1;
+    const double            inter_search_radius = 6 * r0;
 }
 
 namespace Coupling {

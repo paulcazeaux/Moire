@@ -5,11 +5,12 @@
  * Created on April 22, 2017, 12:28AM
  */
 
-#include <complex>
 
 #ifndef moire__tools_numbers_h
 #define moire__tools_numbers_h
 
+#include <complex>
+ 
 namespace numbers
 {
     /**

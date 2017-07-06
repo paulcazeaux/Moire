@@ -218,8 +218,8 @@ double Coupling::Intralayer::MoS2(const Orbital orbit_row,  const Orbital orbit_
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +  -1 * vector[1],
-                                    -1 * vector[0] +   2 * vector[1] };
+    std::array<int, 2> hom_vec  {{   2 * vector[0] +  -1 * vector[1],
+                                    -1 * vector[0] +   2 * vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] -   1 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */
@@ -490,8 +490,8 @@ double Coupling::Intralayer::WSe2(const Orbital orbit_row,  const Orbital orbit_
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +  -1 * vector[1],
-                                    -1 * vector[0] +   2 * vector[1] };
+    std::array<int, 2> hom_vec  {{   2 * vector[0] +  -1 * vector[1],
+                                    -1 * vector[0] +   2 * vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] -   1 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */
@@ -762,8 +762,8 @@ double Coupling::Intralayer::MoSe2(const Orbital orbit_row, const Orbital orbit_
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +  -1 * vector[1],
-                                    -1 * vector[0] +   2 * vector[1] };
+    std::array<int, 2> hom_vec  {{   2 * vector[0] +  -1 * vector[1],
+                                    -1 * vector[0] +   2 * vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] -   1 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */
@@ -1032,8 +1032,8 @@ double Coupling::Intralayer::WS2(const Orbital orbit_row,   const Orbital orbit_
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +  -1 * vector[1],
-                                    -1 * vector[0] +   2 * vector[1] };
+    std::array<int, 2> hom_vec  {{   2 * vector[0] +  -1 * vector[1],
+                                    -1 * vector[0] +   2 * vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] -   1 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */
@@ -1412,8 +1412,8 @@ bool IsNonZero::Intralayer::TMDC(const Orbital orbit_row,  const Orbital orbit_c
      *                                                                    
      * In this system, the distance between a point and the center is still the euclidean distance, on all three coordinates.
      */
-    std::array<int, 2> hom_vec = {   2 * vector[0] +  -1 * vector[1],
-                                    -1 * vector[0] +   2 * vector[1] };
+    std::array<int, 2> hom_vec  {{   2 * vector[0] +  -1 * vector[1],
+                                    -1 * vector[0] +   2 * vector[1] }};
        // redundant 3rd coordinate: -1 * vector[0] -   1 * vector[1]
 
     /* Shift the arrow vector by the orbital coordinates */
