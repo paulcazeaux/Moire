@@ -130,7 +130,7 @@ double Coupling::Interlayer::C_to_C(const Orbital orbit_row, const Orbital orbit
         double rs = r/Graphene::a;
 
         double V0 = .3155 * std::exp(-1.7543*rs*rs) * std::cos(2.001*rs);
-        double V3 = -.0688 * rs*rs * std::exp(-3.4692*(rs - .5212)*(rs-.5212));
+        double V3 = -.0688 * rs*rs * std::exp(-3.4692*(rs-.5212)*(rs-.5212));
         double V6 = -.0083 * std::exp(-2.8764*(rs-1.5206)*(rs-1.5206)) * std::sin(1.5731*rs);
         
         double t = V0 + V3*(std::cos(3*theta12)+std::cos(3*theta21)) + V6*(std::cos(6*theta12)+std::cos(6*theta21));
@@ -218,12 +218,12 @@ bool IsNonZero::Interlayer::C_to_C(const Orbital orbit_row, const Orbital orbit_
                     const double theta_row, const double theta_col)
 {
     /* Shift the arrow vector by the orbital coordinates */
-    if (atom(orbit_col) == Atom::A && atom(orbit_row) == Atom::B)
+    if (atom(orbit_row) == Atom::B)
     {
         vector[0] -=  std::cos(theta_row) * Graphene::atom_pos.at (Atom::B)[0] + std::sin(theta_row) * Graphene::atom_pos.at (Atom::B)[1];
         vector[1] -= -std::sin(theta_row) * Graphene::atom_pos.at (Atom::B)[0] + std::cos(theta_row) * Graphene::atom_pos.at (Atom::B)[1];
     }
-    else if (atom(orbit_col) == Atom::B && atom(orbit_row) == Atom::A)
+    if (atom(orbit_col) == Atom::B)
     {
         vector[0] +=  std::cos(theta_col) * Graphene::atom_pos.at (Atom::B)[0] + std::sin(theta_col) * Graphene::atom_pos.at (Atom::B)[1];
         vector[1] += -std::sin(theta_col) * Graphene::atom_pos.at (Atom::B)[0] + std::cos(theta_col) * Graphene::atom_pos.at (Atom::B)[1];
