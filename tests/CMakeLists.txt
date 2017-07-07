@@ -61,9 +61,11 @@ MESSAGE(STATUS "Setting up tests")
 # Test Materials: 1D model coefficients
 make_test("materials.1d_toy_model" "")
 
-
 # Test Materials: Graphene coefficients
 make_test("materials.graphene" "")
+
+# Test Bilayer Hamiltonian assembly and symmetry
+make_test("bilayer.test_H_sym" "")
 
 ######################################################################################
 ### 4) Wrap up: define a custom test target

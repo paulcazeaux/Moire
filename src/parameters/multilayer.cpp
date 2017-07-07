@@ -16,7 +16,7 @@ Multilayer<dim,n_layers>::Multilayer(   std::string job_name,
                 int poly_degree,    
                 double energy_rescale,              double energy_shift,
                 double B,                           double E,
-                double cutoff_radius)
+                double cutoff_radius,               int refinement_level)
     :
     job_name(job_name),     output_file(output_file),
     observable_type(observable_type),
@@ -24,7 +24,7 @@ Multilayer<dim,n_layers>::Multilayer(   std::string job_name,
     poly_degree(poly_degree),                       
     energy_rescale(energy_rescale),     energy_shift(energy_shift),
     B(B),                               E(E),
-    cutoff_radius(cutoff_radius) {}
+    cutoff_radius(cutoff_radius),       refinement_level(refinement_level) {}
 
 
 
@@ -42,6 +42,7 @@ Multilayer<dim,n_layers>::Multilayer(int argc, char **argv) {
     B = 0;
     E = 0;
     cutoff_radius = 0;
+    refinement_level = 0;
 
     // ------------------------------
     // Generate input for simulation.
@@ -204,7 +205,7 @@ Multilayer<dim,n_layers>::Multilayer(const Multilayer& ml)
     poly_degree(ml.poly_degree),                       
     energy_rescale(ml.energy_rescale),     energy_shift(ml.energy_shift),
     B(ml.B),                               E(ml.E),
-    cutoff_radius(ml.cutoff_radius) 
+    cutoff_radius(ml.cutoff_radius),       refinement_level(ml.refinement_level)
 {
     for (int n = 0; n<n_layers; ++n)
         layer_data[n] = std::make_unique<LayerData<dim>> (ml.layer(n));
@@ -254,7 +255,7 @@ Multilayer<dim,n_layers>::extract_monolayer(const unsigned char layer_index) con
                 this->poly_degree,                      
                 this->energy_rescale,                   this->energy_shift,
                 this->B,                                this->E,
-                this->cutoff_radius);
+                this->cutoff_radius,                    this->refinement_level);
     monolayer.layer_data[0] = std::make_unique<LayerData<dim>> (* this->layer_data[layer_index]);
     return monolayer;
 }

@@ -419,7 +419,7 @@ namespace Bilayer {
                     std::array<types::loc_t,dim> 
                     grid_vector = lattice(0).get_vertex_grid_indices(neighbor_lattice_index);
                     for (size_t j=0; j<dim; ++j)
-                        grid_vector[j] -= this_point_grid_indices[j];
+                        grid_vector[j] = this_point_grid_indices[j] - grid_vector[j];
 
                     auto it_cols = ColIndices.begin();
                     for (types::loc_t cell_index = 0; cell_index < n_cell_nodes(range_block, domain_block); ++cell_index)
@@ -444,18 +444,16 @@ namespace Bilayer {
                     for (types::loc_t cell_index = 0; cell_index < n_cell_nodes(range_block, domain_block); ++cell_index)
                     {
                         /* Note: the unit cell node displacement follows the point which is in the interlayer block */
-                        dealii::Tensor<1,dim> arrow_vector = lattice(other_domain_block).get_vertex_position(neighbor_lattice_index)
-                                                            + (other_domain_block != range_block ? 1. : -1.) 
-                                                                * unit_cell(1-range_block).get_node_position(cell_index)
-                                                                    - this_point_position;
+                        dealii::Tensor<1,dim> arrow_vector = this_point_position 
+                                                                + (domain_block != range_block ? 1. : -1.) 
+                                                                    * unit_cell(1-range_block).get_node_position(cell_index)
+                                                                - lattice(other_domain_block).get_vertex_position(neighbor_lattice_index);
                         
                         for (types::loc_t orbital = 0; orbital <  n_domain_orbitals(range_block, domain_block); orbital++)
-                        {
                             for (types::loc_t orbital_middle = 0; orbital_middle < n_domain_orbitals(range_block, other_domain_block); orbital_middle++)
                                 if (this->is_interlayer_term_nonzero(orbital_middle, orbital, arrow_vector, other_domain_block, domain_block ))
                                     it_cols[orbital].push_back(get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
-                        }
-                        it_cols += n_domain_orbitals(range_block, other_domain_block); 
+                        it_cols += n_domain_orbitals(range_block, domain_block); 
                     }
                 }
 
@@ -634,6 +632,37 @@ namespace Bilayer {
         }
     }
 
+    template<int dim, int degree>
+    std::tuple<types::block_t, types::loc_t, types::loc_t, types::loc_t>
+    DoFHandler<dim,degree>::get_dof_info(  const types::block_t range_block, const types::glob_t block_dof_index) const
+    {
+        assert( range_block  < 2 );
+        assert( block_dof_index < n_dofs(range_block));
+
+        types::block_t domain_block;
+
+        const std::array<std::vector<types::glob_t>,2>& partition = lattice_point_dof_partition_.at(range_block);
+        types::glob_t point_index = std::upper_bound(partition.at(0).begin(), partition.at(0).end(), block_dof_index) - partition.at(0).begin() - 1;
+        if (block_dof_index - partition.at(0)[point_index] < n_dofs_each_point(range_block, 0))
+        {
+            domain_block = 0;
+        }
+        else
+        {
+            domain_block = 1;
+            point_index = std::upper_bound(partition.at(domain_block).begin(), partition.at(domain_block).end(), block_dof_index) - partition.at(domain_block).begin() - 1;
+        }
+
+        assert(block_dof_index >= partition.at(domain_block)[point_index]);
+        assert(block_dof_index - partition.at(domain_block)[point_index] < n_dofs_each_point(range_block, domain_block));
+
+        types::loc_t lattice_index = original_indices_.at(domain_block).at(point_index);
+        types::loc_t cell_index = (block_dof_index - partition.at(domain_block)[point_index]) / n_domain_orbitals(range_block, domain_block);
+        types::loc_t orbital = (block_dof_index - partition.at(domain_block)[point_index]) % n_domain_orbitals(range_block, domain_block);
+
+        return std::make_tuple(domain_block, lattice_index, cell_index, orbital);
+    }
+
 
     template<int dim, int degree>
     std::tuple<types::loc_t, types::loc_t, types::loc_t>
@@ -644,7 +673,7 @@ namespace Bilayer {
         assert( block_dof_index < n_dofs(range_block));
 
         const std::vector<types::glob_t>& partition = lattice_point_dof_partition_.at(range_block).at(domain_block);
-        auto lower = std::lower_bound(partition.begin(), partition.end(), block_dof_index);
+        auto lower = std::upper_bound(partition.begin(), partition.end(), block_dof_index) - 1;
 
         types::loc_t lattice_index = original_indices_.at(domain_block).at(static_cast<types::loc_t>(lower - partition.begin()));
         types::loc_t cell_index = (block_dof_index - *lower) / n_domain_orbitals(range_block, domain_block);

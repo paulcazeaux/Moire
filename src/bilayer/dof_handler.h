@@ -21,9 +21,7 @@
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Tpetra_Map_decl.hpp>
-#include <Tpetra_Map_def.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
-#include <Tpetra_CrsGraph_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
@@ -137,6 +135,11 @@ namespace Bilayer {
         /**
          * Accessor to go from global degrees of freedom to geometric (domain block, lattice, cell and orbital indices 
          */
+        std::tuple<types::block_t, types::loc_t, types::loc_t, types::loc_t>
+        get_dof_info(  const types::block_t range_block, 
+                       const types::glob_t block_dof_index) const;
+
+
         std::tuple<types::loc_t, types::loc_t, types::loc_t>
         get_dof_info(  const types::block_t range_block, const types::block_t domain_block, 
                        const types::glob_t block_dof_index) const;

@@ -202,7 +202,7 @@ namespace Bilayer {
                         std::array<types::loc_t,dim> 
                         grid_vector = lattice(0).get_vertex_grid_indices(neighbor_lattice_index);
                         for (size_t j=0; j<dim; ++j)
-                            grid_vector[j] -= this_point_grid_indices[j];
+                            grid_vector[j] = this_point_grid_indices[j] - grid_vector[j];
 
                         auto it_cols = ColIndices.begin();
                         auto it_vals = Values.begin();
@@ -231,19 +231,17 @@ namespace Bilayer {
                         for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
                         {
                             /* Note: the unit cell node displacement follows the point which is in the interlayer block */
-                            dealii::Tensor<1,dim> arrow_vector = lattice(other_domain_block).get_vertex_position(neighbor_lattice_index)
-                                                                + (other_domain_block != range_block ? 1. : -1.) 
+                            dealii::Tensor<1,dim> arrow_vector = this_point_position 
+                                                                + (domain_block != range_block ? 1. : -1.) 
                                                                     * unit_cell(1-range_block).get_node_position(cell_index)
-                                                                        - this_point_position;
+                                                                - lattice(other_domain_block).get_vertex_position(neighbor_lattice_index);
                             
                             for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
-                            {
                                 for (types::loc_t orbital_middle = 0; orbital_middle < dof_handler.n_domain_orbitals(range_block, other_domain_block); orbital_middle++)
                                 {
                                     it_cols[orbital].push_back(dof_handler.get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
                                     it_vals[orbital].push_back(dof_handler.interlayer_term(orbital_middle, orbital, arrow_vector, other_domain_block, domain_block ));
                                 }
-                            }
                             it_cols += dof_handler.n_domain_orbitals(range_block, other_domain_block); 
                             it_vals += dof_handler.n_domain_orbitals(range_block, other_domain_block);
                         }
@@ -255,6 +253,7 @@ namespace Bilayer {
             hamiltonian_action.at(range_block)->fillComplete ();
         }
     }
+
     template<int dim, int degree, typename Scalar>
     void
     BaseAlgebra<dim,degree,Scalar>::hamiltonian_rproduct(const std::array<MultiVector, 2>  A, std::array<MultiVector, 2> & B)

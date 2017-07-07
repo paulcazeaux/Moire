@@ -7,11 +7,7 @@
 
 #include "tests.h"
 #include "materials/graphene.h"
-
-#include <fstream>
-#include <iostream>
-
-static const int dim = 1;
+#include "tools/numbers.h"
 
 void do_test_intralayer()
 {
@@ -33,57 +29,31 @@ void do_test_intralayer()
                         dealii::ExcInternalError() );
     }
 
-    //std::cout << "Intralayer OK" << std::endl;
+    std::cout << "Intralayer OK" << std::endl;
 }
 
 void do_test_interlayer()
 {
     using Graphene::Orbital;
-    size_t n = 100;
-    Orbital o1 = Orbital::B_pz;
-    Orbital o2 = Orbital::B_pz;
+    size_t n = 9;
+    std::vector<Orbital>               o1     {{  Orbital::A_pz,  Orbital::B_pz,    Orbital::B_pz,     Orbital::B_pz,    Orbital::B_pz,    Orbital::A_pz,    Orbital::A_pz,    Orbital::A_pz,    Orbital::A_pz}};
+    std::vector<Orbital>               o2     {{  Orbital::A_pz,  Orbital::A_pz,    Orbital::A_pz,     Orbital::A_pz,    Orbital::A_pz,    Orbital::A_pz,    Orbital::A_pz,    Orbital::A_pz,    Orbital::B_pz}};
+    std::vector<std::array<double, 3>> v      {{  {{0,0}},        {{1.2384,0.715}}, {{1.2384,0.715}},  {{1.2384,0.715}}, {{1.2384,0.715}}, {{1.2384,0.715}}, {{1.2384,0.715}}, {{7,0}},          {{7,0}}      }};
+    std::vector<double>                theta1 {{  0.,             0.,               0.5*numbers::PI_6, numbers::PI_6,    numbers::PI_3,    numbers::PI_2,    numbers::PI_4,    0.,               0.           }};
+    std::vector<double>                theta2 {{  0.,             0.,               0.5*numbers::PI_6, numbers::PI_6,    -numbers::PI_3,   numbers::PI_3,    -numbers::PI_4,   0.,               0.           }};
 
-    std::vector<std::array<double, 3>>  v;
-    std::vector<bool>   s;
+    std::vector<double>                t      {{  .3155,          .3155,            0.290245,          0.23025,          0.11532,          0.04828,          0.070967,         -0.0001187,       0.           }};
+    std::vector<bool>                  s      {{  true,           true,             true,              true,             true,             true,             true,             true,             false         }};
 
-    for (size_t i = 0; i<n; ++i)
-    for (size_t j = 0; j<n; ++j)
-    {
-        double x = (2*static_cast<double>(i)-n) * 9. / static_cast<double>(n);
-        double y = (2*static_cast<double>(j)-n) * 9. / static_cast<double>(n);
-        v.push_back({{x,y,0}});
-        s.push_back((std::sqrt(x*x + y*y) < Graphene::inter_cutoff_radius ? true : false));
-    }
-
-    std::cout << "x = ["; 
-    for (size_t i = 0; i<n; ++i)
-    for (size_t j = 0; j<n; ++j)
-        std::cout << v[n*i+j][0] << (j < n-1 ? "," : (i < n-1 ? ";\t" : "];\n") );
-
-    std::cout << "y = ["; 
-    for (size_t i = 0; i<n; ++i)
-    for (size_t j = 0; j<n; ++j)
-        std::cout << v[n*i+j][1] << (j < n-1 ? "," : (i < n-1 ? ";\t" : "];\n") );
-    
-
-    double theta_row = 0.5235987756;
-    double theta_col = -0.5235987756;
-
-    std::vector<double> t   {{ .3155}};
-
-    std::cout << "t = ["; 
     for (size_t i=0; i<n; ++i)
-    for (size_t j=0; j<n; ++j)
     {
-        std::cout   << Coupling::Interlayer::C_to_C( o1, o2, v.at(n*i+j), theta_row, theta_col) 
-                    << (j < n-1 ? "," : (i < n-1 ? ";\t" : "];\n") );
-        // AssertThrow(Coupling::Interlayer::C_to_C( o1, o2, v.at(i), theta_row, theta_col ) ==   t.at(i),
-        //                 dealii::ExcInternalError() );
-        //AssertThrow(IsNonZero::Interlayer::C_to_C(o1, o2,  v.at(n*i+j), theta_row, theta_col ) ==  s.at(n*i+j),
-        //                dealii::ExcInternalError() );
+        AssertThrow(std::fabs(Coupling::Interlayer::C_to_C( o1[i], o2[i], v[i], theta1[i], theta2[i]) - t[i]) < 1e-5,
+                         dealii::ExcInternalError() );
+        AssertThrow(IsNonZero::Interlayer::C_to_C(o1[i], o2[i], v[i], theta1[i], theta2[i]) ==  s[i],
+                        dealii::ExcInternalError() );
     }
 
-    //std::cout << "Interlayer OK" << std::endl;
+    std::cout << "Interlayer OK" << std::endl;
 }
 
 int main(int argc, char** argv) {

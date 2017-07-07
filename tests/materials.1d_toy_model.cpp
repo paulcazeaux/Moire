@@ -8,11 +8,6 @@
 #include "tests.h"
 #include "materials/1d_model.h"
 
-#include <fstream>
-#include <iostream>
-
-static const int dim = 1;
-
 void do_test_intralayer()
 {
     size_t n = 7;

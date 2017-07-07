@@ -91,7 +91,7 @@ public:
 
     // Determines the cutoff radius in real space and refinement level
     double          cutoff_radius;
-    types::loc_t    refinement_level;
+    int             refinement_level;
 
     // Layer data
     std::array<std::unique_ptr<const LayerData<dim>>, n_layers >    layer_data;
@@ -103,9 +103,9 @@ public:
                 ObservableType observable_type = ObservableType::Invalid,
                 double inter_search_radius = 0,
                 int poly_degree = 0,   
-                double energy_rescale = 0, double energy_shift = 0,
-                double B = 0,           double E = 0,
-                double cutoff_radius = 0);
+                double energy_rescale = 1, double energy_shift = 0,
+                double B = 0,              double E = 0,
+                double cutoff_radius = 0,  int refinement_level = 0);
 
     Multilayer(int argc, char **argv);
     Multilayer(const Multilayer&);
@@ -114,7 +114,8 @@ public:
     friend std::ostream& operator<<( std::ostream& os, const Multilayer<dim, n_layers>& ml)
     {
             os                                                                              << std::endl;
-            os << " T Job_name: "                   << ml.job_name                          << std::endl;
+            os << " T Job name: "                   << ml.job_name                          << std::endl;
+            os << " T Output file: "                << ml.output_file                       << std::endl;
             os << " |"                                                                      << std::endl;
             os << " | Input parameters for multilayer object:"                              << std::endl;
             os << " | ------------"                                                         << std::endl;
