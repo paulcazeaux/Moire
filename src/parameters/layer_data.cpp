@@ -24,7 +24,7 @@ LayerData<dim>::LayerData(      Materials::Mat material,
     lattice = Materials::lattice<dim>(material);
     for (size_t i=0; i<dim; ++i)
         for (size_t j=0; j<dim; ++j)
-            lattice_basis[i][j] = lattice[i][j];
+            lattice_basis[i][j] = lattice[j][i];
     lattice_basis       = Transformation<dim>::matrix(dilation, angle) * lattice_basis;
 
     for (types::loc_t i=0; i<n_orbitals; ++i)
@@ -51,7 +51,7 @@ LayerData<dim>::set_angle(const double angle)
     lattice = Materials::lattice<dim>(this->material);
     for (size_t i=0; i<dim; ++i)
         for (size_t j=0; j<dim; ++j)
-            this->lattice_basis[i][j] = lattice[i][j];
+            this->lattice_basis[i][j] = lattice[j][i];
 
     this->angle              = angle;
     this->lattice_basis       = Transformation<dim>::matrix(this->dilation, angle) * this->lattice_basis;
@@ -65,7 +65,7 @@ LayerData<dim>::set_dilation(const double dilation)
     lattice = Materials::lattice<dim>(material);
     for (size_t i=0; i<dim; ++i)
         for (size_t j=0; j<dim; ++j)
-            this->lattice_basis[i][j] = lattice[i][j];
+            this->lattice_basis[i][j] = lattice[j][i];
 
     this->dilation            = dilation;
     this->lattice_basis       = Transformation<dim>::matrix(dilation, this->angle) * this->lattice_basis;
