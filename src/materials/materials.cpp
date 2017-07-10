@@ -58,7 +58,6 @@ Materials::mat_to_string(Mat mat)
 }
 
 /* Methods for returning each material's geometry and overall tight-binding space */
-
 template<>
 const std::array<std::array<double, 1>, 1>&
 Materials::lattice<1>(const Mat mat)

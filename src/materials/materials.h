@@ -55,6 +55,10 @@ namespace Materials {
     /*********************************************************************/
     /**
      * First, the lattice basis, templated on the dimension (1 or 2)
+     *
+     * !!! CONVENTION !!!
+     * The returned basis is given as an array of columns, so to construct the corresponding
+     * matrix, the i-th row and j-th column entry is basis[j][i].
      */
     template<int dim>
     const std::array<std::array<double, dim>, dim>& lattice(const Mat mat);
