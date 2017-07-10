@@ -38,6 +38,101 @@ namespace Bilayer {
         this->assemble_hamiltonian_action();
     }    
 
+
+    template<int dim, int degree, typename Scalar>
+    void
+    BaseAlgebra<dim,degree,Scalar>::assemble_hamiltonian_action()
+    {
+        for (types::block_t range_block = 0; range_block < 2; ++range_block)
+        {
+            hamiltonian_action.at(range_block) =  Teuchos::RCP<Matrix>(new Matrix(dof_handler.make_sparsity_pattern_hamiltonian_action(range_block)) );
+
+            std::vector<types::glob_t> globalRows;
+            std::vector<Teuchos::Array<types::glob_t>> ColIndices;
+            std::vector<Teuchos::Array<Scalar>> Values;
+
+            for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
+                for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(range_block, domain_block); ++n)
+                {
+                    const PointData& this_point = dof_handler.locally_owned_point(range_block, domain_block, n);
+
+                    dealii::Point<dim> 
+                    this_point_position = lattice(domain_block).get_vertex_position(this_point.lattice_index);
+                    std::array<types::loc_t, dim> 
+                    this_point_grid_indices = lattice(domain_block).get_vertex_grid_indices(this_point.lattice_index);
+
+                            /* Block b <-> b */
+                    globalRows.clear();
+                    for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
+                        for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
+                            globalRows.push_back(dof_handler.get_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital));
+
+                    ColIndices.resize(globalRows.size());
+                    Values.resize(globalRows.size());
+                    for (auto & cols : ColIndices) 
+                        cols.clear();
+                    for (auto & vals : Values) 
+                        vals.clear();
+
+                    std::vector<types::loc_t>   
+                    neighbors = lattice(domain_block).list_neighborhood_indices(this_point_position, layer(domain_block).intra_search_radius);
+                    for (auto neighbor_lattice_index : neighbors)
+                    {
+                        std::array<types::loc_t,dim> 
+                        grid_vector = lattice(0).get_vertex_grid_indices(neighbor_lattice_index);
+                        for (size_t j=0; j<dim; ++j)
+                            grid_vector[j] = this_point_grid_indices[j] - grid_vector[j];
+
+                        auto it_cols = ColIndices.begin();
+                        auto it_vals = Values.begin();
+                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
+                            for (types::loc_t orbital_row = 0; orbital_row <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_row++)
+                            {
+                                for (types::loc_t orbital_col = 0; orbital_col <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_col++)
+                                {
+                                    it_cols->push_back(dof_handler.get_dof_index(range_block, domain_block, neighbor_lattice_index, cell_index, orbital_col));
+                                    it_vals->push_back(dof_handler.intralayer_term(orbital_col, orbital_row, grid_vector, domain_block ));
+                                }
+                                it_cols++; 
+                                it_vals++;
+                            }
+                    }
+
+                            /* Block a -> b, a != b */
+                    types::block_t other_domain_block = 1-this_point.domain_block;
+                    neighbors = lattice(other_domain_block).list_neighborhood_indices( this_point_position, 
+                                                dof_handler.inter_search_radius + unit_cell(1-range_block).bounding_radius);
+                            
+                    for (auto neighbor_lattice_index : neighbors)
+                    {
+                        auto it_cols = ColIndices.begin();
+                        auto it_vals = Values.begin();
+                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
+                        {
+                            /* Note: the unit cell node displacement follows the point which is in the interlayer block */
+                            dealii::Tensor<1,dim> arrow_vector = this_point_position 
+                                                                + (domain_block != range_block ? 1. : -1.) 
+                                                                    * unit_cell(1-range_block).get_node_position(cell_index)
+                                                                - lattice(other_domain_block).get_vertex_position(neighbor_lattice_index);
+                            
+                            for (types::loc_t orbital_row = 0; orbital_row <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_row++)
+                                for (types::loc_t orbital_col = 0; orbital_col < dof_handler.n_domain_orbitals(range_block, other_domain_block); orbital_col++)
+                                {
+                                    it_cols[orbital_row].push_back(dof_handler.get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_col));
+                                    it_vals[orbital_row].push_back(dof_handler.interlayer_term(orbital_col, orbital_row, arrow_vector, other_domain_block, domain_block ));
+                                }
+                            it_cols += dof_handler.n_domain_orbitals(range_block, other_domain_block); 
+                            it_vals += dof_handler.n_domain_orbitals(range_block, other_domain_block);
+                        }
+                    }
+
+                    for (size_t i = 0; i < globalRows.size(); ++i)
+                        hamiltonian_action.at(range_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
+                }
+            hamiltonian_action.at(range_block)->fillComplete ();
+        }
+    }
+
     template<int dim, int degree, typename Scalar>
     void
     BaseAlgebra<dim,degree,Scalar>::assemble_adjoint_interpolant()
@@ -159,100 +254,6 @@ namespace Bilayer {
         helper.at(1).at(1) = MultiVector(dof_handler.transpose_range_map(1,1), dof_handler.n_range_orbitals(1,1));
     }
 
-
-    template<int dim, int degree, typename Scalar>
-    void
-    BaseAlgebra<dim,degree,Scalar>::assemble_hamiltonian_action()
-    {
-        for (types::block_t range_block = 0; range_block < 2; ++range_block)
-        {
-            hamiltonian_action.at(range_block) =  Teuchos::RCP<Matrix>(new Matrix(dof_handler.make_sparsity_pattern_hamiltonian_action(range_block)) );
-
-            std::vector<types::glob_t> globalRows;
-            std::vector<Teuchos::Array<types::glob_t>> ColIndices;
-            std::vector<Teuchos::Array<Scalar>> Values;
-
-            for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
-                for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(range_block, domain_block); ++n)
-                {
-                    const PointData& this_point = dof_handler.locally_owned_point(range_block, domain_block, n);
-
-                    dealii::Point<dim> 
-                    this_point_position = lattice(domain_block).get_vertex_position(this_point.lattice_index);
-                    std::array<types::loc_t, dim> 
-                    this_point_grid_indices = lattice(domain_block).get_vertex_grid_indices(this_point.lattice_index);
-
-                            /* Block b <-> b */
-                    globalRows.clear();
-                    for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
-                        for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
-                            globalRows.push_back(dof_handler.get_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital));
-
-                    ColIndices.resize(globalRows.size());
-                    Values.resize(globalRows.size());
-                    for (auto & cols : ColIndices) 
-                        cols.clear();
-                    for (auto & vals : Values) 
-                        vals.clear();
-
-                    std::vector<types::loc_t>   
-                    neighbors = lattice(domain_block).list_neighborhood_indices(this_point_position, layer(domain_block).intra_search_radius);
-                    for (auto neighbor_lattice_index : neighbors)
-                    {
-                        std::array<types::loc_t,dim> 
-                        grid_vector = lattice(0).get_vertex_grid_indices(neighbor_lattice_index);
-                        for (size_t j=0; j<dim; ++j)
-                            grid_vector[j] = this_point_grid_indices[j] - grid_vector[j];
-
-                        auto it_cols = ColIndices.begin();
-                        auto it_vals = Values.begin();
-                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
-                            for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
-                            {
-                                for (types::loc_t orbital_middle = 0; orbital_middle <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_middle++)
-                                {
-                                    it_cols->push_back(dof_handler.get_dof_index(range_block, domain_block, neighbor_lattice_index, cell_index, orbital_middle));
-                                    it_vals->push_back(dof_handler.intralayer_term(orbital_middle, orbital, grid_vector, domain_block ));
-                                }
-                                it_cols++; 
-                                it_vals++;
-                            }
-                    }
-
-                            /* Block a -> b, a != b */
-                    types::block_t other_domain_block = 1-this_point.domain_block;
-                    neighbors = lattice(other_domain_block).list_neighborhood_indices( this_point_position, 
-                                                dof_handler.inter_search_radius + unit_cell(1-range_block).bounding_radius);
-                            
-                    for (auto neighbor_lattice_index : neighbors)
-                    {
-                        auto it_cols = ColIndices.begin();
-                        auto it_vals = Values.begin();
-                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
-                        {
-                            /* Note: the unit cell node displacement follows the point which is in the interlayer block */
-                            dealii::Tensor<1,dim> arrow_vector = this_point_position 
-                                                                + (domain_block != range_block ? 1. : -1.) 
-                                                                    * unit_cell(1-range_block).get_node_position(cell_index)
-                                                                - lattice(other_domain_block).get_vertex_position(neighbor_lattice_index);
-                            
-                            for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
-                                for (types::loc_t orbital_middle = 0; orbital_middle < dof_handler.n_domain_orbitals(range_block, other_domain_block); orbital_middle++)
-                                {
-                                    it_cols[orbital].push_back(dof_handler.get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_middle));
-                                    it_vals[orbital].push_back(dof_handler.interlayer_term(orbital_middle, orbital, arrow_vector, other_domain_block, domain_block ));
-                                }
-                            it_cols += dof_handler.n_domain_orbitals(range_block, other_domain_block); 
-                            it_vals += dof_handler.n_domain_orbitals(range_block, other_domain_block);
-                        }
-                    }
-
-                    for (size_t i = 0; i < globalRows.size(); ++i)
-                        hamiltonian_action.at(range_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
-                }
-            hamiltonian_action.at(range_block)->fillComplete ();
-        }
-    }
 
     template<int dim, int degree, typename Scalar>
     void

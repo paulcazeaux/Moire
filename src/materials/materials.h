@@ -83,6 +83,9 @@ namespace Materials {
      * Returns an intra-layer tight-binding hopping term for a one dimensional material,
      * for a given pair of orbitals and a lattice vector in grid coordinates computed 
      * for the material mat.
+     *
+     * !!! CONVENTION !!!
+     * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     double
     intralayer_term(const int orbital_row, const int orbital_col, 
@@ -96,6 +99,9 @@ namespace Materials {
      * Returns an intra-layer tight-binding hopping term for a two dimensional material,
      * for a given pair of orbitals and a lattice vector in grid coordinates computed 
      * for the material mat.
+     *
+     * !!! CONVENTION !!!
+     * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     double
     intralayer_term(const int orbital_row, const int orbital_col, 
@@ -111,6 +117,9 @@ namespace Materials {
      *
      * The two angle variables are there for compatibility with the two-dimensional case
      * and does nothing in the case of 1 dimensional materials.
+     *
+     * !!! CONVENTION !!!
+     * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
 
     double
@@ -129,6 +138,11 @@ namespace Materials {
      *
      * The two angle variables are the twist angles for the corresponding layer, with respect
      * to the un-rotated lattice as given in this library in the corresponding header file.
+     * !!! CONVENTION !!!
+     * Rotation angles use a COUNTERCLOCKWISE rotation convention.
+     *
+     * !!! CONVENTION !!!
+     * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     double
     interlayer_term(const int orbital_row, const int orbital_col, 
