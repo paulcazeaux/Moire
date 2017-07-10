@@ -29,7 +29,7 @@
  * The intralayer term is computed as a function of orbital indices as well
  * as the vector between lattice sites in integer (lattice) coordinates.
  * The interlayer term is computed as a function of orbital indices as well as real-space 
- * vector between site positions, as well as some angular information if necessary.
+ * vector between site positions, as well as some angular information as necessary.
  */
 
 namespace Materials {
@@ -83,6 +83,9 @@ namespace Materials {
      */
     const double&                               orbital_height(const Mat mat, const int idx);
 
+    /***********************************************************************************/
+    /* Methods for returning tight-binding hopping terms and associated nonzero checks */
+    /***********************************************************************************/
     /**
      * Returns an intra-layer tight-binding hopping term for a one dimensional material,
      * for a given pair of orbitals and a lattice vector in grid coordinates computed 
@@ -95,10 +98,21 @@ namespace Materials {
     intralayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat);
+    /**
+     * Returns whether a given intra-layer tight-binding hopping term for a one dimensional material
+     * is nonzero, for a given pair of orbitals and a lattice vector in grid coordinates computed 
+     * for the material mat.
+     * Calling this method is cheaper than the corresponding calculation of the hopping term and 
+     * should be used when building the minimal static sparsity pattern.
+     *
+     * !!! CONVENTION !!!
+     * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
+     */
     bool
     is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat);
+
     /**
      * Returns an intra-layer tight-binding hopping term for a two dimensional material,
      * for a given pair of orbitals and a lattice vector in grid coordinates computed 
@@ -111,13 +125,24 @@ namespace Materials {
     intralayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat);
+    /**
+     * Returns whether a given intra-layer tight-binding hopping term for a two dimensional material
+     * is nonzero, for a given pair of orbitals and a lattice hopping vector in grid coordinates computed 
+     * for the material mat.
+     * Calling this method is cheaper than the corresponding calculation of the hopping term and 
+     * should be used when building the minimal static sparsity pattern.
+     *
+     * !!! CONVENTION !!!
+     * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
+     */
     bool
     is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat);
+
     /**
-     * Returns an inter-layer tight-binding hopping term between two one dimensional materials,
-     * for a given pair of orbitals and a real-space vector in cartesian coordinates.
+     * Returns an inter-layer tight-binding hopping term between a pair of one dimensional materials,
+     * for a given pair of orbitals and a real-space hopping vector in cartesian coordinates.
      *
      * The two angle variables are there for compatibility with the two-dimensional case
      * and does nothing in the case of 1 dimensional materials.
@@ -125,12 +150,27 @@ namespace Materials {
      * !!! CONVENTION !!!
      * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
-
     double
     interlayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<double, 2>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
+    /**
+     * Returns whether a given inter-layer tight-binding hopping term for a pair of one dimensional
+     * materials is nonzero, for a given pair of orbitals and a lattice hopping vector in cartesian 
+     * coordinates.
+     * Calling this method is cheaper than the corresponding calculation of the hopping term and 
+     * should be used when building the minimal static sparsity pattern.
+     *
+     * The two angle variables are the twist angles for the corresponding layer, with respect
+     * to the un-rotated lattice as given in this library in the corresponding header file.
+     *
+     * !!! CONVENTION !!!
+     * Rotation angles use a COUNTERCLOCKWISE rotation convention.
+     *
+     * !!! CONVENTION !!!
+     * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
+     */
     bool
     is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
                     const std::array<double, 2>& vector, 
@@ -138,21 +178,40 @@ namespace Materials {
                     const Mat mat_row, const Mat mat_col);
     /**
      * Returns an inter-layer tight-binding hopping term between a pair of two dimensional 
-     * materials, for a given pair of orbitals and a real-space vector in cartesian coordinates.
+     * materials, for a given pair of orbitals and a real-space hopping vector
+     * in cartesian coordinates.
      *
      * The two angle variables are the twist angles for the corresponding layer, with respect
      * to the un-rotated lattice as given in this library in the corresponding header file.
+     *
      * !!! CONVENTION !!!
      * Rotation angles use a COUNTERCLOCKWISE rotation convention.
      *
      * !!! CONVENTION !!!
      * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
+
     double
     interlayer_term(const int orbital_row, const int orbital_col, 
                     const std::array<double, 3>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
+    /**
+     * Returns whether a given inter-layer tight-binding hopping term for a pair of two dimensional
+     * materials is nonzero, for a given pair of orbitals and a real-space hopping vector 
+     * in cartesian coordinates.
+     * Calling this method is cheaper than the corresponding calculation of the hopping term and 
+     * should be used when building the minimal static sparsity pattern.
+     *
+     * The two angle variables are the twist angles for the corresponding layer, with respect
+     * to the un-rotated lattice as given in this library in the corresponding header file.
+     *
+     * !!! CONVENTION !!!
+     * Rotation angles use a COUNTERCLOCKWISE rotation convention.
+     *
+     * !!! CONVENTION !!!
+     * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
+     */
     bool
     is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
                     const std::array<double, 3>& vector, 
