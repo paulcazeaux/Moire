@@ -79,7 +79,7 @@ namespace Bilayer {
                     for (auto neighbor_lattice_index : neighbors)
                     {
                         std::array<types::loc_t,dim> 
-                        grid_vector = lattice(0).get_vertex_grid_indices(neighbor_lattice_index);
+                        grid_vector = lattice(domain_block).get_vertex_grid_indices(neighbor_lattice_index);
                         for (size_t j=0; j<dim; ++j)
                             grid_vector[j] = this_point_grid_indices[j] - grid_vector[j];
 

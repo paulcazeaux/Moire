@@ -24,11 +24,8 @@
 #include <Kokkos_Core.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_Comm.hpp>
-#include <Tpetra_Vector.hpp>
-#include <Tpetra_Map_decl.hpp>
-#include <Tpetra_CrsGraph_decl.hpp>
+#include <Tpetra_MultiVector_decl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
-#include <Tpetra_CrsMatrix_def.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
