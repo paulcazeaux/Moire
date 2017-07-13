@@ -10,7 +10,6 @@
 #define moire__tools_transformation_h
 
 #include "deal.II/base/tensor.h"
-#include "deal.II/physics/transformations.h"
 
 
 template<int dim>
@@ -25,7 +24,17 @@ struct Transformation<1> {
 template<>
 struct Transformation<2>{
     static dealii::Tensor<2,2>      matrix(const double scaling, const double angle)
-                        { return scaling * dealii::Physics::Transformations::Rotations::rotation_matrix_2d<double>(angle); };
+    {
+        const double rotation[2][2]
+        = {{
+            scaling * std::cos(angle), scaling * std::sin(angle)
+            },
+            {
+            -scaling * std::sin(angle), scaling * std::cos(angle)
+            }
+        };
+  return dealii::Tensor<2,2> (rotation);
+    }
 };
 
 #endif

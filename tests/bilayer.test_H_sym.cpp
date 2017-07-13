@@ -83,7 +83,7 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
         test_algebra.A .at(b).update( -1., test_algebra.B .at(b), 1.);
         Teuchos::Array<double> norms (test_algebra.A.at(b) .getNumVectors());
         test_algebra.A .at(b).normInf(norms);
-        AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-14,
+        AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
                         dealii::ExcInternalError() );
     }
  }
