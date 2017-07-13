@@ -67,6 +67,9 @@ make_test("materials.graphene" "")
 # Test Bilayer Hamiltonian assembly and symmetry
 make_test("bilayer.test_H_sym" "")
 
+# Test Bilayer Hamiltonian assembly and symmetry
+make_test("bilayer.test_rotation_invariance" "")
+
 ######################################################################################
 ### 4) Wrap up: define a custom test target
 ######################################################################################

@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.8)
 
 # Here define your project name
 project(Moire)
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 
 # Here define the name and the version of your package
 SET(PACKAGE_NAME “Moire” CACHE STRING "package_name" FORCE)
@@ -32,6 +32,11 @@ IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     STRING (REPLACE "-Wno-placement-new"    "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
     STRING (REPLACE "-Wno-literal-suffix"   "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
     STRING (REPLACE "-Wno-long-double"      "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
+ENDIF()
+
+# Avoid warnings with GCC 7
+IF(CMAKE_CXX_COMPILER_ID MATCHES "GCC")
+    SET(CMAKE_CXX_FLAGS  ${CMAKE_CXX_FLAGS} "-Wno-int-in-bool-context -Wno-return-type")
 ENDIF()
 
 ######################################
