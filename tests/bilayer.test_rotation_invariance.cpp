@@ -87,6 +87,7 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
         AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
                         dealii::ExcInternalError() );
     }
+    std::cout << "Rotation invariance test OK" << std::endl;
  }
 
 

@@ -32,14 +32,26 @@ template<int dim>
 class PeriodicTranslationUnit<dim, double>
 {
 public:
+    typedef Kokkos::View<double *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> > view_t;
+    typedef Kokkos::View<typename std::conditional<dim == 1, double **, double *** >::type,
+        Kokkos::LayoutRight, Kokkos::MemoryTraits<Kokkos::Unmanaged> > view_nd_t;
+
     PeriodicTranslationUnit(const int n_inner, const std::array<int, dim> n_nodes);
     ~PeriodicTranslationUnit();
 
-    Kokkos::View<double *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-    view() const;
+    view_t view() const;
+
+    view_nd_t view_nd() const;
 
     void
     translate(dealii::Tensor<1, dim> vector);
+
+    friend std::ostream& operator<<( std::ostream& os, const PeriodicTranslationUnit<dim, double>& torus)
+    {
+        for (size_t i = 0; i < torus.n; ++i)
+            std::cout << torus.data[i] << (i + 1 < torus.n ? ",\t" : "");
+        return os;
+    };
 
 private:
     int n;
@@ -58,14 +70,26 @@ template<int dim>
 class PeriodicTranslationUnit<dim, std::complex<double>>
 {
 public:
+    typedef Kokkos::View<std::complex<double> *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> > view_t;
+    typedef Kokkos::View<typename std::conditional<dim == 1, std::complex<double> **, std::complex<double> *** >::type,
+        Kokkos::LayoutRight, Kokkos::MemoryTraits<Kokkos::Unmanaged> > view_nd_t;
+
     PeriodicTranslationUnit(const int n_inner, const std::array<int, dim> n_nodes);
     ~PeriodicTranslationUnit();
 
-    Kokkos::View<std::complex<double> *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-    view() const;
+    view_t view() const;
+
+    view_nd_t view_nd() const;
 
     void
     translate(dealii::Tensor<1, dim> vector);
+
+    friend std::ostream& operator<<( std::ostream& os, const PeriodicTranslationUnit<dim, std::complex<double>>& torus)
+    {
+        for (size_t i = 0; i < torus.n; ++i)
+            os << numbers::real(torus.data[i]) << " + " << numbers::imag(torus.data[i]) << (i + 1 < torus.n ? "i\t" : "i");
+        return os;
+    };
 
 private:
     int n;

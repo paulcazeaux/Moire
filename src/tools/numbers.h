@@ -105,6 +105,23 @@ namespace numbers
     template<class T>
     std::complex<T>
     conjugate(const std::complex<T> x) {return std::conj(x); }
+
+    template<typename Scalar>
+    Scalar
+    real(const Scalar x) {return x;}
+    
+    template<class T>
+    T
+    real(const std::complex<T> x) {return x.real (); }
+
+
+    template<typename Scalar>
+    Scalar
+    imag(const Scalar x) {return 0.;}
+    
+    template<class T>
+    T
+    imag(const std::complex<T> x) {return x.imag (); }
 }
 
 #endif
