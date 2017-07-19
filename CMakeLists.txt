@@ -15,7 +15,7 @@ SET(PACKAGE_VERSION “1.0” CACHE STRING “package_version” FORCE)
 # set a language for the entire project.
 enable_language(CXX)
 
-SET(CMAKE_CXX_FLAGS  ${CMAKE_CXX_FLAGS} "-std=c++1z -Wno-unused-variable -Wno-unused-parameter")
+add_compile_options(-std=c++1z -Wno-unused-variable -Wno-unused-parameter)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
 
 
@@ -32,12 +32,12 @@ IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     STRING (REPLACE "-Wno-placement-new"    "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
     STRING (REPLACE "-Wno-literal-suffix"   "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
     STRING (REPLACE "-Wno-long-double"      "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
-    SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -Wno-c++1z-extensions")
+    add_compile_options(-Wno-c++1z-extensions)
 ENDIF()
 
 # Avoid warnings with GCC 7
 IF(CMAKE_COMPILER_IS_GNUCXX)
-    SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context -Wno-return-type")
+    add_compile_options(-Wno-int-in-bool-context -Wno-return-type)
 ENDIF()
 
 ######################################
