@@ -26,8 +26,6 @@
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
 #include "deal.II/base/tensor.h"
-#include "deal.II/base/conditional_ostream.h"
-#include "deal.II/base/timer.h"
 
 #include "tools/types.h"
 #include "parameters/multilayer.h"
@@ -48,8 +46,6 @@ namespace Bilayer {
     template <int dim, int degree>
     class DoFHandler : public Multilayer<dim, 2>
     {
-
-
     static_assert( (dim == 1 || dim == 2), "UnitCell dimension must be 1 or 2!\n");
 
     public:
@@ -111,7 +107,7 @@ namespace Bilayer {
         types::loc_t    n_range_orbitals(       const types::block_t range_block, const types::block_t domain_block) const;
 
 
-        bool                is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
+        bool is_locally_owned_point( const types::block_t range_block,  const types::block_t domain_block, 
                                                      const types::loc_t lattice_index) const;
         types::subdomain_id point_owner( const types::block_t range_block,  const types::block_t domain_block, 
                                                      const types::loc_t lattice_index) const;
@@ -152,6 +148,11 @@ namespace Bilayer {
                                         const types::loc_t orbital) const;
 
         types::glob_t   get_block_dof_index(  const types::block_t range_block, const types::block_t domain_block,
+                                              const types::loc_t lattice_index, const types::loc_t cell_index, 
+                                              const types::loc_t orbital) const;
+
+
+        types::glob_t   get_transpose_block_dof_index(  const types::block_t range_block, const types::block_t domain_block,
                                               const types::loc_t lattice_index, const types::loc_t cell_index, 
                                               const types::loc_t orbital) const;
 

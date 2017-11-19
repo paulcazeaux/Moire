@@ -47,24 +47,19 @@ namespace Bilayer {
                                                                                             + lattice_point_dof_partition_[1][0].capacity()
                                                                                             + lattice_point_dof_partition_[0][1].capacity()
                                                                                             + lattice_point_dof_partition_[1][1].capacity());
-        typedef std::tuple<types::block_t, types::block_t, types::loc_t, types::loc_t> boundary_t;
         typedef std::tuple<types::loc_t, types::block_t, types::block_t, types::loc_t, types::loc_t> interp_t;
         memory.InitArrays += sizeof(lattice_points_) + sizeof(PointData) * (lattice_points_[0][0].capacity()
                                                                         + lattice_points_[1][0].capacity()
                                                                         + lattice_points_[0][1].capacity()
                                                                         + lattice_points_[1][1].capacity())
                                 + std::accumulate(lattice_points_[0][0].begin(), lattice_points_[0][0].end(), 0, 
-                                                [] (types::loc_t a, PointData b) {return a + sizeof(boundary_t) * b.boundary_lattice_points.capacity() 
-                                                                                            + sizeof(interp_t) * b.interpolated_nodes.capacity(); })
+                                                [] (types::loc_t a, PointData b) {return a + sizeof(interp_t) * b.interpolating_nodes.capacity(); })
                                 + std::accumulate(lattice_points_[1][0].begin(), lattice_points_[1][0].end(), 0, 
-                                                [] (types::loc_t a, PointData b) {return a + sizeof(boundary_t) * b.boundary_lattice_points.capacity() 
-                                                                                            + sizeof(interp_t) * b.interpolated_nodes.capacity(); })
+                                                [] (types::loc_t a, PointData b) {return a + sizeof(interp_t) * b.interpolating_nodes.capacity(); })
                                 + std::accumulate(lattice_points_[0][1].begin(), lattice_points_[0][1].end(), 0, 
-                                                [] (types::loc_t a, PointData b) {return a + sizeof(boundary_t) * b.boundary_lattice_points.capacity() 
-                                                                                            + sizeof(interp_t) * b.interpolated_nodes.capacity(); })
+                                                [] (types::loc_t a, PointData b) {return a + sizeof(interp_t) * b.interpolating_nodes.capacity(); })
                                 + std::accumulate(lattice_points_[1][1].begin(), lattice_points_[1][1].end(), 0, 
-                                                [] (types::loc_t a, PointData b) {return a + sizeof(boundary_t) * b.boundary_lattice_points.capacity() 
-                                                                                            + sizeof(interp_t) * b.interpolated_nodes.capacity(); });
+                                                [] (types::loc_t a, PointData b) {return a + sizeof(interp_t) * b.interpolating_nodes.capacity(); });
         memory.Static += sizeof(owned_dofs_) + sizeof(transpose_domain_maps_) + sizeof(transpose_range_maps_)
                                 + 10 * (sizeof(Teuchos::RCP<const Map>) + sizeof(Map));
         return memory;
@@ -312,68 +307,39 @@ namespace Bilayer {
                 {
                     lattice_points_.at(range_block).at(domain_block).emplace_back(range_block, domain_block, this_lattice_index);
                     
-                    /* Case of inter-layer blocks: boundary points and interpolation points require more data */
+                    /* Case of inter-layer blocks: interpolation points require more data */
                     if (range_block != domain_block)
                     {
                         PointData& this_point = lattice_points_.at(range_block).at(domain_block).back();
 
-                        const auto& this_cell    = unit_cell(1-range_block);
+                        const auto& this_cell    = unit_cell(domain_block);
                         const auto& this_lattice = lattice(domain_block);
                         std::array<types::loc_t,dim> 
                         this_vertex_indices = this_lattice.get_vertex_grid_indices(this_lattice_index);
 
-                    /* We now deal with the technicalities of boundary points */
-                        this_point.boundary_lattice_points .reserve(this_cell.n_boundary_nodes);
-
-                        for (types::loc_t p = 0; p < this_cell.n_boundary_nodes; ++p)
-                        {
-                            /* Which cell does this boundary point belong to? */
-                            auto [cell_index, lattice_indices] = this_cell.map_boundary_point_interior(p);
-                            for (size_t i=0; i<dim; ++i)
-                                lattice_indices[i] += this_vertex_indices[i];
-
-                            /* Find out what is the corresponding lattice point index */
-                            types::loc_t new_lattice_index = this_lattice.get_vertex_global_index(lattice_indices);
-                            /* Check that this point exists in our cutout */
-                            if (new_lattice_index != types::invalid_local_index)
-                            {
-                                /* Add the point to the vector of identified boundary points */
-                                this_point.boundary_lattice_points .push_back(
-                                    std::make_tuple(range_block, domain_block, new_lattice_index, cell_index));
-                            }
-                            else // The point is out of bounds
-                                this_point.boundary_lattice_points .push_back(
-                                    std::make_tuple(range_block, domain_block,
-                                    types::invalid_local_index, types::invalid_local_index));
-                        }
-
-                    /* We now find and add the interpolation points from the other grid */
+                    /* We now find and add the interpolating points from the other grid */
 
                         const auto this_point_position  = this_lattice.get_vertex_position(this_lattice_index);
                         const auto& other_cell          = unit_cell(range_block);
                         const auto& other_lattice       = lattice(range_block);
 
-                        size_t estimate_size = other_cell.n_nodes 
-                                    * std::ceil(dealii::determinant(this_cell.basis)/dealii::determinant(other_cell.basis));
-                        this_point.interpolated_nodes .reserve(estimate_size);
+                        this_point.interpolating_nodes .reserve(this_cell.n_nodes);
 
-                        /* Select and iterate through the relevant neighbors of our current point in the other lattice */
-                        std::vector<types::loc_t>   
-                        neighbors = other_lattice.list_neighborhood_indices( -this_point_position, 
-                                            other_cell.bounding_radius+this_cell.bounding_radius);
-                        for (types::loc_t lattice_index : neighbors)
+                        /* For each node, find the lattice point and corresponding element on the other side */
+                        for (types::loc_t cell_index = 0; cell_index < this_cell.n_nodes; ++cell_index)
                         {
-                            const dealii::Point<dim> relative_points_position = - (other_lattice.get_vertex_position(lattice_index) + this_point_position);
-                            
-                            /* Iterate through the grid points in the corresponding unit cell and test invidually if they are relevant */
-                            for (types::loc_t cell_index = 0; cell_index < other_cell.n_nodes; ++cell_index)
-                            {
-                                types::loc_t element_index = this_cell.find_element( relative_points_position - other_cell.get_node_position(cell_index));
-                                /* Test whether the point is in the cell and add to the vector of identified interpolated points */
-                                if (element_index != types::invalid_local_index) 
-                                    this_point.interpolated_nodes.push_back(
-                                            std::make_tuple(element_index, domain_block, range_block, lattice_index, cell_index));
-                            }
+                             dealii::Point<dim> X = - (this_point_position + this_cell.get_node_position(cell_index));
+                             const dealii::Tensor<1,dim> Xg = other_lattice.inverse_basis * X;
+                             std::array<types::loc_t, dim> indices;
+                             for (size_t i = 0; i<dim; ++i)
+                                indices[i] = std::floor(Xg[i] + 0.5);
+                             const types::loc_t interp_lattice_index = other_lattice.get_vertex_global_index(indices);
+                             if (interp_lattice_index != types::invalid_local_index)
+                             {
+                                types::loc_t interp_element_index = other_cell.find_element(X - other_lattice.get_vertex_position(interp_lattice_index));
+                                this_point.interpolating_nodes.push_back(
+                                            std::make_tuple(cell_index, domain_block, range_block, interp_lattice_index, interp_element_index));
+                             }
                         }
                     }
                 }
@@ -470,13 +436,13 @@ namespace Bilayer {
     {
         Teuchos::RCP<SparsityPattern> sparsity_pattern = Tpetra::createCrsGraph(transpose_range_maps_.at(range_block).at(domain_block));
 
-        for (const PointData& this_point : lattice_points_.at(range_block).at(domain_block) )
-        {   
-            assert(this_point.range_block == range_block);
-            assert(this_point.domain_block == domain_block);
-            if (range_block == domain_block)
-            {
-            /* First, the case of diagonal blocks */
+        /* First, the case of diagonal blocks */
+        if (range_block == domain_block)
+        {
+            for (const PointData& this_point : lattice_points_.at(domain_block).at(range_block) )
+            { 
+                assert(this_point.range_block == range_block);
+                assert(this_point.domain_block == domain_block);
                 const types::glob_t n_nodes    = n_cell_nodes(range_block, domain_block);
                 /* We simply exchange the point with its opposite */
                 std::array<types::loc_t, dim> on_grid = lattice(domain_block).get_vertex_grid_indices(this_point.lattice_index);
@@ -493,49 +459,58 @@ namespace Bilayer {
                         sparsity_pattern->insertGlobalIndices(row, 1, &col);
                     }
             }
-            else
-            {
-                /* Now the case of extradiagonal blocks : we map the interpolation process */            
-                const auto& cell = unit_cell(1-range_block);
+        }
+        else
+        {
+            /* Now the case of extradiagonal blocks : we map the interpolation process */
+            for (const PointData& this_point : lattice_points_.at(domain_block).at(range_block) )
+            {  
+                assert(this_point.domain_block == range_block);
+                assert(this_point.range_block == domain_block);
+                const auto& interp_lattice = lattice(domain_block);
+                const auto& interp_cell = unit_cell(domain_block);
+                const auto& target_lattice = lattice(range_block);
+                const auto& target_cell = unit_cell(range_block);
 
-                const types::glob_t n_orbitals        = n_domain_orbitals(range_block, domain_block);  
-                const types::glob_t interp_n_nodes    = n_cell_nodes(domain_block, range_block);
+                const types::loc_t n_orbitals = n_domain_orbitals(range_block, domain_block);  
 
-                for (const auto & interp_point : this_point.interpolated_nodes)
+                for (const auto & interp_point : this_point.interpolating_nodes)
                 {
-                    auto [element_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_cell_index] = interp_point;
-                    assert(interp_range_block == domain_block);
-                    assert(interp_domain_block == range_block);
-
-                    for (types::loc_t cell_index : cell.subcell_list [element_index].unit_cell_dof_index_map)
+                    const auto [cell_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_element_index] = interp_point;
+                    assert(interp_domain_block == domain_block);
+                    assert(interp_range_block == range_block);
+                    
+                    for (types::loc_t interp_cell_index : interp_cell.subcell_list [interp_element_index].unit_cell_dof_index_map)
                     {
-                        if (cell.is_node_interior(cell_index))
-                        {
+                        if (interp_cell.is_node_interior(interp_cell_index))
                             for (types::loc_t orbital = 0; orbital < n_orbitals; orbital++)
                             {
                                 types::glob_t 
-                                row = orbital + n_orbitals * (interp_cell_index + interp_n_nodes * reordered_indices_.at(interp_domain_block).at(interp_lattice_index) ),
-                                col = get_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital);
+                                row = get_transpose_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital),
+                                col = get_block_dof_index(range_block, domain_block, interp_lattice_index, interp_cell_index, orbital);
                                 sparsity_pattern->insertGlobalIndices(row, 1, &col);
                             }
-                        }
                         else // Boundary point!
                         {
-                            auto [source_range_block, source_domain_block, source_lattice_index, source_cell_index] 
-                                        = this_point.boundary_lattice_points[cell_index - cell.n_nodes];
-                            assert(source_range_block == range_block );
-                            assert(source_domain_block == domain_block );
+                                /* Which cell does this boundary point belong to? */
+                            const auto interp_lattice_indices = interp_lattice.get_vertex_grid_indices(interp_lattice_index);
+                            auto [offset_interp_cell_index, offset_indices] = interp_cell.map_boundary_point_interior(interp_cell_index - interp_cell.n_nodes);
+                            for (int i=0; i<dim; ++i)
+                                offset_indices[i] += interp_lattice_indices[i];
 
-                            /* Last check to see if the boundary point actually exists on the grid. Maybe some extrapolation would be useful? */
-                            if (source_lattice_index != types::invalid_local_index) 
+                            /* Find out what is the corresponding lattice point index */
+                            const types::loc_t offset_interp_lattice_index = interp_lattice.get_vertex_global_index(offset_indices);
+                            /* Check that this offset point exists in our cutout */
+                            if (offset_interp_lattice_index != types::invalid_local_index)
                                 for (types::loc_t orbital = 0; orbital < n_orbitals; orbital++)
                                 {
                                     types::glob_t 
-                                    row = orbital + n_orbitals * (interp_cell_index + interp_n_nodes * reordered_indices_.at(interp_domain_block).at(interp_lattice_index) ),
-                                    col = get_block_dof_index(range_block, domain_block, source_lattice_index, source_cell_index , orbital);
+                                    row = get_transpose_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital),
+                                    col = get_block_dof_index(range_block, domain_block, offset_interp_lattice_index, offset_interp_cell_index, orbital);
                                     sparsity_pattern->insertGlobalIndices(row, 1, &col);
                                 }
                         }
+                        
                     }
                 }
             }
@@ -716,7 +691,26 @@ namespace Bilayer {
         assert( cell_index    < n_cell_nodes(range_block, domain_block) );
         assert( orbital       < n_domain_orbitals(range_block, domain_block) );
 
-        return ( reordered_indices_.at(domain_block).at(lattice_index) * n_dofs_each_point(range_block, domain_block)
+        return ( reordered_indices_.at(domain_block).at(lattice_index) * n_cell_nodes(range_block, domain_block)
+                    + cell_index) * n_domain_orbitals(range_block, domain_block)
+                    + orbital;
+    }
+
+
+    template<int dim, int degree>
+    types::glob_t
+    DoFHandler<dim,degree>::get_transpose_block_dof_index(const types::block_t range_block,  const types::block_t domain_block,
+                                                const types::loc_t lattice_index, const types::loc_t cell_index, 
+                                                const types::loc_t orbital) const
+    {
+        /* Bounds checking */
+        assert( range_block   < 2   );
+        assert( domain_block  < 2   );
+        assert( lattice_index < n_lattice_points(domain_block, range_block)  );
+        assert( cell_index    < n_cell_nodes(domain_block, range_block) );
+        assert( orbital       < n_domain_orbitals(range_block, domain_block) );
+
+        return ( reordered_indices_.at(range_block).at(lattice_index) * n_cell_nodes(domain_block, range_block)
                     + cell_index) * n_domain_orbitals(range_block, domain_block)
                     + orbital;
     }

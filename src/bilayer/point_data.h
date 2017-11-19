@@ -42,29 +42,13 @@ namespace Bilayer {
         loc_t lattice_index;
 
         /**
-         * Now we need to store details for the interpolation process.
-         * These vectors should remain empty if range_block and domain_block are the same
-         * (where cells have periodic boundary conditions).
-         *
-         *
-         * First some information about the unit cell's boundary.
-         * These points belong to the same block.
-         *
-         * The tuple fully identifies a point geometrically.
-         * First and second index are the block identifiers, 
-         * then the lattice point index (within its block), 
-         * and the unit cell grid index.
-         */
-        std::vector<std::tuple<block_t, block_t, loc_t, loc_t>>
-                                                    boundary_lattice_points;
-
-        /**
-         * Now some information about points we will interpolate to. 
+         * Now some information about points we will interpolate from. 
          * These points belong to the other middle block (2 if range_block = 1 and vice versa).
-         * First element of the tuple is the element index, and then the grid point information as above
+         * First element of the tuple is our current cell index, and then the blocks, lattice index 
+         * and element index of the interpolating element.
          */
         std::vector<std::tuple<loc_t, block_t, block_t, loc_t, loc_t> >   
-                                                    interpolated_nodes;
+        interpolating_nodes;
 
         PointData(const block_t, const block_t, const loc_t);
 

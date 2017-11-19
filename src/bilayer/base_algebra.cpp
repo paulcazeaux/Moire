@@ -1,4 +1,4 @@
-/* 
+/**
 * File:   bilayer/base_algebra.cpp
 * Author: Paul Cazeaux
 *
@@ -147,15 +147,12 @@ namespace Bilayer {
                 std::vector<types::glob_t> globalRows;
                 std::vector<Teuchos::Array<types::glob_t>> ColIndices;
                 std::vector<Teuchos::Array<Scalar>> Values;
-
-                for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(range_block, domain_block); ++n)
-                {
-                    const PointData& this_point = dof_handler.locally_owned_point(range_block, domain_block, n);
-
-                                            /* Block b <-> b */
-                    if (range_block == domain_block)
-                    {
                     /* First, the case of diagonal blocks */
+                if (range_block == domain_block)
+                    for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(domain_block, range_block); ++n)
+                    {
+                        const PointData& this_point = dof_handler.locally_owned_point(range_block, domain_block, n);
+
                         size_t N = dof_handler.n_dofs_each_point(range_block, domain_block);
                         globalRows.resize(N);
                         ColIndices.resize(N);
@@ -181,14 +178,21 @@ namespace Bilayer {
                                 ++it_row;
                                 ++it_col;
                             }
+                        for (size_t i = 0; i < globalRows.size(); ++i)
+                            adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
                     }
-                    else
-                    {
+                else
                         /* Now the case of extradiagonal blocks : we map the interpolation process */
+                    for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(domain_block, range_block); ++n)
+                    {
+                        const PointData& this_point = dof_handler.locally_owned_point(domain_block, range_block, n);
+                        const auto& interp_lattice = lattice(domain_block);
+                        const auto& interp_cell = unit_cell(domain_block);
+                        const auto& target_lattice = lattice(range_block);
+                        const auto& target_cell = unit_cell(range_block);
                         const types::loc_t n_orbitals = dof_handler.n_domain_orbitals(domain_block, range_block);
-                        std::vector<double> interpolation_weights;
 
-                        size_t N = dof_handler.n_domain_orbitals(domain_block, range_block) * this_point.interpolated_nodes.size();
+                        size_t N = n_orbitals * this_point.interpolating_nodes.size();
                         globalRows.resize(N);
                         ColIndices.resize(N);
                         Values.resize(N);
@@ -200,52 +204,62 @@ namespace Bilayer {
                         auto it_row = globalRows.begin();
                         auto it_cols = ColIndices.begin();
                         auto it_vals = Values.begin();
-                        for (const auto & interp_point : this_point.interpolated_nodes)
+                        for (const auto & interp_point : this_point.interpolating_nodes)
                         {
-                            auto [element_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_cell_index] = interp_point;
+                            const auto [cell_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_element_index] = interp_point;
+                            assert(interp_domain_block == domain_block);
+                            assert(interp_range_block == range_block);
+
                             for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
-                                it_row[orbital] = dof_handler.get_block_dof_index(interp_range_block, interp_domain_block, interp_lattice_index, interp_cell_index, orbital);
+                                it_row[orbital] = dof_handler.get_transpose_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital);
 
-                            dealii::Point<dim> quadrature_point (- (lattice(domain_block).get_vertex_position(this_point.lattice_index)
-                                                                    + lattice(range_block).get_vertex_position(interp_lattice_index)
-                                                                    + unit_cell(range_block).get_node_position(interp_cell_index)    ));
+                            dealii::Point<dim> quadrature_point (- (interp_lattice.get_vertex_position(interp_lattice_index)
+                                                                    + target_lattice.get_vertex_position(this_point.lattice_index)
+                                                                    + target_cell.get_node_position(cell_index)    ));
 
-                            unit_cell(domain_block).subcell_list[element_index].get_interpolation_weights(quadrature_point, interpolation_weights);
+                            std::vector<double> interpolation_weights (Element<dim,degree>::dofs_per_cell);
+                            unit_cell(domain_block).subcell_list[interp_element_index].get_interpolation_weights(quadrature_point, interpolation_weights);
+
                             for (types::loc_t j = 0; j < Element<dim,degree>::dofs_per_cell; ++j)
                             {
-                                types::loc_t cell_index = unit_cell(domain_block).subcell_list.at(element_index).unit_cell_dof_index_map.at(j);
-                                if (unit_cell(domain_block).is_node_interior(cell_index))
-                                {
+                                types::loc_t interp_cell_index = interp_cell.subcell_list [interp_element_index].unit_cell_dof_index_map.at(j);
+                                if (interp_cell.is_node_interior(interp_cell_index))
                                     for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
                                     {
-                                        it_cols[orbital].push_back(dof_handler.get_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital));
+                                        it_cols[orbital].push_back(dof_handler.get_block_dof_index(range_block, domain_block, interp_lattice_index, interp_cell_index, orbital));
                                         it_vals[orbital].push_back(interpolation_weights.at(j));
                                     }
-                                }
                                 else // Boundary point!
                                 {
-                                    auto [source_range_block, source_domain_block, source_lattice_index, source_cell_index] 
-                                                = this_point.boundary_lattice_points.at(cell_index - unit_cell(domain_block).n_nodes);
-                                    /* Last check to see if the boundary point actually exists on the grid. Maybe some extrapolation would be useful? */
-                                    if (source_lattice_index != types::invalid_local_index) 
-                                        for (types::loc_t orbital = 0; orbital < n_orbitals; orbital++)
+                                        /* Which cell does this boundary point belong to? */
+                                    const auto interp_lattice_indices = interp_lattice.get_vertex_grid_indices(interp_lattice_index);
+                                    auto [offset_interp_cell_index, offset_indices] = interp_cell.map_boundary_point_interior(interp_cell_index - interp_cell.n_nodes);
+                                    for (int i=0; i<dim; ++i)
+                                        offset_indices[i] += interp_lattice_indices[i];
+
+                                    /* Find out what is the corresponding lattice point index */
+                                    const types::loc_t offset_interp_lattice_index = interp_lattice.get_vertex_global_index(offset_indices);
+
+                                    /* Check that this point exists in our cutout */
+                                    if (offset_interp_lattice_index != types::invalid_local_index)
+                                        for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
                                         {
-                                            it_cols[orbital].push_back(dof_handler.get_block_dof_index(range_block, domain_block, source_lattice_index, source_cell_index , orbital));
+                                            it_cols[orbital].push_back(dof_handler.get_block_dof_index(range_block, domain_block, offset_interp_lattice_index, offset_interp_cell_index, orbital));
                                             it_vals[orbital].push_back(interpolation_weights.at(j));
                                         }
                                 }
-                                it_row += n_orbitals;
-                                it_cols += n_orbitals;
-                                it_vals += n_orbitals;
                             }
+                            it_row += n_orbitals;
+                            it_cols += n_orbitals;
+                            it_vals += n_orbitals;
                         }
-                    }
+                        
 
-                    for (size_t i = 0; i < globalRows.size(); ++i)
-                        adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
+                        for (size_t i = 0; i < globalRows.size(); ++i)
+                            adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
+                    }
+                    adjoint_interpolant.at(range_block).at(domain_block)->fillComplete ();
                 }
-                adjoint_interpolant.at(range_block).at(domain_block)->fillComplete ();
-            }
 
         /* Finally, we allocate the helper multivectors */
         helper.at(0).at(0) = MultiVector(dof_handler.transpose_range_map(0,0), dof_handler.n_range_orbitals(0,0));
@@ -305,8 +319,6 @@ namespace Bilayer {
 
             typename MultiVector::dual_view_type::t_dev
             helperView = helper.at(b).at(b).template getLocalView<Kokkos::Serial>();
-            Kokkos::View<Scalar *, Kokkos::Serial, Kokkos::MemoryTraits<Kokkos::Unmanaged> >
-            fftView = torus.at(b).view ();
 
             /* We use the FFT now to translate in the unit cells for each lattice point! */
             for (types::loc_t n=0; n<dof_handler.n_locally_owned_points(b, b); ++n)
@@ -324,11 +336,11 @@ namespace Bilayer {
                 {
                     /* Copy the data into FFTW-allocated memory */
                     auto pointView = Kokkos::subview(helperView, std::make_pair(start, end), j);
-                    Kokkos::deep_copy(fftView, pointView);
+                    Kokkos::deep_copy(torus.at(b).view (), pointView);
                     /* Forward FFT */
                     torus.at(b).translate (vector);
                     /* Copy back into helper Kokkos array */
-                    Kokkos::deep_copy(pointView, fftView);
+                    Kokkos::deep_copy(pointView, torus.at(b).view ());
                 }
             }
             /* Next we deal with the extradiagonal block interpolation*/
@@ -352,24 +364,35 @@ namespace Bilayer {
             n_orbitals_1 = dof_handler.n_domain_orbitals(b, 1-b),
             n_orbitals_2 = dof_handler.n_range_orbitals(b, 1-b);
             tA_View = tA_blocks.at(1-b).at(b).template getLocalView<Kokkos::Serial>();
-            helperView_const = helper.at(b).at(b-1).template getLocalView<Kokkos::Serial>();
+            helperView_const = helper.at(b).at(1-b).template getLocalView<Kokkos::Serial>();
 
             Kokkos::parallel_for (dof_handler.n_cell_nodes(1-b,b) * dof_handler.n_locally_owned_points(1-b,b), KOKKOS_LAMBDA (const types::loc_t i) {
                     for (types::loc_t o1 = 0; o1 < n_orbitals_1; ++o1)
                         for (types::loc_t o2 = 0; o2 < n_orbitals_2; ++o2)
                             tA_View(o2 + n_orbitals_2 * i, o1) = numbers::conjugate<Scalar>( helperView_const(o1 + n_orbitals_1 * i, o2) );
-                });  
+                });
         }
     }
 
 
     template<int dim, int degree, typename Scalar>
     void
-    BaseAlgebra<dim,degree,Scalar>::linear_combination(const Scalar alpha, const std::array<MultiVector, 2> A,
-                                                const Scalar beta, std::array<MultiVector, 2> & B)
+    BaseAlgebra<dim,degree,Scalar>::linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
+                                                const Scalar& beta, std::array<MultiVector, 2>& B)
     {
         for (types::block_t block = 0; block < 2; ++block)
             B.at(block).update(alpha, A.at(block), beta);
+    }
+
+
+    template<int dim, int degree, typename Scalar>
+    void
+    BaseAlgebra<dim,degree,Scalar>::linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
+                                                const Scalar& beta, const std::array<MultiVector, 2>& B,
+                                                const Scalar& gamma, std::array<MultiVector, 2>& C)
+    {
+        for (types::block_t block = 0; block < 2; ++block)
+            C.at(block).update(alpha, A.at(block), beta, B.at(block), gamma);
     }
 
     template<int dim, int degree, typename Scalar>

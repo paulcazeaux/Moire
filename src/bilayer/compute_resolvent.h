@@ -7,19 +7,21 @@
 
 
 
-#ifndef moire__bilayer_computedos_h
-#define moire__bilayer_computedos_h
+#ifndef moire__bilayer_compute_resolvent_h
+#define moire__bilayer_compute_resolvent_h
 
 #include <Teuchos_VerboseObject.hpp>
 #include <Teuchos_TimeMonitor.hpp>
+#include <BelosSolverFactory.hpp>
 #include "tools/types.h"
 #include "bilayer/base_algebra.h"
+#include <BelosTpetraAdapter.hpp>
 
 
 namespace Bilayer {
 
     /**
-    * A class which encapsulates the DoS computation of a discretized 
+    * A class which encapsulates the resolvent computation of a discretized 
     * Tight-Binding bilayer Hamiltonian encoded by a C* algebra.
     *
     * Its three template parameters are respectively 
@@ -34,7 +36,7 @@ namespace Bilayer {
     *       for adjoint calculations (see BaseAlgebra documentation).
     */
     template <int dim, int degree, typename Scalar = double >
-    class ComputeDoS : private BaseAlgebra<dim, degree, Scalar>
+    class ComputeResolvent : private BaseAlgebra<dim, degree, Scalar>
     {
     public:
         /**
@@ -46,22 +48,22 @@ namespace Bilayer {
         typedef BaseAlgebra<dim,degree,Scalar>  LA;
         typedef typename LA::MultiVector        MultiVector;
         typedef typename LA::Matrix             Matrix;
+        typedef typename LA::Operator           Operator;
 
         /**
          *  Default constructor. 
          * Initializes 
          * - the underlying BaseAlgebra object,
          * - the conditional output stream on the root node 
-         *      (rank 0 on MPI_COMM_WORLD),
-         * - the computing timer.
+         *      (rank 0 on MPI_COMM_WORLD).
          */
-        ComputeDoS(const Multilayer<dim, 2>& bilayer);
+        ComputeResolvent(const Multilayer<dim, 2>& bilayer);
 
         /**
          *  Default destructor. 
          * Outputs timing data.
          */
-        ~ComputeDoS();
+        ~ComputeResolvent();
 
         /**
          *  Set up all the necessary objects, vectors, matrices,
@@ -72,34 +74,11 @@ namespace Bilayer {
         void run();
 
         /**
-         *  Write to file the Chebyshev moments of the diagonal 
-         * elements (Local Density of States) of the Tight-Binding 
-         * bilayer Hamiltonian after it is computed by 
-         * the above run() call.
-         */
-        void write_LDoS_to_file();
-
-        /**
-         *  Write to file the Chebyshev moments of the Density of States
+         *  Write to file ?? TBD ??
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
-        void write_DoS_to_file();
-
-        /**
-         *  Output the Chebyshev moments of the diagonal elements
-         * (Local Density of States) of the Tight-Binding 
-         * bilayer Hamiltonian after it is computed by 
-         * the above run() call.
-         */
-        std::vector<std::array<std::vector<Scalar>,2>> output_LDoS();
-
-        /**
-         *  Output the Chebyshev moments of the Density of States
-         * of the Tight-Binding bilayer Hamiltonian after it is
-         * computed by the above run() call.
-         */
-        std::vector<Scalar> output_DoS();
+        void write_to_file();
 
         /**
          *  Determine an estimate of the current memory usage
@@ -122,8 +101,8 @@ namespace Bilayer {
 
         /**
          *  Assembles the matrices used to represent the product
-         * by the Hamiltonian operator within the BaseAlgebra
-         * base class object.
+         * by the Hamiltonian operator and the Transpose interpolation
+         * within the BaseAlgebra base class object.
          */
         void assemble_matrices();
 
@@ -147,20 +126,11 @@ namespace Bilayer {
         std::ostream & pcout;
 
         /**
-         * Three arrays of two Tpetra MultiVectors each which hold
-         * the data of three successive steps during the Chebyshev
-         * recursion, corresponding to Chebyshev polynomials
-         * applied to the Hamiltonian operator.
-         *
+         *  Two arrays of two Tpetra MultiVectors each which hold
+         * the data of the initial identity array and the computed
+         * resolvent
          */
-        std::array<MultiVector, 2> Tp, T, Tn;
-
-        /**
-         * Array of Scalars holding the Chebyshev moments of the 
-         * local Density of States of the Hamiltonian, computed 
-         * using the Kernel Polynomial Method in the solve() method above.
-         */
-        std::vector<std::array<std::vector<Scalar>,2>> chebyshev_moments;
+        std::array<MultiVector, 2> I, H, R;
     };
 
 }/* End namespace Bilayer */

@@ -26,12 +26,11 @@
 #include <Teuchos_Comm.hpp>
 #include <Tpetra_MultiVector_decl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
+#include <Tpetra_Operator.hpp>
 
 #include "deal.II/base/exceptions.h"
 #include "deal.II/base/point.h"
 #include "deal.II/base/tensor.h"
-#include "deal.II/base/conditional_ostream.h"
-#include "deal.II/base/timer.h"
 
 #include "tools/types.h"
 #include "tools/numbers.h"
@@ -71,6 +70,7 @@ namespace Bilayer {
          */
         typedef typename Tpetra::MultiVector<Scalar,types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>  MultiVector;
         typedef typename Tpetra::CrsMatrix<Scalar, types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>   Matrix;
+        typedef typename Tpetra::Operator<Scalar, types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>    Operator;
 
         /**
          *  Default constructor.
@@ -95,9 +95,14 @@ namespace Bilayer {
         void                assemble_adjoint_interpolant();
 
 
-        /* update (wrapper around the multivector update function): A = alpha * A + beta * B. */
-        void                linear_combination(const Scalar alpha, const std::array<MultiVector, 2> A,
-                                                const Scalar beta, std::array<MultiVector, 2> & B);
+        /* update (wrapper around the multivector update function): B = alpha * A + beta * B. */
+        void                linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
+                                                const Scalar& beta, std::array<MultiVector, 2>& B);
+
+        /* update (wrapper around the multivector update function): C = alpha * A + beta * B. + gamma * C*/
+        void                linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
+                                                const Scalar& beta, const std::array<MultiVector, 2>& B,
+                                                const Scalar& gamma, std::array<MultiVector, 2>& C);
         /* Assemble identity observable */
         void                create_identity(std::array<MultiVector, 2>& Id);
         /* Application of the hamiltonian action, representing the right-product in the C* algebra */

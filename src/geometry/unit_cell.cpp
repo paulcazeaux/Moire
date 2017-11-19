@@ -173,19 +173,32 @@ types::loc_t
 UnitCell<dim,degree>::find_element(const dealii::Tensor<1,dim>& X) const
 {
     dealii::Point<dim> Xg (inverse_basis * X);
-    bool test_in_cell = true;
-    for (size_t i=0; i<dim; ++i)
-        test_in_cell = test_in_cell && ( Xg(i) + .5 >= 0) && ( Xg(i) + .5 < 1);
-    if (test_in_cell)
-        switch (dim) {
-            case 1: 
-                return static_cast<types::loc_t>(std::floor(line_element_count_ * (Xg(0) + .5) ));
-            case 2:
-                return static_cast<types::loc_t>(std::floor(line_element_count_ * (Xg(0) + .5) )
-                        + std::floor(line_element_count_ * (Xg(1) + .5)) * line_element_count_);
+    switch (dim) {
+        case 1: 
+        {
+            Xg(0) += .5;
+            return static_cast<types::loc_t>(    Xg(0) > 0 ? 
+                                                (Xg(0) < 1 ? 
+                                                    std::floor(line_element_count_ * Xg(0)) 
+                                                    : line_element_count_ - 1) 
+                                                    : 0 );
         }
-    else 
-        return types::invalid_local_index;
+        case 2:
+        {
+            Xg(0) += .5;
+            Xg(1) += .5;
+            return static_cast<types::loc_t>(   (Xg(0) > 0 ? 
+                                                (Xg(0) < 1 ? 
+                                                    std::floor(line_element_count_ * Xg(0)) 
+                                                    : line_element_count_ - 1) 
+                                                    : 0 )
+                        + line_element_count_ * (Xg(1) > 0 ? 
+                                                (Xg(1) < 1 ? 
+                                                    std::floor(line_element_count_ * Xg(1)) 
+                                                    : line_element_count_ - 1) 
+                                                    : 0 ));            
+        }
+    }
 }
 
 /* Basic getters and setters */

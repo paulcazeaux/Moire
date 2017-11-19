@@ -54,8 +54,7 @@ template<int dim>
 typename PeriodicTranslationUnit<dim, double>::view_t
 PeriodicTranslationUnit<dim, double>::view() const
 {
-    view_t View (data, n);
-    return View;
+    return view_t(data, n);
 }
 
 template<>
@@ -191,8 +190,8 @@ PeriodicTranslationUnit<dim, std::complex<double>>::~PeriodicTranslationUnit()
     fftw_destroy_plan(fplan);
     fftw_destroy_plan(bplan);
 
-    fftw_free(data);
     fftw_free(fft_data);
+    fftw_free(data);
 }
 
 

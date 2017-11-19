@@ -29,5 +29,4 @@ echo "==========================================================================
 InputFile=../app/cfg/twisted_blg.in
 ExportFile=../output
 
-rm ${ExportFile}.out
-mpirun -n 2 ./app/${TARGET} -i ${InputFile} #  > ${ExportFile}.out
+# mpirun -n 1 ./app/${TARGET} -i ${InputFile}

@@ -269,12 +269,11 @@ Multilayer<dim,n_layers>::intralayer_term(const types::loc_t orbital_row, const 
 {
     /* Check if diagonal element; if yes, add offset due to vertical electrical field */
     if (orbital_row == orbital_col && std::all_of(grid_vector.begin(), grid_vector.end(), [](types::block_t v) { return v==0; }))
-        return ( Materials::intralayer_term(orbital_row, orbital_col, grid_vector, layer(layer_index).material)
-                     + this->energy_shift + this->E * layer(layer_index).orbital_height .at(orbital_row)
-		     	) / this->energy_rescale;
+        return Materials::intralayer_term(orbital_row, orbital_col, grid_vector, layer(layer_index).material)
+                     + this->E * layer(layer_index).orbital_height .at(orbital_row);
     else
         return Materials::intralayer_term(orbital_row, orbital_col, grid_vector,
-                                                layer(layer_index).material) / this->energy_rescale;
+                                                layer(layer_index).material);
 }
 
 
@@ -293,8 +292,7 @@ Multilayer<dim,n_layers>::interlayer_term(const types::loc_t orbital_row, const 
                                                 layer(layer_index_row).angle, 
                                                 layer(layer_index_col).angle,
                                                 layer(layer_index_row).material, 
-                                                layer(layer_index_col).material)
-				/ this->energy_rescale;
+                                                layer(layer_index_col).material);
 }
 
 
@@ -305,7 +303,7 @@ Multilayer<dim,n_layers>::is_intralayer_term_nonzero(const types::loc_t orbital_
                                             const int layer_index) const
 {
     return Materials::is_intralayer_term_nonzero(orbital_row, orbital_col, grid_vector,
-                                                layer(layer_index).material) / this->energy_rescale;
+                                                layer(layer_index).material); 
 }
 
 

@@ -14,12 +14,16 @@ namespace Bilayer {
     ComputeDoS<dim,degree,Scalar>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
         :
         BaseAlgebra<dim,degree,Scalar>(bilayer),
-        pcout (std::cout, (this->mpi_communicator->getRank () == 0)),
-        computing_timer (MPI_COMM_WORLD,
-                       pcout,
-                       dealii::TimerOutput::summary,
-                       dealii::TimerOutput::wall_times)
-    {}
+        pcout(( this->mpi_communicator->getRank () == 0) ? std::cout : blackHole)
+    {
+        pcout << bilayer;
+    }
+
+    template<int dim, int degree, typename Scalar>
+    ComputeDoS<dim,degree,Scalar>::~ComputeDoS()
+    {
+        Teuchos::TimeMonitor::summarize (this->mpi_communicator(), pcout);
+    }
 
 
     template<int dim, int degree, typename Scalar>
@@ -40,7 +44,53 @@ namespace Bilayer {
         pcout   << "\tComplete!\n";
     }
 
+    template<int dim, int degree, typename Scalar>
+    void 
+    ComputeDoS<dim,degree,Scalar>::write_LDoS_to_file()
+    {
+        if (this->mpi_communicator->getRank () == 0)
+        {
+            std::ofstream output_file(this->dof_handler.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+            int M = chebyshev_moments.size();
+            int N = chebyshev_moments.at(0).at(0).size() + chebyshev_moments.at(0).at(1).size();
 
+            output_file.write((char*) &M, sizeof(int));
+            output_file.write((char*) &N, sizeof(int));
+            for (const auto & moment : chebyshev_moments)
+            {
+                for (const Scalar m : moment.at(0))
+                    output_file.write((char*) & m, sizeof(Scalar));
+                for (const Scalar m : moment.at(1))
+                    output_file.write((char*) & m, sizeof(Scalar));
+            }
+            output_file.close();
+        }
+    }
+
+    template<int dim, int degree, typename Scalar>
+    void 
+    ComputeDoS<dim,degree,Scalar>::write_DoS_to_file()
+    {
+        if (this->mpi_communicator->getRank () == 0)
+        {
+            std::ofstream output_file(this->dof_handler.output_file, std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+            int M = chebyshev_moments.size();
+            output_file.write((char*) &M, sizeof(int));
+
+            for ( const auto diag_moments : chebyshev_moments)
+            {
+                Scalar m = std::accumulate(diag_moments.at(0).begin(), diag_moments.at(0).end(), static_cast<Scalar>(0.0))
+                                        * this->unit_cell(1).area / (this->unit_cell(0).area + this->unit_cell(1).area)
+                                        / static_cast<double>( this->dof_handler.n_domain_orbitals(0,0) * this->dof_handler.n_cell_nodes(0,0) )
+                            + std::accumulate(diag_moments.at(1).begin(), diag_moments.at(1).end(), static_cast<Scalar>(0.0))
+                                        * this->unit_cell(0).area / (this->unit_cell(0).area + this->unit_cell(1).area)
+                                        / static_cast<double>( this->dof_handler.n_domain_orbitals(1,1) * this->dof_handler.n_cell_nodes(1,1) );
+                output_file.write((char*) & m, sizeof(Scalar));
+            }
+        }
+    }
+
+    
     template<int dim, int degree, typename Scalar>
     std::vector<std::array<std::vector<Scalar>,2>>
     ComputeDoS<dim,degree,Scalar>::output_LDoS()
@@ -48,7 +98,8 @@ namespace Bilayer {
         return chebyshev_moments;
     }
 
-     template<int dim, int degree, typename Scalar>
+    
+    template<int dim, int degree, typename Scalar>
     std::vector<Scalar>
     ComputeDoS<dim,degree,Scalar>::output_DoS()
     {
@@ -66,6 +117,7 @@ namespace Bilayer {
         return DoS;
     }
 
+    
     template<int dim, int degree, typename Scalar>
     types::MemUsage
     ComputeDoS<dim,degree,Scalar>::memory_consumption() const
@@ -88,7 +140,9 @@ namespace Bilayer {
     void
     ComputeDoS<dim,degree,Scalar>::setup()
     {
-        dealii::TimerOutput::Scope t(computing_timer, "Setup");
+        TEUCHOS_FUNC_TIME_MONITOR(
+            "Setup<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
+            );
         LA::base_setup();
         
         Tp = {{ MultiVector( this->dof_handler.locally_owned_dofs(0), this->dof_handler.n_range_orbitals(0,0) ), 
@@ -102,7 +156,9 @@ namespace Bilayer {
     void
     ComputeDoS<dim,degree,Scalar>::assemble_matrices()
     {
-        dealii::TimerOutput::Scope t(computing_timer, "Assembly");
+        TEUCHOS_FUNC_TIME_MONITOR(
+            "Assembly<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
+            );
 
         LA::assemble_hamiltonian_action();
     }
@@ -112,12 +168,18 @@ namespace Bilayer {
     void
     ComputeDoS<dim,degree,Scalar>::solve()
     {
-        dealii::TimerOutput::Scope t(computing_timer, "Solve");
+        TEUCHOS_FUNC_TIME_MONITOR(
+            "Solve<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
+            );
 
         /* Initialization of the vector to the identity */
 
         LA::create_identity(Tp);
         LA::hamiltonian_rproduct(Tp, T);
+        Scalar 
+        alpha = this->dof_handler.energy_shift / this->dof_handler.energy_rescale,
+        beta = 1. / this->dof_handler.energy_rescale;
+        LA::linear_combination(alpha, Tp, beta, T);
 
         std::array<std::vector<Scalar>,2> 
         m0 = LA::diagonal(Tp), 
@@ -132,7 +194,7 @@ namespace Bilayer {
         for (int i=2; i <= this->dof_handler.poly_degree; ++i)
         {
             LA::hamiltonian_rproduct(T, Tn);
-            LA::linear_combination(-1, Tp, 2., Tn);
+            LA::linear_combination(-1, Tp, 2.*alpha, T, 2.*beta, Tn);
 
             std::swap(Tn, Tp);
             std::swap(T, Tp);

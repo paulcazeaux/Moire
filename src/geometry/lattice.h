@@ -59,7 +59,7 @@ private:
 
         /* Maps from global index to grid index */
     GridToIndexMap<dim>                             grid_to_index_map_;
-    std::vector<std::array<types::loc_t, dim>>               index_to_grid_map_; 
+    std::vector<std::array<types::loc_t, dim>>      index_to_grid_map_; 
 
         /* A useful quantity for determining necessary search sizes when looking for neighborhoods */
     const double                                    unit_cell_inscribed_radius_;
