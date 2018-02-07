@@ -1,4 +1,4 @@
-/* 
+/*
  * Test file:   bilayer.print_sparsity_patterns.cpp
  * Author: Paul Cazeaux
  *
@@ -24,6 +24,25 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double>
         std::array<MultiVector, 2> I, A, B;
 };
 
+void print_sp(Teuchos::RCP< const Bilayer::BaseAlgebra<2,degree,double>::Matrix::crs_graph_type > sp, size_t offset_row, size_t offset_col, std::ofstream& out)
+{
+    Teuchos::Array<types::glob_t> line(sp->getNodeNumCols ());
+    for (size_t row=0; row< sp->getGlobalNumRows (); ++row)
+       {
+       	 size_t n;
+         sp->getGlobalRowCopy (row, line, n);
+         for (size_t j = 0; j < n; ++j)
+           // while matrix entries are usually
+           // written (i,j), with i vertical and
+           // j horizontal, gnuplot output is
+           // x-y, that is we have to exchange
+           // the order of output
+           out << offset_col+line[j] << " "
+               << -static_cast<signed int>(offset_row+row)
+               << std::endl;
+       }
+}
+
 TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA(bilayer)
 {
@@ -32,25 +51,35 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA::assemble_adjoint_interpolant();
     
     std::ofstream 
-    output_file("H_sparsity_pattern.0." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
-    hamiltonian_action.at(0).describe(std::cout, Teuchos::VERB_EXTREME);
+    output_file("H_sparsity_pattern." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+    size_t 
+    M = hamiltonian_action.at(0)->getGlobalNumRows(),
+    N = hamiltonian_action.at(0)->getGlobalNumCols();
+    
+    print_sp(hamiltonian_action.at(0)->getCrsGraph(),0,0, output_file);
+    print_sp(hamiltonian_action.at(1)->getCrsGraph(),M,N, output_file);
     output_file.close(); 
-    output_file.open("H_sparsity_pattern.1." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
-    hamiltonian_action.at(1).describe(std::cout, Teuchos::VERB_EXTREME);
+    
+    size_t
+    M1 = adjoint_interpolant.at(0).at(0)->getGlobalNumRows(),
+    N1 = adjoint_interpolant.at(0).at(0)->getGlobalNumCols(),
+    M2 = adjoint_interpolant.at(1).at(0)->getGlobalNumRows(),
+    N2 = adjoint_interpolant.at(0).at(1)->getGlobalNumCols();
+    std::cout << M << " " << N << std::endl;
 
-    output_file.close(); 
-    output_file.open("A_sparsity_pattern.0.0" + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
-    adjoint_interpolant.at(0).at(0).describe(std::cout, Teuchos::VERB_EXTREME);
+    output_file.open("A_sparsity_pattern." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+    print_sp(adjoint_interpolant.at(0).at(0)->getCrsGraph(),0,0, output_file);
+    print_sp(adjoint_interpolant.at(1).at(0)->getCrsGraph(),M,N1, output_file);
+    print_sp(adjoint_interpolant.at(0).at(1)->getCrsGraph(),M1,N, output_file);
+    print_sp(adjoint_interpolant.at(1).at(1)->getCrsGraph(),M+M2,N+N2, output_file);
     output_file.close();
-    output_file.open("A_sparsity_pattern.0.1." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
-    adjoint_interpolant.at(0).at(1).describe(std::cout, Teuchos::VERB_EXTREME);
-    output_file.close(); 
-    output_file.open("A_sparsity_pattern.1.0." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
-    adjoint_interpolant.at(1).at(0).describe(std::cout, Teuchos::VERB_EXTREME);
+
+    output_file.open("lattices." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
+    for (int b = 0; b<2; ++b)
+     for (types::loc_t j=0; j < dof_handler.n_locally_owned_points(b,b); ++j)
+      output_file << lattice(b).get_vertex_position(dof_handler.locally_owned_point(b,b,j).lattice_index) << " " << b << std::endl;
     output_file.close();
-    output_file.open("A_sparsity_pattern.1.1." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
-    adjoint_interpolant.at(1).at(1).describe(std::cout, Teuchos::VERB_EXTREME);
-    output_file.close();
+
 }
 
  void print_sparsity_patterns(Materials::Mat mat)
@@ -63,7 +92,7 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
             1,   
             1, 0,
             0, 0,
-            6., 2);
+            40., 2);
 
     double height;
     switch (mat)
