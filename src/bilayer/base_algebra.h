@@ -118,7 +118,7 @@ namespace Bilayer {
         /* MPI communication environment and utilities */
         Teuchos::RCP<const Teuchos::Comm<int> >             mpi_communicator;
 
-        /* DoF Handler object and local indices range */
+        /* DoF Handler object */
         DoFHandler<dim,degree>                              dof_handler;
 
         /* Matrices representing the sparse linear action of the two main operations, acting on blocks */

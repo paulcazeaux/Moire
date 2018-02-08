@@ -149,7 +149,6 @@ namespace Bilayer {
             // overwrites X with the computed approximate solution.
             Belos::ReturnType result = solver->solve();
         }
-        
     }
 
     template<int dim, int degree, typename Scalar>

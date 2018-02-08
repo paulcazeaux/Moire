@@ -129,7 +129,7 @@ namespace Bilayer {
 
 
         /**
-         * Accessor to go from global degrees of freedom to geometric (domain block, lattice, cell and orbital indices 
+         * Accessor to go from global degrees of freedom to geometric (domain block, lattice, cell and orbital indices)
          */
         std::tuple<types::block_t, types::loc_t, types::loc_t, types::loc_t>
         get_dof_info(  const types::block_t range_block, 

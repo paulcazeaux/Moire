@@ -258,8 +258,8 @@ namespace Bilayer {
                         for (size_t i = 0; i < globalRows.size(); ++i)
                             adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
                     }
-                    adjoint_interpolant.at(range_block).at(domain_block)->fillComplete ();
-                }
+                adjoint_interpolant.at(range_block).at(domain_block)->fillComplete ();
+            }
 
         /* Finally, we allocate the helper multivectors */
         helper.at(0).at(0) = MultiVector(dof_handler.transpose_range_map(0,0), dof_handler.n_range_orbitals(0,0));
