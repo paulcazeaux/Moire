@@ -65,16 +65,16 @@ make_test("materials.1d_toy_model" "")
 make_test("materials.graphene" "")
 
 # Test Tools: Periodic translation FFT helper
-make_test("tools.periodic_translation" "")
+# make_test("tools.periodic_translation" "")
 
 # Test Bilayer Hamiltonian assembly and symmetry
-make_test("bilayer.test_H_sym" "")
+# make_test("bilayer.test_H_sym" "")
 
 # Test Bilayer Hamiltonian rotation invariance
-make_test("bilayer.test_rotation_invariance" "")
+# make_test("bilayer.test_rotation_invariance" "")
 
 # Print sparsity patterns
-make_test("bilayer.print_sparsity_patterns" "")
+make_test("bilayer.print_sparsity_patterns" "3")
 
 ######################################################################################
 ### 4) Wrap up: define a custom test target
