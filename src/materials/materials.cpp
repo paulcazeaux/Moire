@@ -89,7 +89,7 @@ Materials::lattice<2>(const Mat mat)
     }
 }
 
-const int&
+const size_t&
 Materials::n_orbitals(Mat mat)
 {
     switch (mat)
@@ -166,7 +166,7 @@ Materials::inter_search_radius(Mat mat)
     }
 }
 const double&
-Materials::orbital_height(const Mat mat, const int idx)
+Materials::orbital_height(const Mat mat, const size_t idx)
 {
     switch (mat)
     {
@@ -194,7 +194,7 @@ Materials::orbital_height(const Mat mat, const int idx)
 /* Methods for returning intralayer and interlayer terms */
 
 double
-Materials::intralayer_term(const int orbital_row, const int orbital_col, 
+Materials::intralayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat)
 {
@@ -203,7 +203,7 @@ Materials::intralayer_term(const int orbital_row, const int orbital_col,
 }
 
 bool
-Materials::is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+Materials::is_intralayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat)
 {
@@ -212,7 +212,7 @@ Materials::is_intralayer_term_nonzero(const int orbital_row, const int orbital_c
 }
 
 double
-Materials::interlayer_term(const int orbital_row, const int orbital_col, 
+Materials::interlayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 2>& vector,
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col)
@@ -222,7 +222,7 @@ Materials::interlayer_term(const int orbital_row, const int orbital_col,
 }
 
 bool
-Materials::is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+Materials::is_interlayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 2>& vector,
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col)
@@ -232,7 +232,7 @@ Materials::is_interlayer_term_nonzero(const int orbital_row, const int orbital_c
 }
 
 double
-Materials::intralayer_term(const int orbital_row, const int orbital_col, 
+Materials::intralayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat)
 {
@@ -271,7 +271,7 @@ Materials::intralayer_term(const int orbital_row, const int orbital_col,
 }
 
 bool
-Materials::is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+Materials::is_intralayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat)
 {
@@ -301,7 +301,7 @@ Materials::is_intralayer_term_nonzero(const int orbital_row, const int orbital_c
 }
 
 double
-Materials::interlayer_term(const int orbital_row, const int orbital_col, 
+Materials::interlayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 3>& vector,
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col)
@@ -329,7 +329,7 @@ Materials::interlayer_term(const int orbital_row, const int orbital_col,
 }
 
 bool
-Materials::is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+Materials::is_interlayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 3>& vector,
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col)

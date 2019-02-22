@@ -33,7 +33,6 @@ namespace Bilayer {
         /**
          * To which block does the point belong? 
          */
-        block_t range_block;
         block_t domain_block;
 
         /**
@@ -43,14 +42,15 @@ namespace Bilayer {
 
         /**
          * Now some information about points we will interpolate from. 
-         * These points belong to the other middle block (2 if range_block = 1 and vice versa).
-         * First element of the tuple is our current cell index, and then the blocks, lattice index 
-         * and element index of the interpolating element.
+         * These points belong to the other block (1 if range_block = 0 and vice versa).
+         * First element of the tuple is the current cell and block index, 
+         * then the block, lattice index and element index of the interpolating element,
+         * then the interpolating weights for this point.
          */
-        std::vector<std::tuple<loc_t, block_t, block_t, loc_t, loc_t> >   
-        interpolating_nodes;
+        std::vector<std::tuple<loc_t, block_t, block_t, loc_t, loc_t, std::vector<double> > > intra_interpolating_nodes;
+        std::vector<std::tuple<loc_t, block_t, block_t, loc_t, loc_t, std::vector<double> > > inter_interpolating_nodes;
 
-        PointData(const block_t, const block_t, const loc_t);
+        PointData(const block_t, const loc_t);
 
     };
 

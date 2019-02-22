@@ -61,7 +61,7 @@ struct Element<1,degree>
 	 * For speed, we assume that the quadrature points are inside the element.
 	 * Checking this is the responsibility of the caller.
 	 */
-	void 				get_interpolation_weights(const dealii::Point<1> quadrature_point, 
+	void 				get_interpolation_weights(const dealii::Tensor<1,1> quadrature_point, 
 													std::vector<double> & weights) const;
 };
 
@@ -100,7 +100,7 @@ struct Element<2,degree>
 	 * For speed, we assume that the quadrature points are inside the element.
 	 * Checking this is the responsibility of the caller.
 	 */
-	void 		get_interpolation_weights(const dealii::Point<2> quadrature_point, 
+	void 		get_interpolation_weights(const dealii::Tensor<1,2> quadrature_point, 
 													std::vector<double> & weights) const;
 };
 
@@ -111,28 +111,28 @@ struct Element<2,degree>
 
 template <>
 void	Element<1,1>::get_interpolation_weights(
-						const dealii::Point<1> quadrature_point, 
+						const dealii::Tensor<1,1> quadrature_point, 
 						std::vector<double> & weights) const;
 template<>
 void	Element<1,2>::get_interpolation_weights(
-						const dealii::Point<1> quadrature_point, 
+						const dealii::Tensor<1,1> quadrature_point, 
 						std::vector<double> & weights) const;
 template<>
 void	Element<1,3>::get_interpolation_weights(
-						const dealii::Point<1> quadrature_point, 
+						const dealii::Tensor<1,1> quadrature_point, 
 						std::vector<double> & weights) const;
 
 template<>
 void	Element<2,1>::get_interpolation_weights(
-						const dealii::Point<2> quadrature_point, 
+						const dealii::Tensor<1,2> quadrature_point, 
 						std::vector<double> & weights) const;
 template<>
 void	Element<2,2>::get_interpolation_weights(
-						const dealii::Point<2> quadrature_point, 
+						const dealii::Tensor<1,2> quadrature_point, 
 						std::vector<double> & weights) const;
 template<>
 void	Element<2,3>::get_interpolation_weights(
-						const dealii::Point<2> quadrature_point, 
+						const dealii::Tensor<1,2> quadrature_point, 
 						std::vector<double> & weights) const;
 
 

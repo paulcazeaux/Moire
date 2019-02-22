@@ -18,23 +18,20 @@
 #include <fstream>
 
 #include <complex>
-#include "fftw3.h"
+#include "RTOpPack_Types.hpp"
+
 
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_Comm.hpp>
+#include <Teuchos_ArrayView.hpp>
 #include <Tpetra_MultiVector_decl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
 #include <Tpetra_Operator.hpp>
 
-#include "deal.II/base/exceptions.h"
-#include "deal.II/base/point.h"
-#include "deal.II/base/tensor.h"
-
 #include "tools/types.h"
 #include "tools/numbers.h"
-#include "tools/periodic_translation_unit.h"
 #include "bilayer/dof_handler.h"
 
 
@@ -53,24 +50,29 @@ namespace Bilayer {
     *       and interpolate the functions over the unit cell,
     *       (which can take the values 1, 2 or 3),
     * - Scalar: the main number type used in the computation.
-    *       This should be a complex double at the moment when the
-    *       computation of the adjoint is needed due the implementation 
-    *       details of the FFTW computations, but we could also 
-    *       implement real types (and then use the appropriate
-    *       FFT operations specialized for reals.)
     */
-    template <int dim, int degree, typename Scalar>
+    template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
     class BaseAlgebra
     {
+
+        /** 
+         *  Advanced protected typedefs, for specific kind of operators representing the useful operations in the C* algebra.
+         */
+    protected:
+        class RangeBlockOp;
+        class TransposeOp;
+        class LiouvillianOp;
+
     public:
         /**
          *  Public typedefs.
          * These types correspond to the main Trilinos containers
          * used in the discretization.
          */
-        typedef typename Tpetra::MultiVector<Scalar,types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>  MultiVector;
-        typedef typename Tpetra::CrsMatrix<Scalar, types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>   Matrix;
-        typedef typename Tpetra::Operator<Scalar, types::loc_t, types::glob_t, Kokkos::Compat::KokkosSerialWrapperNode>    Operator;
+        typedef typename Tpetra::MultiVector<Scalar,types::loc_t, types::glob_t, Node>  Vector;
+        typedef typename Tpetra::MultiVector<Scalar,types::loc_t, types::glob_t, Node>  MultiVector;
+        typedef typename Tpetra::CrsMatrix<Scalar, types::loc_t, types::glob_t, Node>   Matrix;
+        typedef typename Tpetra::Operator<Scalar, types::loc_t, types::glob_t, Node>    Operator;
 
         /**
          *  Default constructor.
@@ -80,60 +82,264 @@ namespace Bilayer {
          * Initializes 
          * - the underling MPI communicator to MPI_COMM_WORLD,
          * - the dof_handler object in charge of managing the interplay
-         *     between geometry and degrees of freedom,
-         * - raw input/output memory arrays used during the DFT 
-         *     computations  with the special aligned allocation 
-         *     fftw_malloc as recommended by the FFTW library,
-         * - the FFTW plans for computation of said Fourier transforms.
+         *     between geometry and degrees of freedom.
          */
         BaseAlgebra(const Multilayer<dim, 2>& bilayer);
 
-    protected:
-        void                base_setup();
-        void                assemble_base_matrices();
-        void                assemble_hamiltonian_action();
-        void                assemble_adjoint_interpolant();
+        /* Create a basic Vector with the right data structure */
+        Vector                              create_vector(bool ZeroOut = true) const;
+        /* Create a basic MultiVector with the right data structure */
+        MultiVector                         create_multivector(size_t numVecs, bool ZeroOut = true) const;
 
-
-        /* update (wrapper around the multivector update function): B = alpha * A + beta * B. */
-        void                linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
-                                                const Scalar& beta, std::array<MultiVector, 2>& B);
-
-        /* update (wrapper around the multivector update function): C = alpha * A + beta * B. + gamma * C*/
-        void                linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
-                                                const Scalar& beta, const std::array<MultiVector, 2>& B,
-                                                const Scalar& gamma, std::array<MultiVector, 2>& C);
         /* Assemble identity observable */
-        void                create_identity(std::array<MultiVector, 2>& Id);
-        /* Application of the hamiltonian action, representing the right-product in the C* algebra */
-        void                hamiltonian_rproduct(const std::array<MultiVector, 2> A, std::array<MultiVector, 2> & B);
-        /* Adjoint operation on an observable */
-        void                adjoint(const std::array<MultiVector, 2> A, std::array<MultiVector, 2>& tA);
+        void                                set_to_identity(Vector& Id) const;
+
         /* Diagonal of an observable, available on all processes */
-        std::array<std::vector<Scalar>,2>
-                            diagonal(const std::array<MultiVector, 2> A);
+        std::array<std::vector<Scalar>,2>   diagonal(   const Vector& A ) const;
         /* Trace of an observable, available on all processes */
-        Scalar              trace(const std::array<MultiVector, 2> A);
+        Scalar                              trace(      const Vector& A ) const;
+
+        /* Scalar product of two observable as Tr(A^H * B), available on all processes */
+        Scalar                              dot( const Vector& A, 
+                                                 const Vector& B ) const;
+        void                                dot( const MultiVector& A, 
+                                                 const MultiVector& B, 
+                                                 Teuchos::ArrayView<Scalar> dots) const;
+
+
+        /* Operator representing the hamiltonian action, representing the right-product in the C* algebra */
+        Teuchos::RCP<const RangeBlockOp>    HamiltonianAction;
+
+        /* Operator representing the transpose operation on an observable (*/
+        Teuchos::RCP<const TransposeOp>     Transpose;
+        // void  hamiltonian_rproduct(   const MultiVector A, MultiVector& B, 
+        //                                                             const Teuchos::ETransp mode = Teuchos::NO_TRANS );
+
+
+        Teuchos::RCP<const LiouvillianOp>   make_liouvillian_operator(
+                        const Scalar z = Teuchos::ScalarTraits<Scalar>::zero (), 
+                        const Scalar s = Teuchos::ScalarTraits<Scalar>::one ())
+            {
+                return Teuchos::rcp(new LiouvillianOp(Transpose, HamiltonianAction, z, s));
+            }
+
+        
+        // void                                adjoint(    const MultiVector A, MultiVector& tA, 
+        //                                                 const Teuchos::ETransp mode = Teuchos::NO_TRANS, 
+        //                                                 const bool conjugate = true);
+
+        /* Block utilities */
+        /* Const Views into the data in range block form */
+        std::array<const MultiVector, 2>    range_block_view_const(const Vector& A);
+
+        /* Const Views into the data in domain block form */
+        std::array<const MultiVector, 2>    domain_block_view_const(const Vector& A);
+
+        /* Const Views into the data in fully decomposed block form */
+        std::array<std::array<const MultiVector, 2>, 2> 
+                                            block_view_const(const Vector& A);
+
+        /* Views into the data in range block form */
+        std::array<MultiVector, 2>          range_block_view(Vector& A);
+
+        /* Views into the data in domain block form */
+        std::array<MultiVector, 2>          domain_block_view(Vector& A);
+
+        /* Views into the data in fully decomposed block form */
+        std::array<std::array<MultiVector, 2>, 2> 
+                                            block_view(Vector& A);
+
+        /* MPI utilities */
+        Teuchos::RCP<const Teuchos::Comm<int> >
+                                            getComm() const {return mpi_communicator;};
+        Teuchos::RCP<const typename Matrix::map_type>
+                                            getMap() const {return dof_handler.locally_owned_dofs();};
+        size_t                              getNumOrbitals() const {return dof_handler.n_orbitals(0) 
+                                                                    + dof_handler.n_orbitals(1);}
+    protected:
+
+        /* Initialization routines */
+        void                                assemble_base_matrices();
+        void                                assemble_hamiltonian_action();
+        void                                assemble_transpose_interpolant();
+
 
         /* MPI communication environment and utilities */
         Teuchos::RCP<const Teuchos::Comm<int> >             mpi_communicator;
 
         /* DoF Handler object */
-        DoFHandler<dim,degree>                              dof_handler;
+        DoFHandler<dim,degree,Node>                         dof_handler;
 
         /* Matrices representing the sparse linear action of the two main operations, acting on blocks */
-        std::array<std::array<Teuchos::RCP<Matrix>, 2>, 2>  adjoint_interpolant;
+        std::array<std::array<Teuchos::RCP<Matrix>, 2>, 2>  transpose_interpolant;
         std::array<Teuchos::RCP<Matrix>, 2>                 hamiltonian_action;
 
-        /* Data structures allocated for additional local computations in the adjoint operation */
-        std::array<PeriodicTranslationUnit<dim, Scalar>, 2> torus;
-        std::array<std::array<MultiVector, 2>, 2>           helper;
+        // /* Data structures allocated for additional local computations in the adjoint operation */
+        // std::array<std::array<MultiVector, 2>, 2>           helper;
 
         /* Convenience functions */
-        const LayerData<dim>&       layer(const int & idx)      const { return dof_handler.layer(idx); }
-        const Lattice<dim>&         lattice(const int & idx)    const { return dof_handler.lattice(idx); };
-        const UnitCell<dim,degree>& unit_cell(const int & idx)  const { return dof_handler.unit_cell(idx); };
+        const LayerData<dim>&               layer(const int & idx)      const { return dof_handler.layer(idx); }
+        const Lattice<dim>&                 lattice(const int & idx)    const { return dof_handler.lattice(idx); };
+        const UnitCell<dim,degree>&         unit_cell(const int & idx)  const { return dof_handler.unit_cell(idx); };
+    
+
+        /* Classes implementing the Tpetra Operator structure for our particular data structures */
+        class RangeBlockOp: public Operator {
+        public:
+            typedef typename Operator::scalar_type scalar_type;
+            typedef typename Operator::local_ordinal_type local_ordinal_type;
+            typedef typename Operator::global_ordinal_type global_ordinal_type;
+            typedef typename Operator::node_type node_type;
+
+            std::array<Teuchos::RCP<Matrix>, 2>                 A;
+            std::array<Teuchos::Range1D, 2>                     ColumnRange;
+            Teuchos::RCP<const typename Matrix::map_type>       DomainMap;
+            Teuchos::RCP<const typename Matrix::map_type>       RangeMap;
+
+        
+            // Constructor for the Block operator:
+            // H: array of two matrices acting on each range block.
+
+            RangeBlockOp () {}
+            RangeBlockOp ( std::array<Teuchos::RCP<Matrix>, 2>& A, std::array<const size_t,2> n_orbitals);
+                
+
+            //
+            // These functions are required since we inherit from Tpetra::Operator
+            //
+            // Destructor
+            virtual ~RangeBlockOp () {}
+
+            // Get the domain Map of this Operator subclass.
+            Teuchos::RCP<const typename Matrix::map_type> getDomainMap() const { return DomainMap; }
+
+            // Get the range Map of this Operator subclass.
+            Teuchos::RCP<const typename Matrix::map_type> getRangeMap() const { return RangeMap; }
+
+            bool 
+            hasTransposeApply  ()   const { return true; }
+
+            // Compute Y := alpha mode(Op) X + beta Y.
+            void
+            apply (const MultiVector& X,
+                MultiVector& Y, 
+                Teuchos::ETransp mode = Teuchos::NO_TRANS,
+                scalar_type alpha = Teuchos::ScalarTraits<scalar_type>::one (),
+                scalar_type beta = Teuchos::ScalarTraits<scalar_type>::zero ()) const;
+        };
+
+        class TransposeOp: public Operator{
+            public:
+            typedef typename Operator::scalar_type scalar_type;
+            typedef typename Operator::local_ordinal_type local_ordinal_type;
+            typedef typename Operator::global_ordinal_type global_ordinal_type;
+            typedef typename Operator::node_type node_type;
+
+            std::array<std::array<Teuchos::RCP<Matrix>, 2>, 2>  A;
+            std::array<size_t,2>                                nOrbitals;
+            std::array<double,2>                                unitCellAreas;
+            std::array<Teuchos::Range1D, 2>                     ColumnRange;
+            Teuchos::RCP<const typename Matrix::map_type>       DomainMap;
+            Teuchos::RCP<const typename Matrix::map_type>       RangeMap;
+
+            /* Data structures allocated for additional local computations in the adjoint operation */
+            std::array<std::array<Teuchos::RCP<MultiVector>, 2>, 2>           helper;
+        
+            // Constructor for the Block operator:
+            // H: array of two matrices acting on each range block.
+
+            TransposeOp () {}
+            TransposeOp ( std::array<std::array<Teuchos::RCP<Matrix>, 2>, 2>& A, 
+                        std::array<size_t,2>                                n_orbitals,
+                        std::array<double, 2>                               unit_cell_areas,
+                        Teuchos::RCP<const typename Matrix::map_type>       domain_map, 
+                        Teuchos::RCP<const typename Matrix::map_type>       range_map
+                        );
+
+            //
+            // These functions are required since we inherit from Tpetra::Operator
+            //
+            // Destructor
+            virtual ~TransposeOp () {}
+
+            // Get the domain Map of this Operator subclass.
+            Teuchos::RCP<const typename Matrix::map_type> getDomainMap() const { return DomainMap; }
+
+            // Get the range Map of this Operator subclass.
+            Teuchos::RCP<const typename Matrix::map_type>  getRangeMap() const { return RangeMap; }
+
+            bool 
+            hasTransposeApply  ()   const { return true; }
+
+            std::array<std::array<Teuchos::RCP<const MultiVector>, 2>, 2>
+            block_view_const(const MultiVector& X, const size_t j = 0) const;
+
+            std::array<std::array<Teuchos::RCP<MultiVector>, 2>, 2>
+            block_view(MultiVector& X, const size_t j = 0) const;
+
+            // Compute Y := alpha mode(Op) X + beta Y.
+            void
+            apply (const MultiVector& X,
+                MultiVector& Y, 
+                Teuchos::ETransp mode = Teuchos::NO_TRANS,
+                scalar_type alpha = Teuchos::ScalarTraits<scalar_type>::one (),
+                scalar_type beta = Teuchos::ScalarTraits<scalar_type>::zero ()) const;
+        };
+
+
+
+        class LiouvillianOp: public Operator {
+        public:
+            typedef typename Operator::scalar_type scalar_type;
+            typedef typename Operator::local_ordinal_type local_ordinal_type;
+            typedef typename Operator::global_ordinal_type global_ordinal_type;
+            typedef typename Operator::node_type node_type;
+
+            /* Base operators */
+            Teuchos::RCP<const TransposeOp> A;
+            Teuchos::RCP<const RangeBlockOp> H;
+            scalar_type s, z;
+
+            Teuchos::RCP<const typename Matrix::map_type>       DomainMap;
+            Teuchos::RCP<const typename Matrix::map_type>       RangeMap;
+
+            /* Internal storage for the computation of the Liouvillian */
+            Teuchos::RCP<MultiVector> T1, T2;
+        
+            // Constructor for the scaled and shifted Liouvillian operator s ( A^* conj(H) A - H) + z I:
+            // A: base REAL matrix,
+            // B: base HERMITIAN matrix,
+            // s: scalar scaling,
+            // z: scalar shift.
+            LiouvillianOp (   Teuchos::RCP<const TransposeOp>& A, Teuchos::RCP<const RangeBlockOp>& H,
+                        const scalar_type z = Teuchos::ScalarTraits<scalar_type>::zero (), 
+                        const scalar_type s = Teuchos::ScalarTraits<scalar_type>::one ());
+
+            //
+            // These functions are required since we inherit from Tpetra::Operator
+            //
+            // Destructor
+            virtual ~LiouvillianOp () {}
+
+            // Get the domain Map of this Operator subclass.
+            Teuchos::RCP<const typename Matrix::map_type> getDomainMap() const { return DomainMap; }
+
+            // Get the range Map of this Operator subclass.
+            Teuchos::RCP<const typename Matrix::map_type> getRangeMap() const { return RangeMap; }
+
+
+            bool 
+            hasTransposeApply  ()   const { return true; }
+
+            // Compute Y := alpha mode(Op) X + beta Y.
+            void
+            apply (const MultiVector& X,
+                MultiVector& Y, 
+                Teuchos::ETransp mode = Teuchos::NO_TRANS,
+                scalar_type alpha = Teuchos::ScalarTraits<scalar_type>::one (),
+                scalar_type beta = Teuchos::ScalarTraits<scalar_type>::zero ()) const;
+        };
     };
 
-}/* End namespace Bilayer */
+} /* End namespace Bilayer */
 #endif

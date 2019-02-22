@@ -67,7 +67,7 @@ public:
     types::loc_t                            n_boundary_nodes;
 
     /* Needed for the FFT */
-    std::array<types::loc_t,dim>                     n_nodes_per_dim;
+    std::array<types::loc_t,dim>            n_nodes_per_dim;
 
     /* A list of finite elements paving the unit cell, with each one storing for each support point
      * the corresponding global index within the cell 
@@ -84,7 +84,12 @@ public:
     UnitCell(const dealii::Tensor<2,dim> basis, const types::loc_t refinement_level);
     ~UnitCell() {};
 
-    types::loc_t                            find_element(const dealii::Tensor<1,dim>& X) const;
+    /** Utility for interpolating a point on the cell, 
+     *  returning the element index and interpolation weights.
+     *  Note: the point is silently wrapped periodically into the unit cell. 
+     */
+    std::pair<types::loc_t, std::vector<double> > 
+                                            interpolate(const dealii::Point<dim>& X) const;
 
     /**
      * Utilities for locating the cell-wide index of a degree of freedom from its grid index,
@@ -98,6 +103,9 @@ public:
     bool                                    is_node_interior(const types::loc_t& index) const;
     std::tuple<types::loc_t, std::array<types::loc_t, dim>>
                                             map_boundary_point_interior(const types::loc_t& index) const;
+                                            
+    /* Static method for computing the number of nodes of the cell */
+    static types::loc_t                     compute_n_nodes(const types::loc_t refinement_level);
 
 private:
 

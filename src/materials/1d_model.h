@@ -18,7 +18,7 @@ namespace Toy1D {
                             lattice = {{ {{1.}} }};
     const double            atom_pos = 0.;
 
-    const int               n_orbitals      = 1;
+    const size_t            n_orbitals      = 1;
 
     const double            W = .5;
     const double            r0 = .25;

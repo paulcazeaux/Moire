@@ -32,9 +32,10 @@ class Lattice {
 static_assert( (dim == 1 || dim == 2), "Lattice dimension must be 1 or 2!");
 
 public:
-    /* Announce to the world the cut-off radius, number of vertices and array basis */
+    /* Announce to the world the cut-off radius, number of vertices, the index of the origin and array basis */
     const double                            radius;
     types::loc_t                            n_vertices;
+    types::loc_t                            index_origin;
     const dealii::Tensor<2,dim>             basis;
     const dealii::Tensor<2,dim>             inverse_basis;
 
@@ -52,6 +53,13 @@ public:
     std::array<types::loc_t, dim>           get_vertex_grid_indices(const types::loc_t& index) const;
     dealii::Point<dim>                      get_vertex_position(const types::loc_t& index) const;
 
+    /* Utilities for rounding up a given point to a lattice point modulo the unit cell  */
+    std::array<types::loc_t, dim>           round_to_grid_indices(const dealii::Point<dim>& X) const;
+    types::loc_t                            round_to_global_index(const dealii::Point<dim>& X) const;
+    
+    /* Utility to find the global index of the lattice point at an offset from a known lattice point */
+    types::loc_t                            offset_global_index(const types::loc_t& index, const std::array<types::loc_t, dim>& offset) const;
+
 private:
 
         /* Array of vertex positions */
@@ -59,7 +67,10 @@ private:
 
         /* Maps from global index to grid index */
     GridToIndexMap<dim>                             grid_to_index_map_;
-    std::vector<std::array<types::loc_t, dim>>      index_to_grid_map_; 
+    std::vector<std::array<types::loc_t, dim>>      index_to_grid_map_;
+
+        /* The origin is special, we want to remember its index */
+
 
         /* A useful quantity for determining necessary search sizes when looking for neighborhoods */
     const double                                    unit_cell_inscribed_radius_;

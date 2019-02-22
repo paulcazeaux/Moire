@@ -43,12 +43,12 @@ Element<1,degree>::Element(const Element<1,degree>& orig)
 
 template <>
 void	Element<1,1>::get_interpolation_weights(
-						const dealii::Point<1> quadrature_point, 
+						const dealii::Tensor<1,1> quadrature_point, 
 						std::vector<double> & weights) const
 {
 	weights.resize(dofs_per_cell);
 
-	double x = jacobian * (quadrature_point(0) - vertices[0](0));
+	double x = jacobian * (quadrature_point[0] - vertices[0](0));
 	weights[0] = -(x-1.);
 	weights[1] = x;
 }
@@ -62,12 +62,12 @@ void	Element<1,1>::get_interpolation_weights(
 
 template<>
 void	Element<1,2>::get_interpolation_weights(
-						const dealii::Point<1> quadrature_point, 
+						const dealii::Tensor<1,1> quadrature_point, 
 						std::vector<double> & weights) const
 {
 	weights.resize(dofs_per_cell);
 
-	double x = jacobian * (quadrature_point(0) - vertices[0](0));
+	double x = jacobian * (quadrature_point[0] - vertices[0](0));
 	weights[0] = (x-1.)*(2.*x-1.);
 	weights[1] = -4. * x * (x-1.);
 	weights[2] = x * (2.*x-1.);
@@ -81,12 +81,12 @@ void	Element<1,2>::get_interpolation_weights(
 
 template<>
 void	Element<1,3>::get_interpolation_weights(
-						const dealii::Point<1> quadrature_point, 
+						const dealii::Tensor<1,1> quadrature_point, 
 						std::vector<double> & weights) const
 {
 	weights.resize(dofs_per_cell);
 
-	double x = jacobian * (quadrature_point(0) - vertices[0](0));
+	double x = jacobian * (quadrature_point[0] - vertices[0](0));
 	weights[0] = -0.5 * (3.*x-1.) * (3.*x-2.) * (x-1.);
 	weights[1] =  4.5 * x * (3.*x-2.) * (x-1.);
 	weights[2] = -4.5 * x * (3.*x-1.) * (x-1.);
@@ -144,7 +144,7 @@ Element<2,degree>::Element(const Element<2,degree>& orig)
 
 template<>
 void	Element<2,1>::get_interpolation_weights(
-						const dealii::Point<2> quadrature_point, 
+						const dealii::Tensor<1,2> quadrature_point, 
 						std::vector<double> & weights) const
 {
 	weights.resize(dofs_per_cell);
@@ -173,7 +173,7 @@ void	Element<2,1>::get_interpolation_weights(
 
 template<>
 void	Element<2,2>::get_interpolation_weights(
-						const dealii::Point<2> quadrature_point, 
+						const dealii::Tensor<1,2> quadrature_point, 
 						std::vector<double> & weights) const
 {
 	weights.resize(dofs_per_cell);
@@ -213,7 +213,7 @@ void	Element<2,2>::get_interpolation_weights(
 
 template<>
 void	Element<2,3>::get_interpolation_weights(
-						const dealii::Point<2> quadrature_point, 
+						const dealii::Tensor<1,2> quadrature_point, 
 						std::vector<double> & weights) const
 {
 	weights.resize(dofs_per_cell);

@@ -11,9 +11,9 @@
 void do_test_intralayer()
 {
     size_t n = 7;
-    std::vector<int> v      {-3, -2, -1, 0, 1, 2, 3};
+    std::vector<int>    v   {-3, -2, -1, 0, 1, 2, 3};
     std::vector<double> t   { 0,  0,  1., 0, 1., 0, 0};
-    std::vector<bool>   s {false, false, true, true, true, false, false};
+    std::vector<bool>   s   {false, false, true, true, true, false, false};
 
     for (size_t i=0; i < n; ++i)
     {

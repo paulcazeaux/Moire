@@ -54,6 +54,7 @@ DEAL_II_DISABLE_EXTRA_DIAGNOSTICS
 
 #ifdef DEAL_II_WITH_PETSC
 #include <petscsys.h>
+#endif
 
 namespace dealii {
 
@@ -93,7 +94,6 @@ namespace
 #endif
   }
 }
-#endif
 
 
 // Function to initialize deallog. Normally, it should be called at
@@ -116,7 +116,7 @@ initlog(bool console=false)
   deallog.depth_console(console?10:0);
 
 //TODO: Remove this line and replace by test_mode()
-  deallog.threshold_float(1.e-8);
+  deallog.precision(8);
 }
 
 
@@ -134,7 +134,7 @@ mpi_initlog(bool console=false)
       deallog.depth_console(console?10:0);
 
 //TODO: Remove this line and replace by test_mode()
-      deallog.threshold_float(1.e-8);
+      deallog.precision(8);
     }
 #else
   (void)console;
@@ -160,7 +160,7 @@ struct MPILogInitAll
     deallog.depth_console(console?10:0);
 
 //TODO: Remove this line and replace by test_mode()
-    deallog.threshold_float(1.e-8);
+    deallog.precision(8);
     deallog.push(Utilities::int_to_string(myid));
 #else
     (void)console;
@@ -218,68 +218,6 @@ struct MPILogInitAll
 
 } // namespace dealii
 
-
-// ------------------------------ Adjust global variables in deal.II -----------------------
-
-
-DEAL_II_NAMESPACE_OPEN
-/*
- * Now, change some global behavior of deal.II and supporting libraries:
- */
-
-/* Disable stack traces: */
-
-struct SwitchOffStacktrace
-{
-  SwitchOffStacktrace ()
-  {
-    deal_II_exceptions::suppress_stacktrace_in_exceptions ();
-  }
-} deal_II_stacktrace_dummy;
-
-
-
-/* Enable floating point exceptions in debug mode and if we have
-   detected that they are usable: */
-
-struct EnableFPE
-{
-  EnableFPE ()
-  {
-#if defined(DEBUG) && defined(DEAL_II_HAVE_FP_EXCEPTIONS)
-    // enable floating point exceptions
-    feenableexcept(FE_DIVBYZERO|FE_INVALID);
-#endif
-  }
-} deal_II_enable_fpe;
-
-
-/* Set grainsizes for parallel mode smaller than they would otherwise be.
- * This is used to test that the parallel algorithms in lac/ work alright:
- */
-
-namespace internal
-{
-  namespace Vector
-  {
-    extern unsigned int minimum_parallel_grain_size;
-  }
-  namespace SparseMatrix
-  {
-    extern unsigned int minimum_parallel_grain_size;
-  }
-}
-
-struct SetGrainSizes
-{
-  SetGrainSizes ()
-  {
-    internal::Vector::minimum_parallel_grain_size = 2;
-    internal::SparseMatrix::minimum_parallel_grain_size = 2;
-  }
-} set_grain_sizes;
-
-DEAL_II_NAMESPACE_CLOSE
 
 /*
  * Do not use a template here to work around an overload resolution issue with clang and

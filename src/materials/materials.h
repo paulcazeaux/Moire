@@ -66,7 +66,7 @@ namespace Materials {
      * The number of orbitals in the tight-binding model implemented in this library
      * for this material.
      */
-    const int&                                  n_orbitals(const Mat mat);
+    const size_t&                               n_orbitals(const Mat mat);
     /**
      * The cut-off radius for nonzero terms in the intra-layer Hamiltonian.
      */
@@ -81,7 +81,7 @@ namespace Materials {
      * The vertical position of a given orbital in a given layered material, provided the
      * unit cell is centered around the z=0 plane.
      */
-    const double&                               orbital_height(const Mat mat, const int idx);
+    const double&                               orbital_height(const Mat mat, const size_t idx);
 
     /***********************************************************************************/
     /* Methods for returning tight-binding hopping terms and associated nonzero checks */
@@ -95,7 +95,7 @@ namespace Materials {
      * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     double
-    intralayer_term(const int orbital_row, const int orbital_col, 
+    intralayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat);
     /**
@@ -109,7 +109,7 @@ namespace Materials {
      * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     bool
-    is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+    is_intralayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 1>& vector, 
                     const Mat mat);
 
@@ -122,7 +122,7 @@ namespace Materials {
      * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     double
-    intralayer_term(const int orbital_row, const int orbital_col, 
+    intralayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat);
     /**
@@ -136,7 +136,7 @@ namespace Materials {
      * The lattice vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     bool
-    is_intralayer_term_nonzero(const int orbital_row, const int orbital_col, 
+    is_intralayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<int, 2>& vector, 
                     const Mat mat);
 
@@ -151,7 +151,7 @@ namespace Materials {
      * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     double
-    interlayer_term(const int orbital_row, const int orbital_col, 
+    interlayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 2>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
@@ -172,7 +172,7 @@ namespace Materials {
      * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     bool
-    is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+    is_interlayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 2>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
@@ -192,7 +192,7 @@ namespace Materials {
      */
 
     double
-    interlayer_term(const int orbital_row, const int orbital_col, 
+    interlayer_term(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 3>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);
@@ -213,7 +213,7 @@ namespace Materials {
      * The real-space vector goes FROM the 'row' orbital site TO the 'column' orbital site.
      */
     bool
-    is_interlayer_term_nonzero(const int orbital_row, const int orbital_col, 
+    is_interlayer_term_nonzero(const size_t orbital_row, const size_t orbital_col, 
                     const std::array<double, 3>& vector, 
                     const double angle_row, const double angle_col,
                     const Mat mat_row, const Mat mat_col);

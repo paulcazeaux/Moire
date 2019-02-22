@@ -62,6 +62,11 @@ Lattice<dim>::Lattice(const dealii::Tensor<2,dim> basis, const double radius)
 
     /* Initialize the subdomain ids to zero (no partition) */
     n_vertices = vertices_.size();
+    /* Find the index of the origin and cache it */
+    std::array<types::loc_t, dim> lattice_indices_0;
+    for (size_t i=0; i<dim; ++i)
+        lattice_indices_0[i] = 0;
+    index_origin = get_vertex_global_index(lattice_indices_0);
 }
 
 template<int dim>
@@ -110,6 +115,40 @@ template<int dim>
 dealii::Point<dim>
 Lattice<dim>::get_vertex_position(const types::loc_t& index) const
 {   return vertices_.at(index); }
+
+
+template<int dim>
+types::loc_t
+Lattice<dim>::offset_global_index(const types::loc_t& index, const std::array<types::loc_t, dim>& offset) const
+{
+    std::array<types::loc_t, dim> indices = index_to_grid_map_.at(index);
+    for (int i=0; i<dim; ++i)
+        indices[i] += offset[i];
+    return grid_to_index_map_.find(indices);
+}
+
+template<int dim>
+std::array<types::loc_t, dim>
+Lattice<dim>::round_to_grid_indices(const dealii::Point<dim>& X) const
+{
+    const dealii::Tensor<1,dim> Xg = inverse_basis * X;
+    std::array<types::loc_t, dim> indices;
+    for (size_t i = 0; i<dim; ++i)
+        indices[i] = std::floor(Xg[i] + 0.5);
+    return indices;
+}
+
+template<int dim>
+types::loc_t
+Lattice<dim>::round_to_global_index(const dealii::Point<dim>& X) const
+{
+    const dealii::Tensor<1,dim> Xg = inverse_basis * X;
+    std::array<types::loc_t, dim> indices;
+    for (size_t i = 0; i<dim; ++i)
+        indices[i] = std::floor(Xg[i] + 0.5);
+
+    return get_vertex_global_index(indices);
+}
 
 
 template<int dim>

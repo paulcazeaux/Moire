@@ -33,7 +33,7 @@ namespace Bilayer {
     * - Scalar: the main number type used in the computation.
     *       This should be a double when no magnetic field is involved
     *       and a complex<double> otherwise, since there is no need
-    *       for adjoint calculations (see BaseAlgebra documentation).
+    *       for transpose calculations (see BaseAlgebra documentation).
     */
     template <int dim, int degree, typename Scalar = double >
     class ComputeResolvent : private BaseAlgebra<dim, degree, Scalar>
@@ -126,11 +126,11 @@ namespace Bilayer {
         std::ostream & pcout;
 
         /**
-         *  Two arrays of two Tpetra MultiVectors each which hold
+         * Two Tpetra MultiVectors each which hold
          * the data of the initial identity array and the computed
          * resolvent
          */
-        std::array<MultiVector, 2> I, H, R;
+        MultiVector I, R;
     };
 
 }/* End namespace Bilayer */

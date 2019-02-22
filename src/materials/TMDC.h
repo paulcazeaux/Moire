@@ -17,13 +17,13 @@
 
 namespace TMDC {
     /* Syntactic sugar to identify the orbital characters we are working with */
-    enum class Atom : int { M, X_A, X_B};
-    enum class Orbital : int  {
+    enum class Atom : size_t { M, X_A, X_B};
+    enum class Orbital : size_t  {
                 M_dz2 = 0, M_dxy = 1, M_dx2_y2 = 2, M_dxz = 3, M_dyz = 4, 
                     X_A_px = 5, X_A_py = 6, X_A_pz = 7, 
                     X_B_px = 8, X_B_py = 9, X_B_pz = 10};
 
-    const int       n_orbitals          = 11;
+    const size_t    n_orbitals          = 11;
     const double    inter_cutoff_radius = 4.;
     const double    intra_cutoff_radius = 3.;
 }   /* End namespace TMDC */
@@ -112,17 +112,17 @@ namespace TMDC {
     /* Implementation of utility functions to go from Orbital type to underlying index */
     inline 
     Orbital 
-    orbital(const int idx)
+    orbital(const size_t idx)
     {
-        assert(idx >= 0 && idx < n_orbitals);
+        assert(idx < n_orbitals);
         return static_cast<Orbital>(idx);
     }
 
     inline 
-    int 
+    size_t 
     index(const Orbital O)
     {   
-        return static_cast<int>(O); 
+        return static_cast<size_t>(O); 
     }
 
     inline 

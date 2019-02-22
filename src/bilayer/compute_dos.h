@@ -153,7 +153,7 @@ namespace Bilayer {
          * applied to the Hamiltonian operator.
          *
          */
-        std::array<MultiVector, 2> Tp, T, Tn;
+        MultiVector Tp, T, Tn;
 
         /**
          * Array of Scalars holding the Chebyshev moments of the 

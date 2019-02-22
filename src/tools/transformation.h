@@ -17,7 +17,7 @@ struct Transformation {};
 
 template<>
 struct Transformation<1> {
-    static double       matrix(const double scaling, const double angle) 
+    static double       matrix(const double scaling, const double) 
                         { return scaling; }; // in 1D, the angle is ignored
 };
 

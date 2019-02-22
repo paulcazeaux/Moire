@@ -28,6 +28,9 @@ DEAL_II_SETUP_TARGET(Moire)
 ### 4) Link the librairies for your executable
 ######################################################################################
 
-TARGET_LINK_LIBRARIES( Moire Calgebra ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+TARGET_LINK_LIBRARIES( Moire Calgebra ${Kokkos_LIBRARIES} ${Kokkos_TPL_LIBRARIES} 
+                                      ${Teuchos_LIBRARIES} ${Teuchos_TPL_LIBRARIES} 
+                                      ${Tpetra_LIBRARIES} ${Tpetra_TPL_LIBRARIES} 
+                                      ${Belos_LIBRARIES} ${Belos_TPL_LIBRARIES} )
 
 ######################################################################################

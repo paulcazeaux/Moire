@@ -9,10 +9,9 @@
 
 namespace Bilayer {
 
-    PointData::PointData(   const block_t range_block, const block_t domain_block, 
+    PointData::PointData(   const block_t domain_block, 
                             const loc_t lattice_index)
         :
-        range_block(range_block), 
         domain_block(domain_block), 
         lattice_index(lattice_index)
     {}

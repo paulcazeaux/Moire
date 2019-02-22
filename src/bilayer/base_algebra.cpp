@@ -10,38 +10,29 @@
 
 namespace Bilayer {
 
-    template<int dim, int degree, typename Scalar>
-    BaseAlgebra<dim,degree,Scalar>::BaseAlgebra(const Multilayer<dim, 2>& bilayer)
+    template<int dim, int degree, typename Scalar, class Node>
+    BaseAlgebra<dim,degree,Scalar,Node>::BaseAlgebra(const Multilayer<dim, 2>& bilayer)
         :
         mpi_communicator(Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ()),
-        dof_handler(bilayer),
-        torus({{PeriodicTranslationUnit<dim, Scalar>(layer(0).n_orbitals, unit_cell(1).n_nodes_per_dim), 
-                PeriodicTranslationUnit<dim, Scalar>(layer(1).n_orbitals, unit_cell(0).n_nodes_per_dim)}})
-    {}
-
-
-    template<int dim, int degree, typename Scalar>
-    void
-    BaseAlgebra<dim,degree,Scalar>::base_setup()
+        dof_handler(bilayer)
     {
         dof_handler.initialize(mpi_communicator);
-        Assert(dof_handler.locally_owned_dofs(0)->isContiguous(), dealii::ExcNotImplemented());
-        Assert(dof_handler.locally_owned_dofs(1)->isContiguous(), dealii::ExcNotImplemented());
+        Assert(dof_handler.locally_owned_dofs()->isContiguous(), dealii::ExcNotImplemented());
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    BaseAlgebra<dim,degree,Scalar>::assemble_base_matrices()
+    BaseAlgebra<dim,degree,Scalar,Node>::assemble_base_matrices()
     {
-        this->assemble_adjoint_interpolant();
+        this->assemble_transpose_interpolant();
         this->assemble_hamiltonian_action();
     }    
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    BaseAlgebra<dim,degree,Scalar>::assemble_hamiltonian_action()
+    BaseAlgebra<dim,degree,Scalar,Node>::assemble_hamiltonian_action()
     {
         for (types::block_t range_block = 0; range_block < 2; ++range_block)
         {
@@ -52,9 +43,9 @@ namespace Bilayer {
             std::vector<Teuchos::Array<Scalar>> Values;
 
             for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
-                for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(range_block, domain_block); ++n)
+                for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(domain_block); ++n)
                 {
-                    const PointData& this_point = dof_handler.locally_owned_point(range_block, domain_block, n);
+                    const PointData& this_point = dof_handler.locally_owned_point(domain_block, n);
 
                     dealii::Point<dim> 
                     this_point_position = lattice(domain_block).get_vertex_position(this_point.lattice_index);
@@ -63,9 +54,9 @@ namespace Bilayer {
 
                             /* Block b <-> b */
                     globalRows.clear();
-                    for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
-                        for (types::loc_t orbital = 0; orbital <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
-                            globalRows.push_back(dof_handler.get_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital));
+                    for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(); ++cell_index)
+                        for (size_t orbital = 0; orbital <  dof_handler.n_orbitals(domain_block); orbital++)
+                            globalRows.push_back(dof_handler.get_dof_index(domain_block, this_point.lattice_index, cell_index, orbital));
 
                     ColIndices.resize(globalRows.size());
                     Values.resize(globalRows.size());
@@ -85,12 +76,12 @@ namespace Bilayer {
 
                         auto it_cols = ColIndices.begin();
                         auto it_vals = Values.begin();
-                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
-                            for (types::loc_t orbital_row = 0; orbital_row <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_row++)
+                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(); ++cell_index)
+                            for (size_t orbital_row = 0; orbital_row <  dof_handler.n_orbitals(domain_block); orbital_row++)
                             {
-                                for (types::loc_t orbital_col = 0; orbital_col <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_col++)
+                                for (size_t orbital_col = 0; orbital_col <  dof_handler.n_orbitals(domain_block); orbital_col++)
                                 {
-                                    it_cols->push_back(dof_handler.get_dof_index(range_block, domain_block, neighbor_lattice_index, cell_index, orbital_col));
+                                    it_cols->push_back(dof_handler.get_dof_index(domain_block, neighbor_lattice_index, cell_index, orbital_col));
                                     it_vals->push_back(dof_handler.intralayer_term(orbital_col, orbital_row, grid_vector, domain_block ));
                                 }
                                 it_cols++; 
@@ -107,7 +98,7 @@ namespace Bilayer {
                     {
                         auto it_cols = ColIndices.begin();
                         auto it_vals = Values.begin();
-                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
+                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(); ++cell_index)
                         {
                             /* Note: the unit cell node displacement follows the point which is in the interlayer block */
                             dealii::Tensor<1,dim> arrow_vector = this_point_position 
@@ -115,14 +106,14 @@ namespace Bilayer {
                                                                     * unit_cell(1-range_block).get_node_position(cell_index)
                                                                 - lattice(other_domain_block).get_vertex_position(neighbor_lattice_index);
                             
-                            for (types::loc_t orbital_row = 0; orbital_row <  dof_handler.n_domain_orbitals(range_block, domain_block); orbital_row++)
-                                for (types::loc_t orbital_col = 0; orbital_col < dof_handler.n_domain_orbitals(range_block, other_domain_block); orbital_col++)
+                            for (size_t orbital_row = 0; orbital_row <  dof_handler.n_orbitals(domain_block); orbital_row++)
+                                for (size_t orbital_col = 0; orbital_col < dof_handler.n_orbitals(other_domain_block); orbital_col++)
                                 {
-                                    it_cols[orbital_row].push_back(dof_handler.get_dof_index(range_block, other_domain_block, neighbor_lattice_index, cell_index, orbital_col));
+                                    it_cols[orbital_row].push_back(dof_handler.get_dof_index(other_domain_block, neighbor_lattice_index, cell_index, orbital_col));
                                     it_vals[orbital_row].push_back(dof_handler.interlayer_term(orbital_col, orbital_row, arrow_vector, other_domain_block, domain_block ));
                                 }
-                            it_cols += dof_handler.n_domain_orbitals(range_block, other_domain_block); 
-                            it_vals += dof_handler.n_domain_orbitals(range_block, other_domain_block);
+                            it_cols += dof_handler.n_orbitals(other_domain_block); 
+                            it_vals += dof_handler.n_orbitals(other_domain_block);
                         }
                     }
 
@@ -131,68 +122,93 @@ namespace Bilayer {
                 }
             hamiltonian_action.at(range_block)->fillComplete ();
         }
+
+        HamiltonianAction = Teuchos::rcp(new RangeBlockOp(
+                                hamiltonian_action, 
+                                {dof_handler.n_orbitals(0), dof_handler.n_orbitals(1)}));
     }
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    BaseAlgebra<dim,degree,Scalar>::assemble_adjoint_interpolant()
+    BaseAlgebra<dim,degree,Scalar,Node>::assemble_transpose_interpolant()
     {
         for (types::block_t range_block = 0; range_block < 2; ++range_block)
             for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
             {
                 /* First, we initialize the matrix with a static CrsGraph computed by the dof_handler object */
-                adjoint_interpolant.at(range_block).at(domain_block) 
-                    =  Teuchos::RCP<Matrix>(new Matrix(dof_handler.make_sparsity_pattern_adjoint_interpolant(range_block, domain_block)));
+                transpose_interpolant.at(range_block).at(domain_block) 
+                    =  Teuchos::RCP<Matrix>(new Matrix(dof_handler.make_sparsity_pattern_transpose_interpolant(range_block, domain_block)));
 
+                const types::loc_t n_orbitals = dof_handler.n_orbitals(domain_block);
                 std::vector<types::glob_t> globalRows;
                 std::vector<Teuchos::Array<types::glob_t>> ColIndices;
                 std::vector<Teuchos::Array<Scalar>> Values;
+
                     /* First, the case of diagonal blocks */
                 if (range_block == domain_block)
-                    for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(domain_block, range_block); ++n)
+                    for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(range_block); ++n)
                     {
-                        const PointData& this_point = dof_handler.locally_owned_point(range_block, domain_block, n);
+                        const PointData& this_point = dof_handler.locally_owned_point(range_block, n);
+                        assert(this_point.domain_block == domain_block);
 
-                        size_t N = dof_handler.n_dofs_each_point(range_block, domain_block);
+                        size_t N = n_orbitals * this_point.intra_interpolating_nodes.size();
                         globalRows.resize(N);
                         ColIndices.resize(N);
                         Values.resize(N);
-                        for (auto & cols : ColIndices) 
-                            cols.resize(1);
-                        for (auto & vals : Values)
-                            vals.assign(1, 1.);
 
-                        /* We simply exchange the point with its opposite */
-                        std::array<types::loc_t, dim> on_grid = lattice(domain_block).get_vertex_grid_indices(this_point.lattice_index);
-                        for (auto & c : on_grid)
-                            c = -c;
-                        types::loc_t opposite_lattice_index = lattice(domain_block).get_vertex_global_index(on_grid);
+                        for (auto & cols : ColIndices) 
+                            cols.clear();
+                        for (auto & vals : Values)
+                            vals.clear();
 
                         auto it_row = globalRows.begin();
-                        auto it_col = ColIndices.begin();
-                        for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(range_block, domain_block); ++cell_index)
-                            for (types::loc_t orbital = 0; orbital < dof_handler.n_domain_orbitals(range_block, domain_block); orbital++)
+                        auto it_cols = ColIndices.begin();
+                        auto it_vals = Values.begin();
+                        for (const auto & interp_point : this_point.intra_interpolating_nodes)
+                        {
+                            const auto [cell_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_element_index, interp_weights] = interp_point;
+                            assert(interp_domain_block == domain_block);
+                            assert(interp_range_block == range_block);
+
+                            for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
+                                it_row[orbital] = dof_handler.get_transpose_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital);
+
+                            /* Iterate through the nodes of the interpolating element */
+                            for (types::loc_t j = 0; j < Element<dim,degree>::dofs_per_cell; ++j)
                             {
-                                *it_row = dof_handler.get_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital);
-                                (*it_col).assign(1, dof_handler.get_block_dof_index(range_block, domain_block, opposite_lattice_index,   cell_index , orbital));
-                                ++it_row;
-                                ++it_col;
+                                types::loc_t interp_cell_index = unit_cell(domain_block).subcell_list [interp_element_index].unit_cell_dof_index_map.at(j);
+                                if (unit_cell(domain_block).is_node_interior(interp_cell_index))
+                                    for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
+                                    {
+                                        it_cols[orbital].push_back(dof_handler.get_block_dof_index(domain_block, interp_lattice_index, interp_cell_index, orbital));
+                                        it_vals[orbital].push_back(interp_weights.at(j));
+                                    }
+                                else // Boundary point!
+                                {
+                                    /* Periodic wrap */
+                                    auto [offset_interp_cell_index, offset_indices] = unit_cell(domain_block).map_boundary_point_interior(interp_cell_index);
+                                
+                                    for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
+                                    {
+                                        it_cols[orbital].push_back(dof_handler.get_block_dof_index(domain_block, interp_lattice_index, offset_interp_cell_index, orbital));
+                                        it_vals[orbital].push_back(interp_weights.at(j));
+                                    }
+                                }
                             }
+                            it_row += n_orbitals;
+                            it_cols += n_orbitals;
+                            it_vals += n_orbitals;
+                        }
                         for (size_t i = 0; i < globalRows.size(); ++i)
-                            adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
+                            transpose_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
                     }
                 else
-                        /* Now the case of extradiagonal blocks : we map the interpolation process */
-                    for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(domain_block, range_block); ++n)
+                    /* Now the case of extradiagonal blocks */
+                    for (types::loc_t n=0; n < dof_handler.n_locally_owned_points(range_block); ++n)
                     {
-                        const PointData& this_point = dof_handler.locally_owned_point(domain_block, range_block, n);
-                        const auto& interp_lattice = lattice(domain_block);
-                        const auto& interp_cell = unit_cell(domain_block);
-                        const auto& target_lattice = lattice(range_block);
-                        const auto& target_cell = unit_cell(range_block);
-                        const types::loc_t n_orbitals = dof_handler.n_domain_orbitals(domain_block, range_block);
+                        const PointData& this_point = dof_handler.locally_owned_point(range_block, n);
 
-                        size_t N = n_orbitals * this_point.interpolating_nodes.size();
+                        size_t N = n_orbitals * this_point.inter_interpolating_nodes.size();
                         globalRows.resize(N);
                         ColIndices.resize(N);
                         Values.resize(N);
@@ -204,48 +220,39 @@ namespace Bilayer {
                         auto it_row = globalRows.begin();
                         auto it_cols = ColIndices.begin();
                         auto it_vals = Values.begin();
-                        for (const auto & interp_point : this_point.interpolating_nodes)
+                        for (const auto & interp_point : this_point.inter_interpolating_nodes)
                         {
-                            const auto [cell_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_element_index] = interp_point;
+                            const auto [cell_index, interp_range_block, interp_domain_block, interp_lattice_index, interp_element_index, interp_weights] = interp_point;
                             assert(interp_domain_block == domain_block);
                             assert(interp_range_block == range_block);
 
+                            /* Store row index for each orbital */
                             for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
-                                it_row[orbital] = dof_handler.get_transpose_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index , orbital);
+                                it_row[orbital] = dof_handler.get_transpose_block_dof_index(range_block, domain_block, this_point.lattice_index, cell_index, orbital);
 
-                            dealii::Point<dim> quadrature_point (- (interp_lattice.get_vertex_position(interp_lattice_index)
-                                                                    + target_lattice.get_vertex_position(this_point.lattice_index)
-                                                                    + target_cell.get_node_position(cell_index)    ));
-
-                            std::vector<double> interpolation_weights (Element<dim,degree>::dofs_per_cell);
-                            unit_cell(domain_block).subcell_list[interp_element_index].get_interpolation_weights(quadrature_point, interpolation_weights);
-
+                            /* Iterate through the nodes of the interpolating element */
                             for (types::loc_t j = 0; j < Element<dim,degree>::dofs_per_cell; ++j)
                             {
-                                types::loc_t interp_cell_index = interp_cell.subcell_list [interp_element_index].unit_cell_dof_index_map.at(j);
-                                if (interp_cell.is_node_interior(interp_cell_index))
+                                types::loc_t interp_cell_index = unit_cell(domain_block).subcell_list [interp_element_index].unit_cell_dof_index_map.at(j);
+                                
+                                /* Store column indices for each orbital */
+                                if (unit_cell(domain_block).is_node_interior(interp_cell_index))
                                     for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
                                     {
-                                        it_cols[orbital].push_back(dof_handler.get_block_dof_index(range_block, domain_block, interp_lattice_index, interp_cell_index, orbital));
-                                        it_vals[orbital].push_back(interpolation_weights.at(j));
+                                        it_cols[orbital].push_back(dof_handler.get_block_dof_index(domain_block, interp_lattice_index, interp_cell_index, orbital));
+                                        it_vals[orbital].push_back(interp_weights.at(j));
                                     }
                                 else // Boundary point!
                                 {
-                                        /* Which cell does this boundary point belong to? */
-                                    const auto interp_lattice_indices = interp_lattice.get_vertex_grid_indices(interp_lattice_index);
-                                    auto [offset_interp_cell_index, offset_indices] = interp_cell.map_boundary_point_interior(interp_cell_index - interp_cell.n_nodes);
-                                    for (int i=0; i<dim; ++i)
-                                        offset_indices[i] += interp_lattice_indices[i];
-
-                                    /* Find out what is the corresponding lattice point index */
-                                    const types::loc_t offset_interp_lattice_index = interp_lattice.get_vertex_global_index(offset_indices);
+                                    auto [offset_interp_cell_index, offset] = unit_cell(domain_block).map_boundary_point_interior(interp_cell_index);
+                                    const types::loc_t offset_interp_lattice_index = lattice(domain_block).offset_global_index(interp_lattice_index, offset);
 
                                     /* Check that this point exists in our cutout */
                                     if (offset_interp_lattice_index != types::invalid_local_index)
                                         for (types::loc_t orbital = 0; orbital < n_orbitals; ++orbital)
                                         {
-                                            it_cols[orbital].push_back(dof_handler.get_block_dof_index(range_block, domain_block, offset_interp_lattice_index, offset_interp_cell_index, orbital));
-                                            it_vals[orbital].push_back(interpolation_weights.at(j));
+                                            it_cols[orbital].push_back(dof_handler.get_block_dof_index(domain_block, offset_interp_lattice_index, offset_interp_cell_index, orbital));
+                                            it_vals[orbital].push_back(interp_weights.at(j));
                                         }
                                 }
                             }
@@ -256,201 +263,94 @@ namespace Bilayer {
                         
 
                         for (size_t i = 0; i < globalRows.size(); ++i)
-                            adjoint_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
+                            transpose_interpolant.at(range_block).at(domain_block)->replaceGlobalValues(globalRows.at(i), ColIndices.at(i), Values.at(i));
                     }
-                adjoint_interpolant.at(range_block).at(domain_block)->fillComplete ();
+                transpose_interpolant.at(range_block).at(domain_block)->fillComplete ();
             }
 
-        /* Finally, we allocate the helper multivectors */
-        helper.at(0).at(0) = MultiVector(dof_handler.transpose_range_map(0,0), dof_handler.n_range_orbitals(0,0));
-        helper.at(0).at(1) = MultiVector(dof_handler.transpose_range_map(0,1), dof_handler.n_range_orbitals(0,1));
-        helper.at(1).at(0) = MultiVector(dof_handler.transpose_range_map(1,0), dof_handler.n_range_orbitals(1,0));
-        helper.at(1).at(1) = MultiVector(dof_handler.transpose_range_map(1,1), dof_handler.n_range_orbitals(1,1));
+        // /* Finally, we allocate the helper multivectors */
+        // helper.at(0).at(0) = MultiVector(dof_handler.transpose_range_map(0,0), dof_handler.n_orbitals(0));
+        // helper.at(0).at(1) = MultiVector(dof_handler.transpose_range_map(0,1), dof_handler.n_orbitals(0));
+        // helper.at(1).at(0) = MultiVector(dof_handler.transpose_range_map(1,0), dof_handler.n_orbitals(1));
+        // helper.at(1).at(1) = MultiVector(dof_handler.transpose_range_map(1,1), dof_handler.n_orbitals(1));
+        Transpose = Teuchos::rcp(new TransposeOp(
+                                        transpose_interpolant, 
+                                        {dof_handler.n_orbitals(0), dof_handler.n_orbitals(1)},
+                                        {unit_cell(0).area, unit_cell(1).area},
+                                        this->dof_handler.locally_owned_dofs(),
+                                        this->dof_handler.locally_owned_dofs()));
+    }
+
+    /* Create a basic MultiVector with the right data structure */
+    template<int dim, int degree, typename Scalar, class Node>
+    typename BaseAlgebra<dim,degree,Scalar,Node>::Vector
+    BaseAlgebra<dim,degree,Scalar,Node>::create_vector(bool ZeroOut) const
+    {
+        return MultiVector( this->dof_handler.locally_owned_dofs(), this->dof_handler.n_orbitals(0) + this->dof_handler.n_orbitals(1), ZeroOut);
+    }
+
+    /* Create a basic MultiVector with the right data structure */
+    template<int dim, int degree, typename Scalar, class Node>
+    typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector
+    BaseAlgebra<dim,degree,Scalar,Node>::create_multivector(size_t numVecs, bool ZeroOut) const
+    {
+        return MultiVector( this->dof_handler.locally_owned_dofs(), numVecs * (this->dof_handler.n_orbitals(0) + this->dof_handler.n_orbitals(1)), ZeroOut);
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    BaseAlgebra<dim,degree,Scalar>::hamiltonian_rproduct(const std::array<MultiVector, 2>  A, std::array<MultiVector, 2> & B)
+    BaseAlgebra<dim,degree,Scalar,Node>::set_to_identity(Vector& Id) const
     {
-        for (types::block_t block = 0; block < 2; ++block)
-            hamiltonian_action.at(block)->apply(A.at(block), B.at(block), Teuchos::NO_TRANS);
-    }
-
-    template<int dim, int degree, typename Scalar>
-    void
-    BaseAlgebra<dim,degree,Scalar>::adjoint(const std::array<MultiVector, 2>  A, std::array<MultiVector, 2> & tA)
-    {
-        /* Check that the vectors have the same data distribution */
-        for (types::block_t range_block = 0; range_block < 2; ++range_block)
-        {
-            Assert( A.at(range_block).getMap()->isSameAs(* (dof_handler.locally_owned_dofs(range_block) )), dealii::ExcInternalError() );
-            Assert( tA.at(range_block).getMap()->isSameAs(* (dof_handler.locally_owned_dofs(range_block) )), dealii::ExcInternalError() );
-        }
-
-        /* first, we decompose A and tA into their four relevant blocks */
-        std::array<std::array<const MultiVector, 2>, 2> A_blocks = 
-            {{
-                {{  * A.at(0).offsetView(dof_handler.transpose_domain_map(0, 0), 0),
-                    * A.at(0).offsetView(dof_handler.transpose_domain_map(0, 1),
-                                                                            dof_handler.transpose_domain_map(0, 0)->getNodeNumElements())   }},
-                {{  * A.at(1).offsetView(dof_handler.transpose_domain_map(1, 0), 0),
-                    * A.at(1).offsetView(dof_handler.transpose_domain_map(1, 1),
-                                                                            dof_handler.transpose_domain_map(1, 0)->getNodeNumElements())   }}
-            }};
-        std::array<std::array<MultiVector, 2>, 2> tA_blocks = 
-            {{
-                {{  * tA.at(0).offsetView(dof_handler.transpose_domain_map(0, 0), 0),
-                    * tA.at(0).offsetView(dof_handler.transpose_domain_map(0, 1),
-                                                                            dof_handler.transpose_domain_map(0, 0)->getNodeNumElements())   }},
-                {{  * tA.at(1).offsetView(dof_handler.transpose_domain_map(1, 0), 0),
-                    * tA.at(1).offsetView(dof_handler.transpose_domain_map(1, 1),
-                                                                            dof_handler.transpose_domain_map(1, 0)->getNodeNumElements())   }}
-            }};
-
-
-
-        /* First we deal with the FFT-based translation inside each unit cell, in the diagonal blocks */
-        for (types::block_t b = 0; b < 2; ++b)
-        {
-            const types::loc_t n_dofs = dof_handler.n_dofs_each_point(b, b);
-
-            adjoint_interpolant.at(b).at(b)->apply (A_blocks.at(b).at(b), helper.at(b).at(b));
-
-            typename MultiVector::dual_view_type::t_dev
-            helperView = helper.at(b).at(b).template getLocalView<Kokkos::Serial>();
-
-            /* We use the FFT now to translate in the unit cells for each lattice point! */
-            for (types::loc_t n=0; n<dof_handler.n_locally_owned_points(b, b); ++n)
-            {
-                const types::loc_t n_orbitals = dof_handler.n_range_orbitals(b,b);
-                const PointData& this_point = dof_handler.locally_owned_point(b, b, n);
-
-                types::loc_t
-                start = dof_handler.get_block_dof_index(b, b, this_point.lattice_index, 0, 0),
-                end = start + n_dofs;
-                dealii::Tensor<1,dim>
-                    vector = - unit_cell(1-b).inverse_basis * lattice(b).get_vertex_position(this_point.lattice_index);
-
-                for (types::loc_t j=0; j<n_orbitals; ++j)
-                {
-                    /* Copy the data into FFTW-allocated memory */
-                    auto pointView = Kokkos::subview(helperView, std::make_pair(start, end), j);
-                    Kokkos::deep_copy(torus.at(b).view (), pointView);
-                    /* Forward FFT */
-                    torus.at(b).translate (vector);
-                    /* Copy back into helper Kokkos array */
-                    Kokkos::deep_copy(pointView, torus.at(b).view ());
-                }
-            }
-            /* Next we deal with the extradiagonal block interpolation*/
-            adjoint_interpolant.at(b).at(1-b)->apply (A_blocks.at(b).at(1-b), helper.at(b).at(1-b));
-
-            /* Now we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
-            const types::loc_t
-            n_orbitals = dof_handler.n_range_orbitals(b,b);
-            typename MultiVector::dual_view_type::t_dev 
-            tA_View = tA_blocks.at(b).at(b).template getLocalView<Kokkos::Serial>();
-            typename MultiVector::dual_view_type::t_dev_const 
-            helperView_const = helperView;
-
-            Kokkos::parallel_for (dof_handler.n_cell_nodes(b,b) * dof_handler.n_locally_owned_points(b,b), KOKKOS_LAMBDA (const types::loc_t i) {
-                    for (types::loc_t o1 = 0; o1 < n_orbitals; ++o1)
-                        for (types::loc_t o2 = 0; o2 < n_orbitals; ++o2)
-                            tA_View(o2 + n_orbitals * i, o1) = numbers::conjugate<Scalar>( helperView_const(o1 + n_orbitals * i, o2) );
-                });   
-
-            const types::loc_t
-            n_orbitals_1 = dof_handler.n_domain_orbitals(b, 1-b),
-            n_orbitals_2 = dof_handler.n_range_orbitals(b, 1-b);
-            tA_View = tA_blocks.at(1-b).at(b).template getLocalView<Kokkos::Serial>();
-            helperView_const = helper.at(b).at(1-b).template getLocalView<Kokkos::Serial>();
-
-            Kokkos::parallel_for (dof_handler.n_cell_nodes(1-b,b) * dof_handler.n_locally_owned_points(1-b,b), KOKKOS_LAMBDA (const types::loc_t i) {
-                    for (types::loc_t o1 = 0; o1 < n_orbitals_1; ++o1)
-                        for (types::loc_t o2 = 0; o2 < n_orbitals_2; ++o2)
-                            tA_View(o2 + n_orbitals_2 * i, o1) = numbers::conjugate<Scalar>( helperView_const(o1 + n_orbitals_1 * i, o2) );
-                });
-        }
-    }
-
-
-    template<int dim, int degree, typename Scalar>
-    void
-    BaseAlgebra<dim,degree,Scalar>::linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
-                                                const Scalar& beta, std::array<MultiVector, 2>& B)
-    {
-        for (types::block_t block = 0; block < 2; ++block)
-            B.at(block).update(alpha, A.at(block), beta);
-    }
-
-
-    template<int dim, int degree, typename Scalar>
-    void
-    BaseAlgebra<dim,degree,Scalar>::linear_combination(const Scalar& alpha, const std::array<MultiVector, 2>& A,
-                                                const Scalar& beta, const std::array<MultiVector, 2>& B,
-                                                const Scalar& gamma, std::array<MultiVector, 2>& C)
-    {
-        for (types::block_t block = 0; block < 2; ++block)
-            C.at(block).update(alpha, A.at(block), beta, B.at(block), gamma);
-    }
-
-    template<int dim, int degree, typename Scalar>
-    void
-    BaseAlgebra<dim,degree,Scalar>::create_identity(std::array<MultiVector, 2>& Id)
-    {
-        assert(Id.at(0).getMap()->isSameAs(* (dof_handler.locally_owned_dofs(0)) ) 
-                    && Id.at(1).getMap()->isSameAs(* (dof_handler.locally_owned_dofs(1)) ) );
-        
+        Id.putScalar(0.);
 
         std::array<types::loc_t, dim> lattice_indices_0;
         for (size_t i=0; i<dim; ++i)
             lattice_indices_0[i] = 0;
-        /* Block 0,0 */
+        
+        types::loc_t n0 = dof_handler.n_orbitals(0);
         for (types::block_t b = 0; b < 2; ++b)
         {
-            Id.at(b).putScalar(0.);
-
             types::loc_t lattice_index_0 = lattice(b).get_vertex_global_index(lattice_indices_0);
-            if (dof_handler.is_locally_owned_point(b,b,lattice_index_0))
-                for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(b,b); ++cell_index)
-                    for (types::loc_t orbital = 0; orbital < dof_handler.n_domain_orbitals(b,b); ++orbital)
-                        Id.at(b).replaceGlobalValue(dof_handler.get_dof_index(b, b, lattice_index_0, cell_index, orbital), orbital, 1.);
+            if (dof_handler.is_locally_owned_point(b,lattice_index_0))
+                for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(); ++cell_index)
+                    for (size_t orbital = 0; orbital < dof_handler.n_orbitals(b); ++orbital)
+                        Id.replaceGlobalValue(dof_handler.get_dof_index(b, lattice_index_0, cell_index, orbital), b == 0 ? orbital : orbital + n0, 1.);
         }
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     std::array<std::vector<Scalar>,2>
-    BaseAlgebra<dim,degree,Scalar>::diagonal(const std::array<MultiVector, 2> A)
+    BaseAlgebra<dim,degree,Scalar,Node>::diagonal(const Vector& A) const
     {
         std::array<std::vector<Scalar>,2> Diag;
 
         for (types::block_t b = 0; b<2; ++b)
         {
-            Diag.at(b).resize(dof_handler.n_cell_nodes(b,b) * dof_handler.n_domain_orbitals(b,b), 0.0);
+            Diag.at(b).resize(dof_handler.n_cell_nodes() * dof_handler.n_orbitals(b), 0.0);
 
             typename MultiVector::dual_view_type::t_dev_const 
-            View = A.at(b). template getLocalView<Kokkos::Serial>();
+            View = A.subView(dof_handler.column_range(b))-> template getLocalView<Kokkos::Serial>();
 
             std::array<types::loc_t, dim> lattice_indices_0;
             for (size_t i=0; i<dim; ++i)
                 lattice_indices_0[i] = 0;
             /* Add diagonal values on the current process */
-            types::loc_t lattice_index_0 = lattice(b).get_vertex_global_index(lattice_indices_0);
 
-            int origin_owner = dof_handler.point_owner(b, b, lattice_index_0);
+            int origin_owner = dof_handler.point_owner(b, lattice(b).index_origin);
 
             if (dof_handler.my_pid == origin_owner)
             {
-                types::loc_t start_zero = dof_handler.locally_owned_dofs(b)->
+                types::loc_t start_zero = dof_handler.locally_owned_dofs()->
                                                             getLocalElement( 
-                                                            dof_handler.get_dof_index(b, b, lattice_index_0, 0, 0) );
-                for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(b,b); ++cell_index)
-                    for (types::loc_t orbital = 0; orbital < dof_handler.n_domain_orbitals(b,b); ++orbital)
+                                                            dof_handler.get_dof_index(b, lattice(b).index_origin, 0, 0) );
+                size_t idx = 0;
+                for (types::loc_t cell_index = 0; cell_index < dof_handler.n_cell_nodes(); ++cell_index)
+                    for (size_t orbital = 0; orbital < dof_handler.n_orbitals(b); ++orbital)
                     {
-                        size_t idx = cell_index * dof_handler.n_domain_orbitals(b,b) + orbital;
                         Diag.at(b).at(idx) = View(start_zero + idx, orbital);
+                        ++idx;
                     }
             }
             Teuchos::broadcast<int, Scalar>(* mpi_communicator, origin_owner, Diag.at(b).size(), Diag.at(b).data());
@@ -458,20 +358,553 @@ namespace Bilayer {
         return Diag;
     }
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     Scalar
-    BaseAlgebra<dim,degree,Scalar>::trace(const std::array<MultiVector, 2> A)
+    BaseAlgebra<dim,degree,Scalar,Node>::trace(const Vector& A) const
     {
         std::array<std::vector<Scalar>,2> Diag = diagonal(A);
 
-        return std::accumulate(Diag.at(0).begin(), Diag.at(0).end(), static_cast<Scalar>(0.0))
+        return std::accumulate(Diag.at(0).begin(), Diag.at(0).end(), Teuchos::ScalarTraits<Scalar>::zero())
                                     * unit_cell(1).area / (unit_cell(0).area + unit_cell(1).area)
-                                    / static_cast<double>( dof_handler.n_domain_orbitals(0,0) * dof_handler.n_cell_nodes(0,0) )
-                        + std::accumulate(Diag.at(1).begin(), Diag.at(1).end(), static_cast<Scalar>(0.0))
+                                    / static_cast<double>( dof_handler.n_orbitals(0) * dof_handler.n_cell_nodes() )
+                        + std::accumulate(Diag.at(1).begin(), Diag.at(1).end(), Teuchos::ScalarTraits<Scalar>::zero())
                                     * unit_cell(0).area / (unit_cell(0).area + unit_cell(1).area)
-                                    / static_cast<double>( dof_handler.n_domain_orbitals(1,1) * dof_handler.n_cell_nodes(1,1) );
+                                    / static_cast<double>( dof_handler.n_orbitals(1) * dof_handler.n_cell_nodes() );
     }
 
+    template<int dim, int degree, typename Scalar, class Node>
+    Scalar
+    BaseAlgebra<dim,degree,Scalar,Node>::dot(const Vector& A, const Vector& B) const
+    {
+        size_t    
+        n1 = dof_handler.n_orbitals(0),
+        n2 = dof_handler.n_orbitals(1);
+
+        Teuchos::Array<Scalar> dots_tpetra( n1+n2 );
+        A.dot(B, dots_tpetra() );
+        Scalar 
+        s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
+        s2 = Teuchos::ScalarTraits<Scalar>::zero(),
+        a1 = static_cast<Scalar>(unit_cell(1).area 
+                                / (unit_cell(0).area + unit_cell(1).area)
+                                / dof_handler.n_cell_nodes() ),
+        a2 = static_cast<Scalar>(unit_cell(0).area 
+                                / (unit_cell(0).area + unit_cell(1).area)
+                                / dof_handler.n_cell_nodes() );
+
+
+        for (size_t o1=0; o1 < n1; ++o1)
+            s1 += dots_tpetra[o1];
+        for (size_t o2=0; o2 < n2; ++o2)
+            s2 += dots_tpetra[n1+o2];
+
+        return a1 * s1 + a2 * s2;
+    }
+
+
+
+    template<int dim, int degree, typename Scalar, class Node>
+    void
+    BaseAlgebra<dim,degree,Scalar,Node>::dot(
+            const MultiVector& A, 
+            const MultiVector& B, 
+            Teuchos::ArrayView<Scalar> dots) const
+    {
+        size_t    
+        n1 = dof_handler.n_orbitals(0),
+        n2 = dof_handler.n_orbitals(1);
+
+        assert( A.getNumVectors() % (n1 + n2) == 0);
+        assert( A.getNumVectors() / (n1 + n2) == static_cast<size_t>(dots.size()));
+        assert( B.getNumVectors() / (n1 + n2) == static_cast<size_t>(dots.size()));
+
+        Teuchos::Array<Scalar> dots_tpetra( n1+n2 );
+        A.dot(B, dots_tpetra() );
+        Scalar 
+        s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
+        s2 = Teuchos::ScalarTraits<Scalar>::zero(),
+        a1 = static_cast<Scalar>(unit_cell(1).area 
+                                / (unit_cell(0).area + unit_cell(1).area)
+                                / dof_handler.n_cell_nodes() ),
+        a2 = static_cast<Scalar>(unit_cell(0).area 
+                                / (unit_cell(0).area + unit_cell(1).area)
+                                / dof_handler.n_cell_nodes() );
+
+        for (size_t j=0; j < A.getNumVectors() / (n1 + n2); ++j)
+        {
+            for (size_t o1=0; o1 < n1; ++o1)
+                s1 += dots_tpetra[o1];
+            for (size_t o2=0; o2 < n2; ++o2)
+                s2 += dots_tpetra[n1+o2];
+
+            dots[j] = a1 * s1 + a2 * s2;
+        }
+    }
+
+
+    // template<int dim, int degree, typename Scalar, class Node>
+    // void
+    // BaseAlgebra<dim,degree,Scalar,Node>::hamiltonian_rproduct(const MultiVector A, MultiVector & B, const Teuchos::ETransp mode)
+    // {
+    //     /* Create appropriate block views into the data */
+    //     auto A_view = range_block_view_const(A);
+    //     auto B_view = range_block_view(B);
+
+    //     /* Apply the Hamiltonian action */
+    //     for (types::block_t b = 0; b < 2; ++b)
+    //         hamiltonian_action.at(b)->apply(A_view.at(b), B_view.at(b), mode);
+    // }
+
+    // template<int dim, int degree, typename Scalar, class Node>
+    // void
+    // BaseAlgebra<dim,degree,Scalar,Node>::adjoint(const MultiVector  A, MultiVector & tA, const Teuchos::ETransp mode, const bool conjugate)
+    // {
+    //     /* Check that the vectors have the right data distribution */
+    //     Assert( A.getMap()->isSameAs(* (dof_handler.locally_owned_dofs() )), dealii::ExcInternalError() );
+    //     Assert( tA.getMap()->isSameAs(* (dof_handler.locally_owned_dofs() )), dealii::ExcInternalError() );
+
+    //     /* Create appropriate four block views into the data */
+    //     auto A_blocks  = block_view_const(A);
+    //     auto tA_blocks = block_view(tA);
+
+    //     switch (mode)
+    //     {
+    //         case Teuchos::NO_TRANS:
+    //             for (types::block_t range_block = 0; range_block < 2; ++range_block)
+    //                 for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
+    //                 {
+    //                     /* First we apply our interpolant matrix */
+    //                     transpose_interpolant.at(range_block).at(domain_block)->apply (
+    //                                 A_blocks.at(range_block).at(domain_block), 
+    //                                 helper.at(range_block).at(domain_block), 
+    //                                 mode);
+
+    //                     /* Now we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
+    //                     typename MultiVector::dual_view_type::t_dev 
+    //                     tA_View = tA_blocks.at(domain_block).at(range_block).template getLocalView<Kokkos::Serial>();
+    //                     typename MultiVector::dual_view_type::t_dev_const 
+    //                     helperView_const = helper.at(range_block).at(domain_block).template getLocalView<Kokkos::Serial>();
+
+    //                     const types::loc_t
+    //                     n_range_orbitals = dof_handler.n_orbitals(range_block),
+    //                     n_domain_orbitals = dof_handler.n_orbitals(domain_block);
+    //                     if (conjugate)
+    //                         Kokkos::parallel_for (
+    //                                     dof_handler.n_cell_nodes() * dof_handler.n_locally_owned_points(range_block), 
+    //                                     KOKKOS_LAMBDA (const types::loc_t i) 
+    //                                     {
+    //                                         for (types::loc_t o1 = 0; o1 < n_domain_orbitals; ++o1)
+    //                                             for (types::loc_t o2 = 0; o2 < n_range_orbitals; ++o2)
+    //                                                 tA_View(o2 + n_range_orbitals * i, o1) 
+    //                                                         = numbers::conjugate<Scalar>( helperView_const(o1 + n_domain_orbitals * i, o2) );
+    //                                     });
+    //                     else
+    //                         Kokkos::parallel_for (
+    //                                     dof_handler.n_cell_nodes() * dof_handler.n_locally_owned_points(range_block), 
+    //                                     KOKKOS_LAMBDA (const types::loc_t i) 
+    //                                     {
+    //                                         for (types::loc_t o1 = 0; o1 < n_domain_orbitals; ++o1)
+    //                                             for (types::loc_t o2 = 0; o2 < n_range_orbitals; ++o2)
+    //                                                 tA_View(o2 + n_range_orbitals * i, o1) 
+    //                                                         = helperView_const(o1 + n_domain_orbitals * i, o2);
+    //                                     });
+    //                 }
+    //         break;
+
+    //         case Teuchos::TRANS:
+    //         case Teuchos::CONJ_TRANS:
+    //             for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
+    //                 for (types::block_t range_block = 0; range_block < 2; ++range_block)
+    //                 {
+    //                      /* First we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
+    //                     typename MultiVector::dual_view_type::t_dev_const 
+    //                     A_View_const = A_blocks.at(domain_block).at(range_block).template getLocalView<Kokkos::Serial>();
+    //                     typename MultiVector::dual_view_type::t_dev
+    //                     helperView = helper.at(range_block).at(domain_block).template getLocalView<Kokkos::Serial>();
+
+    //                     const types::loc_t
+    //                     n_range_orbitals = dof_handler.n_orbitals(range_block),
+    //                     n_domain_orbitals = dof_handler.n_orbitals(domain_block);
+    //                     if (conjugate)
+    //                         Kokkos::parallel_for (
+    //                                 dof_handler.n_cell_nodes() * dof_handler.n_locally_owned_points(range_block), 
+    //                                 KOKKOS_LAMBDA (const types::loc_t i) 
+    //                                 {
+    //                                     for (types::loc_t o2 = 0; o2 < n_range_orbitals; ++o2)
+    //                                         for (types::loc_t o1 = 0; o1 < n_domain_orbitals; ++o1)
+    //                                             helperView(o1 + n_domain_orbitals * i, o2) 
+    //                                                     = numbers::conjugate<Scalar>( A_View_const(o2 + n_range_orbitals * i, o1) );
+    //                                 });
+    //                     else
+    //                         Kokkos::parallel_for (
+    //                                 dof_handler.n_cell_nodes() * dof_handler.n_locally_owned_points(range_block), 
+    //                                 KOKKOS_LAMBDA (const types::loc_t i) 
+    //                                 {
+    //                                     for (types::loc_t o2 = 0; o2 < n_range_orbitals; ++o2)
+    //                                         for (types::loc_t o1 = 0; o1 < n_domain_orbitals; ++o1)
+    //                                             helperView(o1 + n_domain_orbitals * i, o2) 
+    //                                                     = A_View_const(o2 + n_range_orbitals * i, o1);
+    //                                 });
+
+    //                     /* Next we apply our interpolant matrix */
+    //                     transpose_interpolant.at(range_block).at(domain_block)->apply (
+    //                                 helper.at(range_block).at(domain_block), 
+    //                                 tA_blocks.at(range_block).at(domain_block), 
+    //                                 mode);
+    //                 }
+    //     }
+    // }
+
+    /* Const Views into the data in range block form */
+    template<int dim, int degree, typename Scalar, class Node>
+    std::array<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
+    BaseAlgebra<dim,degree,Scalar,Node>::range_block_view_const(const MultiVector& A)
+    {
+        return {{   * A.subView(dof_handler.column_range(0)), 
+                    * A.subView(dof_handler.column_range(1)) 
+                }};
+    }
+
+    /* Const Views into the data in domain block form */
+    template<int dim, int degree, typename Scalar, class Node>
+    std::array<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
+    BaseAlgebra<dim,degree,Scalar,Node>::domain_block_view_const(const MultiVector& A)
+    {
+        return {{   * A.offsetView(dof_handler.transpose_domain_map(0), 0),
+                    * A.offsetView(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
+                }};
+    }
+
+    /* Const Views into the data in fully decomposed block form */
+    template<int dim, int degree, typename Scalar, class Node>
+    std::array<std::array<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2>, 2>
+    BaseAlgebra<dim,degree,Scalar,Node>::block_view_const(const MultiVector& A)
+    {
+        return
+            {{
+                {{  * A.subView(dof_handler.column_range(0))->offsetView(dof_handler.transpose_domain_map(0), 0),
+                    * A.subView(dof_handler.column_range(0))->offsetView(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
+                }},
+                {{  * A.subView(dof_handler.column_range(1))->offsetView(dof_handler.transpose_domain_map(0), 0),
+                    * A.subView(dof_handler.column_range(1))->offsetView(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
+                }}
+            }};
+    }
+
+    /* Views into the data in range block form */
+    template<int dim, int degree, typename Scalar, class Node>
+    std::array<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
+    BaseAlgebra<dim,degree,Scalar,Node>::range_block_view(MultiVector& A)
+    {
+        return {{   * A.subViewNonConst(dof_handler.column_range(0)), 
+                    * A.subViewNonConst(dof_handler.column_range(1)) 
+                }};
+    }
+
+    /* Views into the data in domain block form */
+    template<int dim, int degree, typename Scalar, class Node>
+    std::array<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
+    BaseAlgebra<dim,degree,Scalar,Node>::domain_block_view(MultiVector& A)
+    {
+        return {{   * A.offsetViewNonConst(dof_handler.transpose_domain_map(0), 0),
+                    * A.offsetViewNonConst(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
+                }};
+    }
+
+    /* Views into the data in fully decomposed block form */
+    template<int dim, int degree, typename Scalar, class Node>
+    std::array<std::array<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2>, 2>
+    BaseAlgebra<dim,degree,Scalar,Node>::block_view(MultiVector& A)
+    {
+        return
+            {{
+                {{  * A.subViewNonConst(dof_handler.column_range(0))->offsetViewNonConst(dof_handler.transpose_domain_map(0), 0),
+                    * A.subViewNonConst(dof_handler.column_range(0))->offsetViewNonConst(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
+                }},
+                {{  * A.subViewNonConst(dof_handler.column_range(1))->offsetViewNonConst(dof_handler.transpose_domain_map(0), 0),
+                    * A.subViewNonConst(dof_handler.column_range(1))->offsetViewNonConst(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
+                }}
+            }};
+    }
+
+
+
+
+    /**
+     *  Implementation of some classes of operators using the BaseAlgebra data structures:   
+     *      Range block operators (like the right product by the Hamiltonian),
+     *      Adjoint-like operators (interpolation on the 4 blocks + permutation of orbitals),
+     *      Liouvillian operators (combination of the previous ones approximating a commutator).
+     */
+
+     template<int dim, int degree, typename Scalar, class Node>
+     BaseAlgebra<dim,degree,Scalar,Node>::RangeBlockOp::RangeBlockOp (
+            std::array<Teuchos::RCP<Matrix>, 2>& A, 
+            std::array<const size_t,2> n_orbitals):
+        A(A),
+        ColumnRange({Teuchos::Range1D(0, n_orbitals[0]-1), 
+                     Teuchos::Range1D(n_orbitals[0], n_orbitals[0] + n_orbitals[1]-1)}),
+        DomainMap(A.at(0)->getDomainMap()),
+        RangeMap(A.at(0)->getRangeMap())
+        {}
+
+     template<int dim, int degree, typename Scalar, class Node>
+     void
+     BaseAlgebra<dim,degree,Scalar,Node>::RangeBlockOp::apply (
+            const MultiVector& X,
+            MultiVector& Y, 
+            Teuchos::ETransp mode,
+            scalar_type alpha,
+            scalar_type beta) const
+        {
+            size_t N = ColumnRange[0].size() + ColumnRange[1].size();
+            assert(X.getNumVectors() % N == 0);
+
+            for (size_t j = 0; j < X.getNumVectors() / N ; ++j)
+            {
+                A.at(0)->apply(* X.subView(ColumnRange[0] + j*N), 
+                               * Y.subViewNonConst(ColumnRange[0] + j*N), mode, alpha, beta);
+                A.at(1)->apply(* X.subView(ColumnRange[1] + j*N), 
+                               * Y.subViewNonConst(ColumnRange[1] + j*N), mode, alpha, beta);
+            }
+        }
+
+     template<int dim, int degree, typename Scalar, class Node>
+     BaseAlgebra<dim,degree,Scalar,Node>::TransposeOp::TransposeOp ( 
+            std::array<std::array<Teuchos::RCP<Matrix>, 2>, 2>& A, 
+            std::array<size_t,2>                                n_orbitals,
+            std::array<double, 2>                               unit_cell_areas,
+            Teuchos::RCP<const typename Matrix::map_type>       domain_map, 
+            Teuchos::RCP<const typename Matrix::map_type>       range_map):
+        A(A),
+        nOrbitals(n_orbitals),
+        unitCellAreas(unit_cell_areas),
+        ColumnRange({Teuchos::Range1D(0, n_orbitals[0]-1), 
+                     Teuchos::Range1D(n_orbitals[0], n_orbitals[0] + n_orbitals[1]-1)}),
+        DomainMap(domain_map),
+        RangeMap(range_map)
+        {
+            /* We allocate the helper multivectors */
+            helper.at(0).at(0) = Tpetra::createMultiVector<scalar_type,local_ordinal_type, global_ordinal_type, node_type>
+                                    (A[0][0]->getRangeMap(), nOrbitals[0]); 
+            helper.at(0).at(1) = Tpetra::createMultiVector<scalar_type,local_ordinal_type, global_ordinal_type, node_type>
+                                    (A[0][1]->getRangeMap(), nOrbitals[0]); 
+            helper.at(1).at(0) = Tpetra::createMultiVector<scalar_type,local_ordinal_type, global_ordinal_type, node_type>
+                                    (A[1][0]->getRangeMap(), nOrbitals[1]);
+            helper.at(1).at(1) = Tpetra::createMultiVector<scalar_type,local_ordinal_type, global_ordinal_type, node_type>
+                                    (A[1][1]->getRangeMap(), nOrbitals[1]); 
+        }
+
+     template<int dim, int degree, typename Scalar, class Node>
+     std::array<std::array<Teuchos::RCP<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector>, 2>, 2>
+     BaseAlgebra<dim,degree,Scalar,Node>::TransposeOp::block_view_const(
+            const MultiVector& X,
+            const size_t j) const
+        {
+            size_t N = ColumnRange[0].size() + ColumnRange[1].size();
+
+            std::array<std::array<Teuchos::RCP<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector>, 2>, 2>
+            blocks =
+                {{
+                    {{  X.subView(ColumnRange[0] + j*N)->offsetView(A[0][0]->getDomainMap(), 0),
+                        X.subView(ColumnRange[0] + j*N)->offsetView(A[0][1]->getDomainMap(), A[0][0]->getDomainMap()->getNodeNumElements())   
+                    }},
+                    {{  X.subView(ColumnRange[1] + j*N)->offsetView(A[1][0]->getDomainMap(), 0),
+                        X.subView(ColumnRange[1] + j*N)->offsetView(A[1][1]->getDomainMap(), A[1][0]->getDomainMap()->getNodeNumElements())   
+                    }}
+                }};
+            return blocks;
+                
+        }
+
+     template<int dim, int degree, typename Scalar, class Node>
+     std::array<std::array<Teuchos::RCP<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector>, 2>, 2>
+     BaseAlgebra<dim,degree,Scalar,Node>::TransposeOp::block_view(
+            MultiVector& X,
+            const size_t j) const
+        {
+            size_t N = ColumnRange[0].size() + ColumnRange[1].size();
+            std::array<std::array<Teuchos::RCP<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector>, 2>, 2>
+            blocks =
+                {{
+                    {{  X.subViewNonConst(ColumnRange[0] + j*N)->offsetViewNonConst(A[0][0]->getDomainMap(), 0),
+                        X.subViewNonConst(ColumnRange[0] + j*N)->offsetViewNonConst(A[0][1]->getDomainMap(), A[0][0]->getDomainMap()->getNodeNumElements())   
+                    }},
+                    {{  X.subViewNonConst(ColumnRange[1] + j*N)->offsetViewNonConst(A[1][0]->getDomainMap(), 0),
+                        X.subViewNonConst(ColumnRange[1] + j*N)->offsetViewNonConst(A[1][1]->getDomainMap(), A[1][0]->getDomainMap()->getNodeNumElements())   
+                    }}
+                }};
+            return blocks;
+        }
+
+
+
+
+     template<int dim, int degree, typename Scalar, class Node>
+     void
+     BaseAlgebra<dim,degree,Scalar,Node>::TransposeOp::apply (
+            const MultiVector& X,
+            MultiVector& Y, 
+            Teuchos::ETransp mode,
+            scalar_type alpha,
+            scalar_type beta) const
+     {
+        /* Create appropriate four block views into the data */
+        size_t N = ColumnRange[0].size() + ColumnRange[1].size();
+        assert(X.getNumVectors() % N == 0);
+
+        for (size_t j = 0; j < X.getNumVectors() / N ; ++j)
+        {
+            auto X_blocks  = block_view_const(X,j);
+            auto Y_blocks  = block_view(Y,j);
+
+            switch (mode)
+            {
+                case Teuchos::NO_TRANS:
+                    for (types::block_t range_block = 0; range_block < 2; ++range_block)
+                        for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
+                        {
+                            /* First we apply our interpolant matrix */
+                            A.at(range_block).at(domain_block)->apply (
+                                        * X_blocks.at(range_block).at(domain_block), 
+                                        * helper.at(range_block).at(domain_block), 
+                                        mode, alpha);
+
+                            /* Now we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
+                            typename MultiVector::dual_view_type::t_dev 
+                            Y_View = Y_blocks.at(domain_block).at(range_block)->template getLocalView<Kokkos::Serial>();
+                            typename MultiVector::dual_view_type::t_dev_const 
+                            helperView_const = helper.at(range_block).at(domain_block)->template getLocalView<Kokkos::Serial>();
+
+                            if (beta == Teuchos::ScalarTraits<scalar_type>::zero ())
+                                Kokkos::parallel_for (
+                                            helper.at(range_block).at(domain_block)->getLocalLength() / nOrbitals[domain_block], 
+                                            KOKKOS_LAMBDA (const types::loc_t i) 
+                                            {
+                                                for (size_t o1 = 0; o1 < nOrbitals[domain_block]; ++o1)
+                                                    for (size_t o2 = 0; o2 < nOrbitals[range_block]; ++o2)
+                                                        Y_View(o2 + nOrbitals[range_block] * i, o1) 
+                                                                = helperView_const(o1 + nOrbitals[domain_block] * i, o2);
+                                            });
+                            else
+                                Kokkos::parallel_for (
+                                            helper.at(range_block).at(domain_block)->getLocalLength() / nOrbitals[domain_block], 
+                                            KOKKOS_LAMBDA (const types::loc_t i) 
+                                            {
+                                                for (size_t o1 = 0; o1 < nOrbitals[domain_block]; ++o1)
+                                                    for (size_t o2 = 0; o2 < nOrbitals[range_block]; ++o2)
+                                                        Y_View(o2 + nOrbitals[range_block] * i, o1) 
+                                                                = helperView_const(o1 + nOrbitals[domain_block] * i, o2)
+                                                                 + beta * Y_View(o2 + nOrbitals[range_block] * i, o1);
+                                            });
+                        }
+                break;
+
+                case Teuchos::TRANS:
+                case Teuchos::CONJ_TRANS:
+                    for (types::block_t domain_block = 0; domain_block < 2; ++domain_block)
+                        for (types::block_t range_block = 0; range_block < 2; ++range_block)
+                        {
+                             /* First we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
+                            typename MultiVector::dual_view_type::t_dev_const 
+                            X_View_const = X_blocks.at(domain_block).at(range_block)->template getLocalView<Kokkos::Serial>();
+                            typename MultiVector::dual_view_type::t_dev
+                            helperView = helper.at(range_block).at(domain_block)->template getLocalView<Kokkos::Serial>();
+
+                            /* Here we have a rescaling due to the weighted scalar product behind the transpose */
+                            Scalar r = unitCellAreas[domain_block] / unitCellAreas[range_block];
+
+                            Kokkos::parallel_for (
+                                helper.at(range_block).at(domain_block)->getLocalLength() / nOrbitals[domain_block], 
+                                KOKKOS_LAMBDA (const types::loc_t i) 
+                                {
+                                    for (size_t o2 = 0; o2 < nOrbitals[range_block]; ++o2)
+                                        for (size_t o1 = 0; o1 < nOrbitals[domain_block]; ++o1)
+                                            helperView(o1 + nOrbitals[domain_block] * i, o2) 
+                                                    = r * X_View_const(o2 + nOrbitals[range_block] * i, o1);
+                                });
+
+                            /* Next we apply our interpolant matrix */
+                            A.at(range_block).at(domain_block)->apply (
+                                        * helper.at(range_block).at(domain_block), 
+                                        * Y_blocks.at(range_block).at(domain_block), 
+                                        mode, alpha, beta);
+                        }
+                }
+            }
+     }
+
+     template<int dim, int degree, typename Scalar, class Node>
+     BaseAlgebra<dim,degree,Scalar,Node>::LiouvillianOp::LiouvillianOp (   
+            Teuchos::RCP<const TransposeOp>& A, Teuchos::RCP<const RangeBlockOp>& H,
+            const scalar_type z, 
+            const scalar_type s):
+        A(A), H(H), s(s), z(z), DomainMap(A->getDomainMap()), RangeMap(A->getRangeMap())
+        {
+            T1 = Tpetra::createMultiVector<scalar_type,local_ordinal_type, global_ordinal_type, node_type>(DomainMap, 0);
+            T2 = Tpetra::createMultiVector<scalar_type,local_ordinal_type, global_ordinal_type, node_type>(DomainMap, 0);
+        }
+
+     template<int dim, int degree, typename Scalar, class Node>
+     void
+     BaseAlgebra<dim,degree,Scalar,Node>::LiouvillianOp::apply (
+            const MultiVector& X,
+            MultiVector& Y, 
+            Teuchos::ETransp mode,
+            scalar_type alpha,
+            scalar_type beta) const
+        {
+            if (T1.is_null() || T1->getMap() != Y.getMap() || T1->getNumVectors() != Y.getNumVectors())
+                * T1 = MultiVector(Y.getMap(), Y.getNumVectors(), false);
+            if (T2.is_null() || T2->getMap() != Y.getMap() || T2->getNumVectors() != Y.getNumVectors())
+                * T2 = MultiVector(Y.getMap(), Y.getNumVectors(), false);
+            
+            if (mode == Teuchos::NO_TRANS)
+            {
+                A->apply(X, *T1, Teuchos::NO_TRANS);
+                H->apply(*T1, *T2, Teuchos::TRANS);
+                A->apply(*T2, *T1, Teuchos::TRANS);
+
+                H->apply(X, *T1, Teuchos::NO_TRANS, 
+                                        -Teuchos::ScalarTraits<scalar_type>::one (), 
+                                        Teuchos::ScalarTraits<scalar_type>::one ());
+
+
+                Y.update(alpha*s, *T1, alpha*z, X, beta);
+
+            }
+
+            if (mode == Teuchos::TRANS)
+            {
+                A->apply(X, *T1, Teuchos::NO_TRANS);
+                H->apply(*T1, *T2, Teuchos::NO_TRANS);
+                A->apply(*T2, *T1, Teuchos::TRANS);
+
+                H->apply(X, *T1, Teuchos::TRANS, 
+                                        -Teuchos::ScalarTraits<scalar_type>::one (), 
+                                        Teuchos::ScalarTraits<scalar_type>::one ());
+
+
+                Y.update(alpha*s, *T1, alpha*z, X, beta);
+            }
+
+
+            if (mode == Teuchos::CONJ_TRANS)
+            {
+                A->apply(X, *T1, Teuchos::NO_TRANS);
+                H->apply(*T1, *T2, Teuchos::TRANS);
+                A->apply(*T2, *T1, Teuchos::TRANS);
+
+                H->apply(X, *T1, Teuchos::NO_TRANS, 
+                                        -Teuchos::ScalarTraits<scalar_type>::one (), 
+                                        Teuchos::ScalarTraits<scalar_type>::one ());
+
+
+                Y.update(alpha*Teuchos::ScalarTraits<scalar_type>::conjugate(s), *T1, 
+                         alpha*Teuchos::ScalarTraits<scalar_type>::conjugate(z), X, 
+                         beta);
+            }
+        }
 
     /**
      * Explicit instantiations

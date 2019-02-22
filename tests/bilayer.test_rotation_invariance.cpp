@@ -21,19 +21,16 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double>
         typedef Bilayer::BaseAlgebra<2,degree,double>  LA;
 
         TestAlgebra(Multilayer<2, 2> bilayer);
-        std::array<MultiVector, 2> I, H;
+        MultiVector I, H;
 };
 
 TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA(bilayer)
 {
-    LA::base_setup();
+    I  = LA::create_multivector();
+    H  = Tpetra::createCopy(I);
 
-    I  = {{ MultiVector( dof_handler.locally_owned_dofs(0), dof_handler.n_range_orbitals(0,0) ), 
-            MultiVector( dof_handler.locally_owned_dofs(1), dof_handler.n_range_orbitals(1,1) ) }};
-    H  = {{ Tpetra::createCopy(I[0]),  Tpetra::createCopy(I[1]) }};
-
-    LA::create_identity(I);
+    LA::set_to_identity(I);
 
     LA::assemble_hamiltonian_action();
     
@@ -76,17 +73,14 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
 
     TestAlgebra test_algebra2 (bilayer);
     
-    Teuchos::ArrayRCP<const double> view = test_algebra.H .at(0).getData(0);
-    Teuchos::ArrayRCP<const double> view2 = test_algebra2.H .at(0).getData(0);
+    // Teuchos::ArrayRCP<const double> view = test_algebra.H.getData(0);
+    // Teuchos::ArrayRCP<const double> view2 = test_algebra2.H.getData(0);
 
-    for (int b = 0; b<2; ++b)
-    {
-        test_algebra.H .at(b).update( -1., test_algebra2.H .at(b), 1.);
-        Teuchos::Array<double> norms (test_algebra.H.at(b) .getNumVectors());
-        test_algebra.H .at(b).normInf(norms);
-        AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
+    test_algebra.H .update( -1., test_algebra2.H, 1.);
+    Teuchos::Array<double> norms (test_algebra.H .getNumVectors());
+    test_algebra.H .normInf(norms);
+    AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
                         dealii::ExcInternalError() );
-    }
     std::cout << "Rotation invariance test OK" << std::endl;
  }
 

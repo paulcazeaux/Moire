@@ -19,12 +19,19 @@ add_compile_options(-std=c++1z -Wno-unused-variable -Wno-unused-parameter)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
 
 
-find_package(FFTW)
 find_package(MPI)
-find_package(Trilinos 12.10.1 REQUIRED
-		HINTS ${/usr/local/})
+find_package(Kokkos REQUIRED
+        PATHS /usr/local /pool)
+find_package(Teuchos REQUIRED
+        PATHS /usr/local /pool)
+find_package(Tpetra REQUIRED
+		PATHS /usr/local /pool)
+find_package(Thyra REQUIRED
+        PATHS /usr/local /pool)
+find_package(Belos REQUIRED
+        PATHS /usr/local /pool)
 find_package(deal.II 8.5.0 REQUIRED
-		HINTS ${/usr/local/})
+		PATHS /usr/local /pool)
 
 # Fix dealii.II flags for Clang to avoid warnings
 IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -43,8 +50,8 @@ ENDIF()
 ######################################
 ### include required modules & utilities
 #####################################################################################
-include_directories(${FFTW_INCLUDES} ${MPI_INCLUDES} ${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
-link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
+include_directories(${MPI_INCLUDES} ${Tpetra_INCLUDE_DIRS} ${Tpetra_TPL_INCLUDE_DIRS} ${Belos_INCLUDE_DIRS} ${Belos_TPL_INCLUDE_DIRS} ${Teuchos_INCLUDE_DIRS} ${Teuchos_TPL_INCLUDE_DIRS} ${Kokkos_INCLUDE_DIRS} ${Kokkos_TPL_INCLUDE_DIRS})
+link_directories(${Tpetra_LIBRARY_DIRS} ${Tpetra_TPL_LIBRARY_DIRS} ${Thyra_LIBRARY_DIRS} ${Thyra_TPL_LIBRARY_DIRS} ${Belos_LIBRARY_DIRS} ${Belos_TPL_LIBRARY_DIRS} ${Teuchos_LIBRARY_DIRS} ${Teuchos_TPL_LIBRARY_DIRS} ${Kokkos_LIBRARY_DIRS} ${Kokkos_TPL_LIBRARY_DIRS})
 include(CMakeBackwardCompatibilityCXX)
 include(CheckLibraryExists)
 

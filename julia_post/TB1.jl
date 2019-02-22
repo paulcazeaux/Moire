@@ -10,9 +10,9 @@ function DoS(a, b, mu)
     nratios = size(mu,2)
     M = 4*N
 
-    g = ((N-(0:N-1)).*cos(pi*(0:N-1)/N) + sin(pi*(0:N-1)/N)*cot(pi/N))/N
+    g = ((N-(0:N-1)).*cos.(pi*(0:N-1)/N) + sin.(pi*(0:N-1)/N)*cot(pi/N))/N
     g = sqrt(M) * [g[1]/sqrt(2); g[2:N]]
-    Y = cos(pi/M*(0.5:M))
+    Y = cos.(pi/M*(0.5:M))
     Y = repmat(Y, 1, nratios)
     Z = zeros(Float64, M, nratios)
 
@@ -21,7 +21,7 @@ function DoS(a, b, mu)
       Z[:,p] = idct!(Z[:,p])
     end
 
-    Z = 4*flipdim(Z./(pi*sqrt(1-Y.^2)), 1)
+    Z = 4*flipdim(Z./(pi*sqrt.(1-Y.^2)), 1)
     Y = flipdim(a*Y+b, 1)
 
     return Y, Z
@@ -82,7 +82,7 @@ function Image(grid, values, npx, upscaling, xrange, yrange, cscale, crange, xLa
 
   
   xtic = [1/9 1/8 1/7 1/6 1/5 1/4 1/3 2/5 1/2 3/5 2/3 4/5 1 5/4 3/2 5/3 2 5/2 3 4 5 6 7 8 9]'
-  xtic = sqrt(xtic)./(1+sqrt(xtic))
+  xtic = sqrt.(xtic)./(1+sqrt.(xtic))
   xticstr = (L"\frac{1}{9}", L"\frac{1}{8}", L"\frac{1}{7}", 
       L"\frac{1}{6}", L"\frac{1}{5}", L"\frac{1}{4}", L"\frac{1}{3}",
       L"\frac{2}{5}",  L"\frac{1}{2}", L"\frac{3}{5}", L"\frac{2}{3}", L"\frac{4}{5}", L"1",

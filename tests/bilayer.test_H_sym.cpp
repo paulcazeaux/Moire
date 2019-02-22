@@ -21,29 +21,21 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double>
         typedef Bilayer::BaseAlgebra<2,degree,double>  LA;
 
         TestAlgebra(Multilayer<2, 2> bilayer);
-        std::array<MultiVector, 2> I, A, B;
+        MultiVector I, A, B;
 };
 
 TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA(bilayer)
 {
-    LA::base_setup();
+    I  = LA::create_multivector();
+    A  = Tpetra::createCopy(I);
+    B  = Tpetra::createCopy(I);
 
-    I  = {{ MultiVector( dof_handler.locally_owned_dofs(0), dof_handler.n_range_orbitals(0,0) ), 
-            MultiVector( dof_handler.locally_owned_dofs(1), dof_handler.n_range_orbitals(1,1) ) }};
-    A  = {{ Tpetra::createCopy(I[0]),  Tpetra::createCopy(I[1]) }};
-    B  = {{ Tpetra::createCopy(I[0]),  Tpetra::createCopy(I[1]) }};
-
-    I.at(0).randomize();
-    I.at(1).randomize();
+    I.randomize();
 
     LA::assemble_hamiltonian_action();
-    
-    for (types::block_t block = 0; block < 2; ++block)
-    {
-        hamiltonian_action.at(block)->apply(I.at(block), A.at(block), Teuchos::NO_TRANS);
-        hamiltonian_action.at(block)->apply(I.at(block), B.at(block), Teuchos::CONJ_TRANS);
-    }
+    hamiltonian_rproduct(I, A, Teuchos::NO_TRANS);
+    hamiltonian_rproduct(I, B, Teuchos::CONJ_TRANS);
 }
 
  void do_test(Materials::Mat mat)
@@ -77,15 +69,11 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
 
     TestAlgebra test_algebra (bilayer);
 
-    
-    for (int b = 0; b<2; ++b)
-    {
-        test_algebra.A .at(b).update( -1., test_algebra.B .at(b), 1.);
-        Teuchos::Array<double> norms (test_algebra.A.at(b) .getNumVectors());
-        test_algebra.A .at(b).normInf(norms);
-        AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
+    test_algebra.A .update( -1., test_algebra.B , 1.);
+    Teuchos::Array<double> norms (test_algebra.A .getNumVectors());
+    test_algebra.A .normInf(norms);
+    AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
                         dealii::ExcInternalError() );
-    }
 
     std::cout << "Symmetry test OK" << std::endl;
  }

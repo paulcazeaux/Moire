@@ -81,10 +81,10 @@ namespace Bilayer {
             {
                 Scalar m = std::accumulate(diag_moments.at(0).begin(), diag_moments.at(0).end(), static_cast<Scalar>(0.0))
                                         * this->unit_cell(1).area / (this->unit_cell(0).area + this->unit_cell(1).area)
-                                        / static_cast<double>( this->dof_handler.n_domain_orbitals(0,0) * this->dof_handler.n_cell_nodes(0,0) )
+                                        / static_cast<double>( this->dof_handler.n_orbitals(0) * this->dof_handler.n_cell_nodes() )
                             + std::accumulate(diag_moments.at(1).begin(), diag_moments.at(1).end(), static_cast<Scalar>(0.0))
                                         * this->unit_cell(0).area / (this->unit_cell(0).area + this->unit_cell(1).area)
-                                        / static_cast<double>( this->dof_handler.n_domain_orbitals(1,1) * this->dof_handler.n_cell_nodes(1,1) );
+                                        / static_cast<double>( this->dof_handler.n_orbitals(1) * this->dof_handler.n_cell_nodes() );
                 output_file.write((char*) & m, sizeof(Scalar));
             }
         }
@@ -108,10 +108,10 @@ namespace Bilayer {
         {
             Scalar T = std::accumulate(diag_moments.at(0).begin(), diag_moments.at(0).end(), static_cast<Scalar>(0.0))
                                     * this->unit_cell(1).area / (this->unit_cell(0).area + this->unit_cell(1).area)
-                                    / static_cast<double>( this->dof_handler.n_domain_orbitals(0,0) * this->dof_handler.n_cell_nodes(0,0) )
+                                    / static_cast<double>( this->dof_handler.n_orbitals(0) * this->dof_handler.n_cell_nodes() )
                         + std::accumulate(diag_moments.at(1).begin(), diag_moments.at(1).end(), static_cast<Scalar>(0.0))
                                     * this->unit_cell(0).area / (this->unit_cell(0).area + this->unit_cell(1).area)
-                                    / static_cast<double>( this->dof_handler.n_domain_orbitals(1,1) * this->dof_handler.n_cell_nodes(1,1) );
+                                    / static_cast<double>( this->dof_handler.n_orbitals(1) * this->dof_handler.n_cell_nodes() );
             DoS.push_back(T);
         }
         return DoS;
@@ -125,10 +125,9 @@ namespace Bilayer {
         types::MemUsage memory = this->dof_handler.memory_consumption();
         memory.Static += sizeof(this);
         memory.Static += sizeof(T) + sizeof(Tp) + sizeof(Tn);
-        memory.Static += sizeof( this->hamiltonian_action ) + sizeof( this->adjoint_interpolant );
+        memory.Static += sizeof( this->hamiltonian_action ) + sizeof( this->transpose_interpolant );
 
-        memory.Vectors += 3 * sizeof(Scalar) * ( T.at(0).getNumVectors() * T.at(0).getGlobalLength()
-                                               + T.at(1).getNumVectors() * T.at(1).getGlobalLength() );
+        memory.Vectors += 3 * sizeof(Scalar) * ( T.getNumVectors() * T.getGlobalLength() );
         memory.Matrices += (sizeof(Scalar) + sizeof(typename Matrix::global_ordinal_type) ) 
                             * ( this->hamiltonian_action.at(0)->getNodeNumEntries() + this->hamiltonian_action.at(1)->getNodeNumEntries() );
 
@@ -143,12 +142,10 @@ namespace Bilayer {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Setup<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
             );
-        LA::base_setup();
         
-        Tp = {{ MultiVector( this->dof_handler.locally_owned_dofs(0), this->dof_handler.n_range_orbitals(0,0) ), 
-                MultiVector( this->dof_handler.locally_owned_dofs(1), this->dof_handler.n_range_orbitals(1,1) ) }};
-        T  = {{ Tpetra::createCopy(Tp[0]),  Tpetra::createCopy(Tp[1]) }};
-        Tn = {{ Tpetra::createCopy(Tp[0]),  Tpetra::createCopy(Tp[1]) }};
+        Tp = LA::create_vector();
+        T  = Tpetra::createCopy(Tp);
+        Tn = Tpetra::createCopy(Tp);
     }
 
 
@@ -174,12 +171,12 @@ namespace Bilayer {
 
         /* Initialization of the vector to the identity */
 
-        LA::create_identity(Tp);
-        LA::hamiltonian_rproduct(Tp, T);
+        LA::set_to_identity(Tp);
+        LA::HamiltonianAction->apply(Tp, T);
         Scalar 
         alpha = this->dof_handler.energy_shift / this->dof_handler.energy_rescale,
         beta = 1. / this->dof_handler.energy_rescale;
-        LA::linear_combination(alpha, Tp, beta, T);
+        T.update(alpha, Tp, beta); // T := alpha * Tp + beta * T
 
         std::array<std::vector<Scalar>,2> 
         m0 = LA::diagonal(Tp), 
@@ -193,8 +190,8 @@ namespace Bilayer {
 
         for (int i=2; i <= this->dof_handler.poly_degree; ++i)
         {
-            LA::hamiltonian_rproduct(T, Tn);
-            LA::linear_combination(-1, Tp, 2.*alpha, T, 2.*beta, Tn);
+            LA::HamiltonianAction->apply(T, Tn);
+            Tn.update(-1, Tp, 2.*alpha, T, 2.*beta); // Tn := 2*alpha*T - Tp + 2*beta*Tn
 
             std::swap(Tn, Tp);
             std::swap(T, Tp);

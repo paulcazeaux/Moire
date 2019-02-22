@@ -107,7 +107,7 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const types::l
         boundary_to_interior_map_[j] = std::make_tuple(grid_to_index_map_.find(indices), grid_offset);
     }
 
-    /* Cache the number of elements appearing in a line as it is used by the find_element_index function */
+    /* Cache the number of elements appearing in a line as it is used by the interpolate function */
     line_element_count_ = interior_line_count / degree;
 
     /* Build the list of elements */
@@ -169,36 +169,31 @@ UnitCell<dim,degree>::UnitCell(const dealii::Tensor<2,dim> basis, const types::l
 }
 
 template<int dim,int degree>
-types::loc_t
-UnitCell<dim,degree>::find_element(const dealii::Tensor<1,dim>& X) const
+std::pair<types::loc_t, std::vector<double> >
+UnitCell<dim,degree>::interpolate(const dealii::Point<dim>& X) const
 {
+    types::loc_t element_index;
+    std::vector<double> interp_weights (Element<dim,degree>::dofs_per_cell);
+
+    /* First, find the element index */
     dealii::Point<dim> Xg (inverse_basis * X);
+
     switch (dim) {
-        case 1: 
+        case 1:
         {
-            Xg(0) += .5;
-            return static_cast<types::loc_t>(    Xg(0) > 0 ? 
-                                                (Xg(0) < 1 ? 
-                                                    std::floor(line_element_count_ * Xg(0)) 
-                                                    : line_element_count_ - 1) 
-                                                    : 0 );
+            Xg(0) -= std::floor(Xg(0) + .5);
+            element_index = static_cast<types::loc_t>( std::floor(line_element_count_ * (Xg(0)+0.5)) );
         }
         case 2:
         {
-            Xg(0) += .5;
-            Xg(1) += .5;
-            return static_cast<types::loc_t>(   (Xg(0) > 0 ? 
-                                                (Xg(0) < 1 ? 
-                                                    std::floor(line_element_count_ * Xg(0)) 
-                                                    : line_element_count_ - 1) 
-                                                    : 0 )
-                        + line_element_count_ * (Xg(1) > 0 ? 
-                                                (Xg(1) < 1 ? 
-                                                    std::floor(line_element_count_ * Xg(1)) 
-                                                    : line_element_count_ - 1) 
-                                                    : 0 ));            
+            Xg(0) -= std::floor(Xg(0) + .5);
+            Xg(1) -= std::floor(Xg(1) + .5);
+            element_index = static_cast<types::loc_t>(  std::floor(line_element_count_ * (Xg(0)+0.5))
+                                + line_element_count_ * std::floor(line_element_count_ * (Xg(1)+0.5)) );
         }
     }
+    subcell_list[element_index].get_interpolation_weights(basis * Xg, interp_weights);
+    return std::make_pair(element_index, interp_weights);
 }
 
 /* Basic getters and setters */
@@ -230,7 +225,7 @@ UnitCell<dim,degree>::is_node_interior(const types::loc_t& index) const
 template<int dim, int degree>
 std::tuple<types::loc_t, std::array<types::loc_t, dim>>
 UnitCell<dim,degree>::map_boundary_point_interior(const types::loc_t& index) const
-{   return boundary_to_interior_map_[index]; }
+{   return boundary_to_interior_map_[index - n_nodes]; }
 
 template<int dim,int degree>
 double  
@@ -241,6 +236,16 @@ UnitCell<dim,degree>::compute_bounding_radius(const dealii::Tensor<2,dim>& basis
         case 2: return .5 * std::sqrt(basis.norm_square() + 2. * std::abs(  basis[0][0] * basis[0][1] + basis[1][0] * basis[1][1]) );
         default: return 0; // Should never happen (dimension is 1 or 2)
     }
+}
+
+template<int dim,int degree>
+types::loc_t
+UnitCell<dim,degree>::compute_n_nodes(const types::loc_t refinement_level)
+{
+    types::loc_t interior_line_count = 2 * degree;
+    for (types::loc_t i=0; i<refinement_level; ++i) 
+        interior_line_count *= 2;
+    return dealii::Utilities::fixed_power<dim, types::loc_t>(interior_line_count);
 }
 
 

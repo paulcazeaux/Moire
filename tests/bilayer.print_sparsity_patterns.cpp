@@ -46,7 +46,6 @@ void print_sp(Teuchos::RCP< const Bilayer::BaseAlgebra<2,degree,double>::Matrix:
 TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA(bilayer)
 {
-    LA::base_setup();
     LA::assemble_hamiltonian_action();
     LA::assemble_adjoint_interpolant();
     
@@ -76,8 +75,8 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
 
     output_file.open("lattices." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
     for (int b = 0; b<2; ++b)
-     for (types::loc_t j=0; j < dof_handler.n_locally_owned_points(b,b); ++j)
-      output_file << lattice(b).get_vertex_position(dof_handler.locally_owned_point(b,b,j).lattice_index) << " " << b << std::endl;
+     for (types::loc_t j=0; j < dof_handler.n_locally_owned_points(b); ++j)
+      output_file << lattice(b).get_vertex_position(dof_handler.locally_owned_point(b,j).lattice_index) << " " << b << std::endl;
     output_file.close();
 
 }
@@ -92,7 +91,7 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
             1,   
             1, 0,
             0, 0,
-            40., 2);
+            10., 2);
 
     double height;
     switch (mat)

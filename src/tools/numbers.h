@@ -117,7 +117,7 @@ namespace numbers
 
     template<typename Scalar>
     Scalar
-    imag(const Scalar x) {return 0.;}
+    imag(const Scalar) {return 0.;}
     
     template<class T>
     T

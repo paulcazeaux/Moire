@@ -42,7 +42,7 @@ namespace StrainedGraphene {
         {Graphene::Atom::B, {{0.5 * alpha, 0.28867513459 * alpha, 0}} } };
 
     /* Useful constants */
-    const int               n_orbitals      = 2;
+    const size_t            n_orbitals      = 2;
     const double            intra_cutoff_radius = 5.7;
     const double            inter_cutoff_radius = 8.;
 

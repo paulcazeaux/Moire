@@ -22,8 +22,8 @@ namespace Graphene {
     /**
      * Syntactic sugar to identify the orbital characters we are working with 
      */
-    enum class Atom : int { A, B};
-    enum class Orbital : int {A_pz = 0, B_pz = 1};
+    enum class Atom : size_t { A, B};
+    enum class Orbital : size_t {A_pz = 0, B_pz = 1};
 
 } /* End namespace Graphene */
 
@@ -87,7 +87,7 @@ namespace Graphene {
     /**
      * Useful constants
      */
-    const int               n_orbitals = 2;
+    const size_t            n_orbitals = 2;
     const double            intra_cutoff_radius = 4 * numbers::SQRT3_3 * a + 1e-5;
     const double            inter_cutoff_radius = 8.;
 
@@ -101,17 +101,17 @@ namespace Graphene {
  */
     inline 
     Orbital 
-    orbital(const int idx)
+    orbital(const size_t idx)
     {
-        assert(idx >= 0 && idx < n_orbitals);
+        assert(idx < n_orbitals);
         return static_cast<Orbital>(idx);
     }
 
     inline 
-    int 
+    size_t 
     index(const Orbital O)
     {   
-        return static_cast<int>(O); 
+        return static_cast<size_t>(O); 
     }
 
     inline 

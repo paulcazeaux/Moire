@@ -40,7 +40,7 @@ struct LayerData {
         LayerData(const LayerData&);
 
         Materials::Mat              material;
-        types::loc_t                n_orbitals;
+        size_t                      n_orbitals;
         double                      height;
 
         dealii::Tensor<2,dim>       lattice_basis;

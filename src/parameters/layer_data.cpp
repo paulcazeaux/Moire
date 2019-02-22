@@ -27,7 +27,7 @@ LayerData<dim>::LayerData(      Materials::Mat material,
             lattice_basis[i][j] = lattice[j][i];
     lattice_basis       = Transformation<dim>::matrix(dilation, angle) * lattice_basis;
 
-    for (types::loc_t i=0; i<n_orbitals; ++i)
+    for (size_t i=0; i<n_orbitals; ++i)
         orbital_height.push_back(height + Materials::orbital_height(material, i));
 }
 
