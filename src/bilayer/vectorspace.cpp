@@ -27,6 +27,7 @@ namespace Bilayer {
         const Teuchos::RCP<const BaseAlgebra<dim,degree,Scalar,Node> >& baseAlgebra
     )
     {
+        baseAlgebra_ = baseAlgebra;
         size_t N = baseAlgebra_->getNumOrbitals();
         baseAlgebra_ = baseAlgebra;
         orbVecMap_ = baseAlgebra_->getMap();
@@ -70,7 +71,6 @@ namespace Bilayer {
     {
         return createMultiVector<dim,degree,Scalar,Node>(
             weakSelfPtr_.create_strong().getConst(),
-            createDomainVectorSpace(numMembers), 
             Teuchos::rcp(new 
                 Tpetra::MultiVector<Scalar,types::loc_t,types::glob_t,Node>
                     (vecMap_, numMembers)));

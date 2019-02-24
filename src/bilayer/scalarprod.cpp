@@ -22,8 +22,8 @@ namespace Bilayer {
     ) const
     {
         typedef Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> TMV;
-        Teuchos::RCP<const TMV> tX = this->getConstTpetraMultiVector(Teuchos::rcpFromRef(X));
-        Teuchos::RCP<const TMV> tY = this->getConstTpetraMultiVector(Teuchos::rcpFromRef(Y));
+        Teuchos::RCP<const TMV> tX = this->getConstThyraMultiVector(Teuchos::rcpFromRef(X));
+        Teuchos::RCP<const TMV> tY = this->getConstThyraMultiVector(Teuchos::rcpFromRef(Y));
 
         if (Teuchos::nonnull(tX) && Teuchos::nonnull(tY)) 
             baseAlgebra->dot(* tX->getConstTpetraMultiVector(), * tY->getConstTpetraMultiVector(), scalarProds_out );
@@ -35,7 +35,7 @@ namespace Bilayer {
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<const Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
     EuclideanScalarProd<dim,degree,Scalar,Node>::
-    getConstTpetraMultiVector(const Teuchos::RCP<const Thyra::MultiVectorBase<Scalar> >& mv) const
+    getConstThyraMultiVector(const Teuchos::RCP<const Thyra::MultiVectorBase<Scalar> >& mv) const
     {
         using Teuchos::rcp_dynamic_cast;
         typedef MultiVector<dim,degree,Scalar,Node> MVec;
@@ -43,11 +43,11 @@ namespace Bilayer {
 
         Teuchos::RCP<const MVec> mvec = rcp_dynamic_cast<const MVec>(mv);
         if (Teuchos::nonnull(mvec)) 
-            return mvec->getConstTpetraOrbMultiVector();
+            return mvec->getConstThyraOrbMultiVector();
 
         Teuchos::RCP<const Vec> vec = rcp_dynamic_cast<const Vec>(mv);
         if (Teuchos::nonnull(vec)) 
-            return vec->getConstTpetraOrbVector();
+            return vec->getConstThyraOrbVector();
 
         return Teuchos::null;
     }

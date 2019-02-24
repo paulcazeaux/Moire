@@ -20,7 +20,7 @@
 #include <complex>
 #include "RTOpPack_Types.hpp"
 
-#include <Thyra_EuclideanScalarProd.hpp>
+#include <Thyra_TpetraThyraWrappers.hpp>
 
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
@@ -76,7 +76,7 @@ namespace Bilayer {
         //////////////////////////
         // Private member function
         Teuchos::RCP<const Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
-        getConstTpetraMultiVector(const Teuchos::RCP<const Thyra::MultiVectorBase<Scalar> >& mv) const;
+        getConstThyraMultiVector(const Teuchos::RCP<const Thyra::MultiVectorBase<Scalar> >& mv) const;
 
     };
 

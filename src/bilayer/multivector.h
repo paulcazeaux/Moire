@@ -8,7 +8,6 @@
 */
 
 
-
 #ifndef moire__bilayer_multivector_h
 #define moire__bilayer_multivector_h
 
@@ -22,8 +21,7 @@
 #include <complex>
 #include "RTOpPack_Types.hpp"
 
-#include <Thyra_SpmdMultiVectorDefaultBase.hpp>
-#include <Thyra_TpetraVectorSpace_decl.hpp>
+#include <Thyra_TpetraThyraWrappers.hpp>
 
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
@@ -38,8 +36,6 @@
 #include <Tpetra_MultiVector_decl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
 #include <Tpetra_Operator.hpp>
-#include <Thyra_TpetraThyraWrappers_decl.hpp>
-
 
 #include "tools/types.h"
 #include "tools/numbers.h"
@@ -89,16 +85,16 @@ namespace Bilayer {
             );
 
             /** Get the embedded non-const Thyra::TpetraMultiVector. */
-            Teuchos::RCP<tTMV> getTpetraMultiVector();
+            Teuchos::RCP<tTMV> getThyraMultiVector();
 
             /** Get the embedded const Thyra::TpetraMultiVector. */
-            Teuchos::RCP<const tTMV> getConstTpetraMultiVector() const;
+            Teuchos::RCP<const tTMV> getConstThyraMultiVector() const;
 
             /** Get the embedded non-const Thyra::TpetraMultiVector. */
-            Teuchos::RCP<tTMV> getTpetraOrbMultiVector();
+            Teuchos::RCP<tTMV> getThyraOrbMultiVector();
 
             /** Get the embedded const Thyra::TpetraMultiVector. */
-            Teuchos::RCP<const tTMV> getConstTpetraOrbMultiVector() const;
+            Teuchos::RCP<const tTMV> getConstThyraOrbMultiVector() const;
 
 
             /** Overridden public functions form MultiVectorAdapterBase */
@@ -201,7 +197,7 @@ namespace Bilayer {
                 const Scalar beta
             ) const;
 
-        private:
+        public:
 
             // ///////////////////////////////////////
             // Private data members
@@ -240,11 +236,21 @@ namespace Bilayer {
     Teuchos::RCP<MultiVector<dim,degree,Scalar,Node> >
     createMultiVector(
         const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
-        const Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar> > &domainSpace,
         const Teuchos::RCP<Tpetra::MultiVector<Scalar,types::loc_t,types::glob_t,Node> > 
         &tpetraMultiVector
     )
     {
+        size_t nVectors;
+        if (tpetraMultiVector->getGlobalLength() == vectorSpace->getVecMap()->getGlobalNumElements())
+            nVectors = tpetraMultiVector->getNumVectors();
+        else if (tpetraMultiVector->getGlobalLength() == vectorSpace->getOrbVecMap()->getGlobalNumElements())
+            nVectors = tpetraMultiVector->getNumVectors() / vectorSpace->getNumOrbitals();
+        else 
+            throw dealii::ExcInternalError();
+
+        Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar>> 
+        domainSpace = vectorSpace->createDomainVectorSpace(nVectors);
+
         Teuchos::RCP<MultiVector<dim,degree,Scalar,Node> > tmv =
         Teuchos::rcp(new MultiVector<dim,degree,Scalar,Node>);
         tmv->initialize(vectorSpace, domainSpace, tpetraMultiVector);
@@ -257,11 +263,21 @@ namespace Bilayer {
     Teuchos::RCP<const MultiVector<dim,degree,Scalar,Node> >
     createConstMultiVector(
         const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
-        const Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar> > &domainSpace,
         const Teuchos::RCP<const Tpetra::MultiVector<Scalar,types::loc_t,types::glob_t,Node> > 
         &tpetraMultiVector
     )
     {
+        size_t nVectors;
+        if (tpetraMultiVector->getGlobalLength() == vectorSpace->getVecMap()->getGlobalNumElements())
+            nVectors = tpetraMultiVector->getNumVectors();
+        else if (tpetraMultiVector->getGlobalLength() == vectorSpace->getOrbVecMap()->getGlobalNumElements())
+            nVectors = tpetraMultiVector->getNumVectors() / vectorSpace->getNumOrbitals();
+        else 
+            throw dealii::ExcInternalError();
+
+        Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar>> 
+        domainSpace = vectorSpace->createDomainVectorSpace(nVectors) ;
+          
         Teuchos::RCP<MultiVector<dim,degree,Scalar,Node> > tmv =
         Teuchos::rcp(new MultiVector<dim,degree,Scalar,Node>);
         tmv->constInitialize(vectorSpace, domainSpace, tpetraMultiVector);

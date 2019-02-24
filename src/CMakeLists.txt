@@ -20,7 +20,7 @@ ADD_LIBRARY( Calgebra STATIC ${source_files})
 ### 3) Link the librairies for your library
 ######################################################################################
 DEAL_II_SETUP_TARGET(Calgebra)
-TARGET_LINK_LIBRARIES( Calgebra ${MPI_LIBRARIES} 
+TARGET_LINK_LIBRARIES( Calgebra ${MPI_LIBRARIES} ${METIS_LIBRARIES}
                                 ${Kokkos_LIBRARIES} ${Kokkos_TPL_LIBRARIES} 
                                 ${Teuchos_LIBRARIES} ${Teuchos_TPL_LIBRARIES} 
                                 ${Tpetra_LIBRARIES} ${Tpetra_TPL_LIBRARIES} 

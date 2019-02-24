@@ -32,8 +32,7 @@ namespace Bilayer {
     *       (which can take the values 1, 2 or 3),
     * - Scalar: the main number type used in the computation.
     *       This should be a double when no magnetic field is involved
-    *       and a complex<double> otherwise, since there is no need
-    *       for transpose calculations (see BaseAlgebra documentation).
+    *       and a complex<double> otherwise.
     */
     template <int dim, int degree, typename Scalar = double >
     class ComputeResolvent : private BaseAlgebra<dim, degree, Scalar>

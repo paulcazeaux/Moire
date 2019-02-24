@@ -27,15 +27,21 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double>
 TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA(bilayer)
 {
-    I  = LA::create_multivector();
+    LA::assemble_hamiltonian_action();
+
+
+    I  = LA::create_vector();
     A  = Tpetra::createCopy(I);
     B  = Tpetra::createCopy(I);
 
     I.randomize();
+    std::cout << "Size of my vectors: I: " << I.getNumVectors() 
+              << ", A: " << A.getNumVectors() 
+              << " and B: " << B.getNumVectors() 
+              << std::endl;
 
-    LA::assemble_hamiltonian_action();
-    hamiltonian_rproduct(I, A, Teuchos::NO_TRANS);
-    hamiltonian_rproduct(I, B, Teuchos::CONJ_TRANS);
+    LA::HamiltonianAction->apply(I, A, Teuchos::NO_TRANS);
+    LA::HamiltonianAction->apply(I, B, Teuchos::CONJ_TRANS);
 }
 
  void do_test(Materials::Mat mat)

@@ -471,7 +471,7 @@ namespace Bilayer {
                     for (types::loc_t j = 0; j < Element<dim,degree>::dofs_per_cell; ++j)
                     {
                         types::loc_t interp_cell_index = unit_cell(domain_block).subcell_list [interp_element_index].unit_cell_dof_index_map.at(j);
-                        
+                    
                         /* Store column indices for each orbital */
                         if (unit_cell(domain_block).is_node_interior(interp_cell_index))
                             for (size_t orbital = 0; orbital < n_orbitals(domain_block); orbital++)
@@ -483,9 +483,9 @@ namespace Bilayer {
                             for (size_t orbital = 0; orbital < n_orbitals(domain_block); orbital++)
                                 it_cols[orbital].push_back(get_block_dof_index(domain_block, interp_lattice_index, offset_interp_cell_index, orbital));
                         }
-                        it_row  += n_orbitals(domain_block);
-                        it_cols += n_orbitals(domain_block);
                     }
+                    it_row  += n_orbitals(domain_block);
+                    it_cols += n_orbitals(domain_block);
                 }
                 for (size_t i = 0; i < N; ++i)
                     sparsity_pattern->insertGlobalIndices(globalRows.at(i), ColIndices.at(i));
@@ -535,9 +535,9 @@ namespace Bilayer {
                                 for (size_t orbital = 0; orbital < n_orbitals(domain_block); orbital++)
                                     it_cols[orbital].push_back(get_block_dof_index(domain_block, offset_interp_lattice_index, offset_interp_cell_index, orbital));
                         }
-                        it_row  += n_orbitals(domain_block);
-                        it_cols += n_orbitals(domain_block);
                     }
+                    it_row  += n_orbitals(domain_block);
+                    it_cols += n_orbitals(domain_block);
                 }
                 for (size_t i = 0; i < N; ++i)
                     sparsity_pattern->insertGlobalIndices(globalRows.at(i), ColIndices.at(i));

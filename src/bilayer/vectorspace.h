@@ -8,7 +8,6 @@
 */
 
 
-
 #ifndef moire__bilayer_vector_space_h
 #define moire__bilayer_vector_space_h
 
@@ -22,8 +21,7 @@
 #include <complex>
 #include "RTOpPack_Types.hpp"
 
-
-#include <Thyra_SpmdVectorSpaceDefaultBase.hpp>
+#include <Thyra_TpetraThyraWrappers.hpp>
 
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>

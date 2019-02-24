@@ -39,6 +39,8 @@ namespace Bilayer {
         N = vectorSpace_->getNumOrbitals(),
         n_rows = vectorSpace_->getOrbVecMap()->getNodeNumElements();
 
+        orbMultiVector_.initialize(Teuchos::rcp<tTMV>(new tTMV()));
+        multiVector_.initialize(Teuchos::rcp<tTMV>(new tTMV()));
         if (inputMVector->getMap()->isSameAs(* vectorSpace->getVecMap()))
         {
             size_t n = inputMVector->getNumVectors();
@@ -61,8 +63,6 @@ namespace Bilayer {
                     vectorSpace_->getTpetraVectorSpace(), 
                     vectorSpace_->createDomainVectorSpace(n),
                     inputMVector);
-
-            this->updateSpmdSpace();
         }
         else if (inputMVector->getNumVectors() % N == 0 
                 && inputMVector->getMap()->isSameAs(* vectorSpace->getOrbVecMap()))
@@ -113,6 +113,8 @@ namespace Bilayer {
         N = vectorSpace_->getNumOrbitals(),
         n_rows = vectorSpace_->getOrbVecMap()->getNodeNumElements();
 
+        Teuchos::RCP<tTMV> orbMultiVector (new tTMV());
+        Teuchos::RCP<tTMV> multiVector (new tTMV());
         if (inputMVector->getMap()->isSameAs(* vectorSpace->getVecMap()))
         {
             size_t n = inputMVector->getNumVectors();
@@ -126,12 +128,12 @@ namespace Bilayer {
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
-            orbMultiVector_.getNonconstObj()->constInitialize(
+            orbMultiVector->constInitialize(
                     vectorSpace_->getOrbTpetraVectorSpace(), 
                     vectorSpace_->createDomainVectorSpace(N*n),
                     Teuchos::rcp(new TMV (vectorSpace_->getOrbVecMap(), localDualView))
                                 );
-            multiVector_.getNonconstObj()->constInitialize(
+            multiVector->constInitialize(
                     vectorSpace_->getTpetraVectorSpace(), 
                     vectorSpace_->createDomainVectorSpace(n),
                     inputMVector);
@@ -153,11 +155,11 @@ namespace Bilayer {
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
-            orbMultiVector_.getNonconstObj()->constInitialize(
+            orbMultiVector->constInitialize(
                     vectorSpace_->getOrbTpetraVectorSpace(),
                     vectorSpace_->createDomainVectorSpace(N),
                     inputMVector);
-            multiVector_.getNonconstObj()->constInitialize(
+            multiVector->constInitialize(
                     vectorSpace_->getTpetraVectorSpace(), 
                     vectorSpace_->createDomainVectorSpace(n*N),
                     Teuchos::rcp(new TMV (vectorSpace_->getVecMap(), localDualView))
@@ -166,13 +168,15 @@ namespace Bilayer {
         else
             throw dealii::ExcInternalError();
 
+        orbMultiVector_.initialize(orbMultiVector);
+        multiVector_.initialize(multiVector);
         this->updateSpmdSpace();
     }
 
 
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
-    MultiVector<dim,degree,Scalar,Node>::getTpetraMultiVector()
+    MultiVector<dim,degree,Scalar,Node>::getThyraMultiVector()
     {
         return multiVector_.getNonconstObj();
     }
@@ -180,9 +184,24 @@ namespace Bilayer {
 
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<const Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
-    MultiVector<dim,degree,Scalar,Node>::getConstTpetraMultiVector() const
+    MultiVector<dim,degree,Scalar,Node>::getConstThyraMultiVector() const
     {
         return multiVector_.getConstObj();
+    }
+
+    template <int dim, int degree, typename Scalar, class Node>
+    Teuchos::RCP<Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
+    MultiVector<dim,degree,Scalar,Node>::getThyraOrbMultiVector()
+    {
+        return orbMultiVector_.getNonconstObj();
+    }
+
+
+    template <int dim, int degree, typename Scalar, class Node>
+    Teuchos::RCP<const Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
+    MultiVector<dim,degree,Scalar,Node>::getConstThyraOrbMultiVector() const
+    {
+        return orbMultiVector_.getConstObj();
     }
 
 
@@ -505,7 +524,7 @@ namespace Bilayer {
 
         Teuchos::RCP<MVec> vecs = Teuchos::rcp_dynamic_cast<MVec>(mv);
         if (Teuchos::nonnull(vecs)) 
-            return vecs->getTpetraMultiVector();
+            return vecs->getThyraMultiVector();
 
         return Teuchos::null;
     }
@@ -520,7 +539,7 @@ namespace Bilayer {
 
         Teuchos::RCP<const MVec> vecs = Teuchos::rcp_dynamic_cast<const MVec>(mv);
         if (Teuchos::nonnull(vecs))
-            return vecs->getConstTpetraMultiVector();
+            return vecs->getConstThyraMultiVector();
 
         return Teuchos::null;
     }
@@ -528,18 +547,18 @@ namespace Bilayer {
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<Thyra::TpetraMultiVector<Scalar,types::loc_t,types::glob_t,Node> >
     MultiVector<dim,degree,Scalar,Node>::
-        getOrbMultiVector(const Teuchos::RCP<Thyra::MultiVectorBase<Scalar> >& mv) const
+    getOrbMultiVector(const Teuchos::RCP<Thyra::MultiVectorBase<Scalar> >& mv) const
     {
         typedef MultiVector<dim,degree,Scalar,Node> MVec;
         typedef Vector<dim,degree,Scalar,Node> Vec;
 
         Teuchos::RCP<MVec> vecs = Teuchos::rcp_dynamic_cast<MVec>(mv);
         if (Teuchos::nonnull(vecs)) 
-            return vecs->getTpetraOrbMultiVector();
+            return vecs->getThyraOrbMultiVector();
 
         Teuchos::RCP<Vec> vec = Teuchos::rcp_dynamic_cast<Vec>(mv);
         if (Teuchos::nonnull(vec))
-            return vec->getTpetraOrbVector();
+            return vec->getThyraOrbVector();
 
         return Teuchos::null;
     }
@@ -554,11 +573,11 @@ namespace Bilayer {
 
         Teuchos::RCP<const MVec> vecs = Teuchos::rcp_dynamic_cast<const MVec>(mv);
         if (Teuchos::nonnull(vecs))
-            return vecs->getConstTpetraOrbMultiVector();
+            return vecs->getConstThyraOrbMultiVector();
 
         Teuchos::RCP<const Vec> vec = Teuchos::rcp_dynamic_cast<const Vec>(mv);
         if (Teuchos::nonnull(vec))
-            return vec->getConstTpetraOrbVector();
+            return vec->getConstThyraOrbVector();
 
         return Teuchos::null;
     }

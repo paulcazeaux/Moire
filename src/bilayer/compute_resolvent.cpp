@@ -123,31 +123,28 @@ namespace Bilayer {
         solverParams->set ("Convergence Tolerance", 1.0e-6);
 
         Belos::SolverFactory<Scalar,MultiVector,Operator> factory;
-        Teuchos::RCP<Belos::SolverManager<Scalar, MultiVector, Operator> > 
+        Teuchos::RCP<Belos::SolverManager<Scalar, MultiVector,Operator> > 
         solver = factory.create ("GMRES", solverParams);
 
         typedef Belos::LinearProblem<Scalar, MultiVector, Operator> problem_type;
+        Teuchos::RCP<problem_type> 
+            problem = Teuchos::rcp (new problem_type (
+                                    this->HamiltonianAction, 
+                                    Teuchos::rcpFromRef(R), 
+                                    Teuchos::rcpFromRef(I)));
+        // You don't have to call this if you don't have a preconditioner.
+        // If M is null, then Belos won't use a (right) preconditioner.
+        // problem->setRightPrec (M);
+        // Tell the LinearProblem to make itself ready to solve.
+        problem->setProblem();
 
-        auto I_view = LA::range_block_view_const(R);
-        auto R_view = LA::range_block_view(R);
-        for (int b = 0; b < 2; ++b)
-        {
-            Teuchos::RCP<problem_type> 
-            problem = Teuchos::rcp (new problem_type (this->hamiltonian_action.at(b), Teuchos::rcpFromRef (R_view.at(b)), Teuchos::rcpFromRef (I_view.at(b))));
-            // You don't have to call this if you don't have a preconditioner.
-            // If M is null, then Belos won't use a (right) preconditioner.
-            // problem->setRightPrec (M);
-            // Tell the LinearProblem to make itself ready to solve.
-            problem->setProblem ();
+        // Tell the solver what problem you want to solve.
+        solver->setProblem(problem);
 
-            // Tell the solver what problem you want to solve.
-            solver->setProblem (problem);
-
-            // Attempt to solve the linear system.  result == Belos::Converged 
-            // means that it was solved to the desired tolerance.  This call 
-            // overwrites X with the computed approximate solution.
-            Belos::ReturnType result = solver->solve();
-        }
+        // Attempt to solve the linear system.  result == Belos::Converged 
+        // means that it was solved to the desired tolerance.  This call 
+        // overwrites X with the computed approximate solution.
+        Belos::ReturnType result = solver->solve();
     }
 
     template<int dim, int degree, typename Scalar>

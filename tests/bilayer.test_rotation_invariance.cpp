@@ -27,14 +27,14 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double>
 TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
     LA(bilayer)
 {
-    I  = LA::create_multivector();
+    LA::assemble_hamiltonian_action();
+    I  = LA::create_vector();
     H  = Tpetra::createCopy(I);
 
     LA::set_to_identity(I);
 
-    LA::assemble_hamiltonian_action();
     
-    LA::hamiltonian_rproduct(I, H);
+    LA::HamiltonianAction->apply(I, H);
 }
 
  void do_test(Materials::Mat mat)

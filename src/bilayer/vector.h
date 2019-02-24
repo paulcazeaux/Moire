@@ -2,7 +2,7 @@
 * File:   bilayer/vector.h
 * Author: Paul Cazeaux
 *
-* Adapted from Thyra Tpetra adapters templates
+* Reimplemented from Thyra Tpetra adapters templates
 *
 * Created on July 31, 2018, 10:00 PM
 */
@@ -21,8 +21,7 @@
 #include <complex>
 #include "RTOpPack_Types.hpp"
 
-#include <Thyra_SpmdVectorDefaultBase.hpp>
-#include <Thyra_TpetraVectorSpace_decl.hpp>
+#include <Thyra_TpetraThyraWrappers.hpp>
 
 #include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
@@ -37,7 +36,6 @@
 #include <Tpetra_MultiVector_decl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
 #include <Tpetra_Operator.hpp>
-#include <Thyra_TpetraThyraWrappers_decl.hpp>
 
 
 #include "tools/types.h"
@@ -86,16 +84,16 @@ namespace Bilayer {
         );
 
         /** Get the embedded non-const Thyra::TpetraVector. */
-        Teuchos::RCP<tTV> getTpetraVector();
+        Teuchos::RCP<tTV> getThyraVector();
 
         /** Get the embedded const Thyra::TpetraVector. */
-        Teuchos::RCP<const tTV> getConstTpetraVector() const;
+        Teuchos::RCP<const tTV> getConstThyraVector() const;
 
         /** Get the embedded non-const Thyra::TpetraMultiVector. */
-        Teuchos::RCP<tTMV> getTpetraOrbVector();
+        Teuchos::RCP<tTMV> getThyraOrbVector();
 
         /** Get the embedded const Thyra::TpetraMultiVector. */
-        Teuchos::RCP<const tTMV> getConstTpetraOrbVector() const;
+        Teuchos::RCP<const tTMV> getConstThyraOrbVector() const;
 
         /** Overridden from Thyra::VectorDefaultBase */
         Teuchos::RCP<const Thyra::VectorSpaceBase<Scalar> > domain() const;
@@ -184,7 +182,7 @@ namespace Bilayer {
             const Scalar beta
         ) const;
 
-    private:
+    public:
     /* Private data members */
 
         Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> >
