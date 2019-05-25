@@ -1,25 +1,30 @@
 /* 
-* File:   bilayer/compute_dos.h
+* File:   bilayer/compute_conductivity.h
 * Author: Paul Cazeaux
 *
-* Created on May 12, 2017, 9:00 AM
+* Created on Feb 24, 2019, 4:00 PM
 */
 
 
 
-#ifndef moire__bilayer_computedos_h
-#define moire__bilayer_computedos_h
+#ifndef moire__bilayer_computeconductivity_h
+#define moire__bilayer_computeconductivity_h
 
 #include <Teuchos_VerboseObject.hpp>
 #include <Teuchos_TimeMonitor.hpp>
 #include "tools/types.h"
 #include "bilayer/base_algebra.h"
+#include "bilayer/operator.h"
+#include <Thyra_BelosLinearOpWithSolveFactory_decl.hpp>
+#include <Thyra_BelosLinearOpWithSolve_decl.hpp>
+#include <Thyra_LinearOpWithSolveFactoryHelpers.hpp>
 
 
 namespace Bilayer {
+using Teuchos::RCP;
 
     /**
-    * A class which encapsulates the DoS computation of a discretized 
+    * A class which encapsulates the Conductivity computation of a discretized 
     * Tight-Binding bilayer Hamiltonian encoded by a C* algebra.
     *
     * Its three template parameters are respectively 
@@ -34,7 +39,7 @@ namespace Bilayer {
     *       for adjoint calculations (see BaseAlgebra documentation).
     */
     template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
-    class ComputeDoS : private BaseAlgebra<dim, degree, Scalar, Node>
+    class ComputeConductivity : private BaseAlgebra<dim, degree, Scalar, Node>
     {
     public:
         /**
@@ -42,10 +47,12 @@ namespace Bilayer {
          * These types correspond to the main Trilinos containers
          * used in the discretization.
          */
-        typedef Scalar                              scalar_type;
-        typedef BaseAlgebra<dim,degree,Scalar,Node> LA;
-        typedef typename LA::MultiVector            MultiVector;
-        typedef typename LA::Matrix                 Matrix;
+        typedef Scalar                          scalar_type;
+        typedef typename Bilayer::BaseAlgebra<dim,degree,Scalar,Node> LA;
+        typedef typename Bilayer::VectorSpace<dim,degree,Scalar,Node> VS;
+        typedef typename Thyra::VectorBase<Scalar> Vec;
+        typedef typename Thyra::MultiVectorBase<Scalar> MVec;
+        typedef typename Thyra::LinearOpBase<Scalar> Op;
 
         /**
          *  Default constructor. 
@@ -55,13 +62,15 @@ namespace Bilayer {
          *      (rank 0 on MPI_COMM_WORLD),
          * - the computing timer.
          */
-        ComputeDoS(const Multilayer<dim, 2>& bilayer);
+        ComputeConductivity(const Multilayer<dim, 2>& bilayer, 
+                            const Scalar tau,
+                            const Scalar beta);
 
         /**
          *  Default destructor. 
          * Outputs timing data.
          */
-        ~ComputeDoS();
+        ~ComputeConductivity();
 
         /**
          *  Set up all the necessary objects, vectors, matrices,
@@ -72,60 +81,29 @@ namespace Bilayer {
         void run();
 
         /**
-         *  Write to file the Chebyshev moments of the diagonal 
-         * elements (Local Density of States) of the Tight-Binding 
-         * bilayer Hamiltonian after it is computed by 
-         * the above run() call.
-         */
-        void write_LDoS_to_file();
-
-        /**
          *  Write to file the Chebyshev moments of the Density of States
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
-        void write_DoS_to_file();
-
-        /**
-         *  Output the Chebyshev moments of the diagonal elements
-         * (Local Density of States) of the Tight-Binding 
-         * bilayer Hamiltonian after it is computed by 
-         * the above run() call.
-         */
-        std::vector<std::array<std::vector<Scalar>,2>> output_LDoS();
+        void write_Conductivity_to_file();
 
         /**
          *  Output the Chebyshev moments of the Density of States
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
-        std::vector<Scalar> output_DoS();
-
-        /**
-         *  Determine an estimate of the current memory usage
-         * by this class, including the BaseAlgebra matrices
-         * and the dof_handler object data fields, on the
-         * local node. 
-         * The global usage should then be reduced across 
-         * MPI nodes if necessary.
-         */
-        types::MemUsage memory_consumption() const;
+        std::vector<std::array<Scalar,dim>> output_Conductivity();
 
     private:
         /**
-         *  Set up the dof_handler object, in particular
-         * computes the geometry of the system,
-         * then initializes the three vectors used for the
-         * Chebyshev recurrence.
+         *  Set up the base_algebra object, in particular
+         * computes the geometry of the system, computes the
+         * matrices for all the operators involved,
+         * then initializes the vectors used for the
+         * Chebyshev recurrence and solution of the linear
+         * system.
          */
         void setup();
-
-        /**
-         *  Assembles the matrices used to represent the product
-         * by the Hamiltonian operator within the BaseAlgebra
-         * base class object.
-         */
-        void assemble_matrices();
 
         /**
          *  Initialize and run the Chebyshev recurrence of the
@@ -153,14 +131,17 @@ namespace Bilayer {
          * applied to the Hamiltonian operator.
          *
          */
-        MultiVector Tp, T, Tn;
-
+        const Scalar tau, beta;
+        RCP<const VS> vectorSpace;
+        RCP<Vec> I, H, Tp, T, Tn;
+        RCP<MVec> dH, LinvdH;
+        RCP<const Op> hamiltonianOp, transposeOp, liouvillianOp, derivationOp;
         /**
          * Array of Scalars holding the Chebyshev moments of the 
-         * local Density of States of the Hamiltonian, computed 
+         * conductivity of the Hamiltonian, computed 
          * using the Kernel Polynomial Method in the solve() method above.
          */
-        std::vector<std::array<std::vector<Scalar>,2>> chebyshev_moments;
+        std::vector<std::array<Scalar,dim>> chebyshev_moments;
     };
 
 }/* End namespace Bilayer */

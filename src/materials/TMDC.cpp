@@ -7,6 +7,7 @@
  */
 
 #include "materials/TMDC.h"
+#include <iostream>
 
 using namespace TMDC;
 
@@ -1104,7 +1105,7 @@ double Coupling::Interlayer::S_to_S(const Orbital orbit_row,    const Orbital or
     const double R_sigma    =  3.128;   const double R_pi       =  2.923;
     const double eta_sigma  =  3.859;   const double eta_pi     =  5.724;
     
-    const double XX_sep     = (12.29/2.0) - 3.130;
+    const double XX_sep     = 6.145 - 3.130;
 
     /*                          Shift the arrow vector by the orbital coordinates                               */
     /* Simplification: we assume that Atom M is at the origin, and X_A / X_B have the same in-plane coordinates */
@@ -1178,7 +1179,7 @@ double Coupling::Interlayer::S_to_S(const Orbital orbit_row,    const Orbital or
     }
     
     if ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
-                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05))
+                        && (std::abs(std::abs(vector[2]) - XX_sep) < 0.05))
     {
         assert( (atom(orbit_row) == Atom::X_A && atom(orbit_col) == Atom::X_B) 
                 || (atom(orbit_row) == Atom::X_B && atom(orbit_col) == Atom::X_A) );
@@ -1191,7 +1192,7 @@ double Coupling::Interlayer::S_to_S(const Orbital orbit_row,    const Orbital or
         
         double V_sigma = nu_sigma*std::exp(-std::pow(r/R_sigma, eta_sigma));
         double V_pi    =    nu_pi*std::exp(-std::pow(r/R_pi,    eta_pi   ));
-        
+
         return (V_sigma - V_pi)*(vector[p_row] * vector[p_col] / r_sq) + (p_row == p_col ? V_pi : 0);
     }
     else
@@ -1203,11 +1204,12 @@ double Coupling::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital or
                                         std::array<double, 3> vector, 
                                         const double theta_row, const double theta_col) 
 {   
+std::array<double, 3> vector2 = vector;
     const double    nu_sigma    =  2.559;   const double    nu_pi       = -1.006;
     const double    R_sigma     =  3.337;   const double    R_pi        =  2.927;
     const double    eta_sigma   =  4.114;   const double    eta_pi      =  5.185;
         
-    const double XX_sep = (12.96/2.0) - 3.350;
+    const double XX_sep = 6.48 - 3.310;
 
     /*                          Shift the arrow vector by the orbital coordinates                               */
     /* Simplification: we assume that Atom M is at the origin, and X_A / X_B have the same in-plane coordinates */
@@ -1279,9 +1281,9 @@ double Coupling::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital or
             break;
         }
     }
-    
+
     if ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
-                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05))
+                        && (std::abs(std::abs(vector[2]) - XX_sep) < 0.05))
     {
         assert( (atom(orbit_row) == Atom::X_A && atom(orbit_col) == Atom::X_B) 
                 || (atom(orbit_row) == Atom::X_B && atom(orbit_col) == Atom::X_A) );
@@ -1466,6 +1468,7 @@ bool IsNonZero::Interlayer::S_to_S(const Orbital orbit_row,  const Orbital orbit
 
     /*                          Shift the arrow vector by the orbital coordinates                               */
     /* Simplification: we assume that Atom M is at the origin, and X_A / X_B have the same in-plane coordinates */
+
     switch (atom(orbit_col))
     {
         case Atom::M:
@@ -1476,16 +1479,16 @@ bool IsNonZero::Interlayer::S_to_S(const Orbital orbit_row,  const Orbital orbit
                     break;
                 case Atom::X_A:
                 {
-                    vector[0] -=  cos(theta_row) * MSe2::atom_pos.at (Atom::X_A)[0] + sin(theta_row) * MSe2::atom_pos.at (Atom::X_A)[1];
-                    vector[1] -= -sin(theta_row) * MSe2::atom_pos.at (Atom::X_A)[0] + cos(theta_row) * MSe2::atom_pos.at (Atom::X_A)[1];
-                    vector[2] -= MSe2::atom_pos.at (Atom::X_A)[2];
+                    vector[0] -=  cos(theta_row) * MS2::atom_pos.at (Atom::X_A)[0] + sin(theta_row) * MS2::atom_pos.at (Atom::X_A)[1];
+                    vector[1] -= -sin(theta_row) * MS2::atom_pos.at (Atom::X_A)[0] + cos(theta_row) * MS2::atom_pos.at (Atom::X_A)[1];
+                    vector[2] -= MS2::atom_pos.at (Atom::X_A)[2];
                     break;
                 }
                 case Atom::X_B:
                 {
-                    vector[0] -=  cos(theta_row) * MSe2::atom_pos.at (Atom::X_B)[0] + sin(theta_row) * MSe2::atom_pos.at (Atom::X_B)[1];
-                    vector[1] -= -sin(theta_row) * MSe2::atom_pos.at (Atom::X_B)[0] + cos(theta_row) * MSe2::atom_pos.at (Atom::X_B)[1];
-                    vector[2] -= MSe2::atom_pos.at (Atom::X_B)[2];
+                    vector[0] -=  cos(theta_row) * MS2::atom_pos.at (Atom::X_B)[0] + sin(theta_row) * MS2::atom_pos.at (Atom::X_B)[1];
+                    vector[1] -= -sin(theta_row) * MS2::atom_pos.at (Atom::X_B)[0] + cos(theta_row) * MS2::atom_pos.at (Atom::X_B)[1];
+                    vector[2] -= MS2::atom_pos.at (Atom::X_B)[2];
                     break;
                 }
             }
@@ -1497,16 +1500,16 @@ bool IsNonZero::Interlayer::S_to_S(const Orbital orbit_row,  const Orbital orbit
             {
                 case Atom::M:
                 {
-                    vector[0] +=  cos(theta_col) * MSe2::atom_pos.at (Atom::X_A)[0] + sin(theta_col) * MSe2::atom_pos.at (Atom::X_A)[1];
-                    vector[1] += -sin(theta_col) * MSe2::atom_pos.at (Atom::X_A)[0] + cos(theta_col) * MSe2::atom_pos.at (Atom::X_A)[1];
-                    vector[2] += MSe2::atom_pos.at (Atom::X_A)[2];
+                    vector[0] +=  cos(theta_col) * MS2::atom_pos.at (Atom::X_A)[0] + sin(theta_col) * MS2::atom_pos.at (Atom::X_A)[1];
+                    vector[1] += -sin(theta_col) * MS2::atom_pos.at (Atom::X_A)[0] + cos(theta_col) * MS2::atom_pos.at (Atom::X_A)[1];
+                    vector[2] += MS2::atom_pos.at (Atom::X_A)[2];
                     break;
                 }
                 case Atom::X_A:
                     break;
                 case Atom::X_B:
                 {
-                    vector[2] += MSe2::atom_pos.at (Atom::X_A)[2] - MSe2::atom_pos.at (Atom::X_B)[2];
+                    vector[2] += MS2::atom_pos.at (Atom::X_A)[2] - MS2::atom_pos.at (Atom::X_B)[2];
                     break;
                 }
             }
@@ -1518,14 +1521,14 @@ bool IsNonZero::Interlayer::S_to_S(const Orbital orbit_row,  const Orbital orbit
             {
                 case Atom::M:
                 {
-                    vector[0] +=  cos(theta_col) * MSe2::atom_pos.at (Atom::X_B)[0] + sin(theta_col) * MSe2::atom_pos.at (Atom::X_B)[1];
-                    vector[1] += -sin(theta_col) * MSe2::atom_pos.at (Atom::X_B)[0] + cos(theta_col) * MSe2::atom_pos.at (Atom::X_B)[1];
-                    vector[2] += MSe2::atom_pos.at (Atom::X_B)[2];
+                    vector[0] +=  cos(theta_col) * MS2::atom_pos.at (Atom::X_B)[0] + sin(theta_col) * MS2::atom_pos.at (Atom::X_B)[1];
+                    vector[1] += -sin(theta_col) * MS2::atom_pos.at (Atom::X_B)[0] + cos(theta_col) * MS2::atom_pos.at (Atom::X_B)[1];
+                    vector[2] += MS2::atom_pos.at (Atom::X_B)[2];
                     break;
                 }
                 case Atom::X_A:
                 {
-                    vector[2] += MSe2::atom_pos.at (Atom::X_B)[2] - MSe2::atom_pos.at (Atom::X_A)[2];
+                    vector[2] += MS2::atom_pos.at (Atom::X_B)[2] - MS2::atom_pos.at (Atom::X_A)[2];
                     break;
                 }
                 case Atom::X_B:
@@ -1534,9 +1537,9 @@ bool IsNonZero::Interlayer::S_to_S(const Orbital orbit_row,  const Orbital orbit
             break;
         }
     }
-    const double XX_sep = (12.29/2.0) - 3.130;
+    const double XX_sep = 6.145 - 3.130;
     return ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
-                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05));
+                        && (std::abs(std::abs(vector[2]) - XX_sep) < 0.05));
 }
 
 bool IsNonZero::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital orbit_col, 
@@ -1614,7 +1617,7 @@ bool IsNonZero::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital orb
             break;
         }
     }
-    const double XX_sep = (12.96/2.0) - 3.350;
+    const double XX_sep = 6.48 - 3.31;
     return ( (vector[0]*vector[0] + vector[1]*vector[1] < TMDC::inter_cutoff_radius * TMDC::inter_cutoff_radius) 
-                        && (std::abs(std::abs(vector[3]) - XX_sep) < 0.05));
+                        && (std::abs(std::abs(vector[2]) - XX_sep) < 0.05));
 }

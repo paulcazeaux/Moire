@@ -21,7 +21,6 @@
 
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_Range1D.hpp>
-#include <Tpetra_DefaultPlatform.hpp>
 #include <Tpetra_Map_decl.hpp>
 #include <Tpetra_CrsGraph_decl.hpp>
 

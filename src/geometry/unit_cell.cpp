@@ -180,18 +180,16 @@ UnitCell<dim,degree>::interpolate(const dealii::Point<dim>& X) const
 
     switch (dim) {
         case 1:
-        {
             Xg(0) -= std::floor(Xg(0) + .5);
             element_index = static_cast<types::loc_t>( std::floor(line_element_count_ * (Xg(0)+0.5)) );
-        }
+        break;
         case 2:
-        {
             Xg(0) -= std::floor(Xg(0) + .5);
             Xg(1) -= std::floor(Xg(1) + .5);
             element_index = static_cast<types::loc_t>(  std::floor(line_element_count_ * (Xg(0)+0.5))
                                 + line_element_count_ * std::floor(line_element_count_ * (Xg(1)+0.5)) );
-        }
     }
+    
     subcell_list[element_index].get_interpolation_weights(basis * Xg, interp_weights);
     return std::make_pair(element_index, interp_weights);
 }

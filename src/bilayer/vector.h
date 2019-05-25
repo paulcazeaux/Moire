@@ -23,7 +23,6 @@
 
 #include <Thyra_TpetraThyraWrappers.hpp>
 
-#include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_Comm.hpp>
@@ -182,7 +181,7 @@ namespace Bilayer {
             const Scalar beta
         ) const;
 
-    public:
+    private:
     /* Private data members */
 
         Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> >
@@ -215,7 +214,7 @@ namespace Bilayer {
     // Nonmember constructor for MultiVector.
     template <int dim, int degree, typename Scalar, class Node>
     inline
-    Teuchos::RCP<Vector<dim,degree,Scalar,Node> >
+    Teuchos::RCP<Thyra::VectorBase<Scalar> >
     createVector(
         const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
         const Teuchos::RCP<typename Vector<dim,degree,Scalar,Node>::TMV> &orbVector
@@ -231,7 +230,7 @@ namespace Bilayer {
     //Nonmember const constructor for MultiVector.
     template <int dim, int degree, typename Scalar, class Node>
     inline
-    Teuchos::RCP<const Vector<dim,degree,Scalar,Node> >
+    Teuchos::RCP<const Thyra::VectorBase<Scalar> >
     createConstVector(
         const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
         const Teuchos::RCP<const typename Vector<dim,degree,Scalar,Node>::TMV> &orbVector

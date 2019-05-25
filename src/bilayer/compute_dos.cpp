@@ -10,25 +10,25 @@
 
 namespace Bilayer {
 
-    template<int dim, int degree, typename Scalar>
-    ComputeDoS<dim,degree,Scalar>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
+    template<int dim, int degree, typename Scalar, class Node>
+    ComputeDoS<dim,degree,Scalar,Node>::ComputeDoS(const Multilayer<dim, 2>& bilayer)
         :
-        BaseAlgebra<dim,degree,Scalar>(bilayer),
+        BaseAlgebra<dim,degree,Scalar,Node>(bilayer),
         pcout(( this->mpi_communicator->getRank () == 0) ? std::cout : blackHole)
     {
         pcout << bilayer;
     }
 
-    template<int dim, int degree, typename Scalar>
-    ComputeDoS<dim,degree,Scalar>::~ComputeDoS()
+    template<int dim, int degree, typename Scalar, class Node>
+    ComputeDoS<dim,degree,Scalar,Node>::~ComputeDoS()
     {
         Teuchos::TimeMonitor::summarize (this->mpi_communicator(), pcout);
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeDoS<dim,degree,Scalar>::run()
+    ComputeDoS<dim,degree,Scalar,Node>::run()
     {
         pcout   << "Starting setup...\n";
         setup();
@@ -44,9 +44,9 @@ namespace Bilayer {
         pcout   << "\tComplete!\n";
     }
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void 
-    ComputeDoS<dim,degree,Scalar>::write_LDoS_to_file()
+    ComputeDoS<dim,degree,Scalar,Node>::write_LDoS_to_file()
     {
         if (this->mpi_communicator->getRank () == 0)
         {
@@ -67,9 +67,9 @@ namespace Bilayer {
         }
     }
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void 
-    ComputeDoS<dim,degree,Scalar>::write_DoS_to_file()
+    ComputeDoS<dim,degree,Scalar,Node>::write_DoS_to_file()
     {
         if (this->mpi_communicator->getRank () == 0)
         {
@@ -91,17 +91,17 @@ namespace Bilayer {
     }
 
     
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     std::vector<std::array<std::vector<Scalar>,2>>
-    ComputeDoS<dim,degree,Scalar>::output_LDoS()
+    ComputeDoS<dim,degree,Scalar,Node>::output_LDoS()
     {
         return chebyshev_moments;
     }
 
     
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     std::vector<Scalar>
-    ComputeDoS<dim,degree,Scalar>::output_DoS()
+    ComputeDoS<dim,degree,Scalar,Node>::output_DoS()
     {
         std::vector<Scalar> DoS;
         for ( const auto diag_moments : chebyshev_moments)
@@ -118,9 +118,9 @@ namespace Bilayer {
     }
 
     
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     types::MemUsage
-    ComputeDoS<dim,degree,Scalar>::memory_consumption() const
+    ComputeDoS<dim,degree,Scalar,Node>::memory_consumption() const
     {
         types::MemUsage memory = this->dof_handler.memory_consumption();
         memory.Static += sizeof(this);
@@ -135,9 +135,9 @@ namespace Bilayer {
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeDoS<dim,degree,Scalar>::setup()
+    ComputeDoS<dim,degree,Scalar,Node>::setup()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Setup<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
@@ -149,9 +149,9 @@ namespace Bilayer {
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeDoS<dim,degree,Scalar>::assemble_matrices()
+    ComputeDoS<dim,degree,Scalar,Node>::assemble_matrices()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Assembly<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
@@ -161,9 +161,9 @@ namespace Bilayer {
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeDoS<dim,degree,Scalar>::solve()
+    ComputeDoS<dim,degree,Scalar,Node>::solve()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Solve<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"

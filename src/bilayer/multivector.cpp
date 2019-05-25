@@ -44,13 +44,11 @@ namespace Bilayer {
         if (inputMVector->getMap()->isSameAs(* vectorSpace->getVecMap()))
         {
             size_t n = inputMVector->getNumVectors();
-            typename TMV::dual_view_type
-                localView = inputMVector->getDualView();
 
             typename TMV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows, N*n); 
+                localViewHost (inputMVector->getLocalViewHost().data(), n_rows, N*n); 
             typename TMV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows, N*n);
+                localViewDev  (inputMVector->getLocalViewDevice().data(), n_rows, N*n);
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -69,13 +67,10 @@ namespace Bilayer {
         {
             size_t n = inputMVector->getNumVectors() / N;
 
-            typename TMV::dual_view_type
-                localView = inputMVector->getDualView();
-
             typename TMV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows*N, n); 
+                localViewHost (inputMVector->getLocalViewHost().data(), n_rows*N, n); 
             typename TMV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows*N, n);
+                localViewDev  (inputMVector->getLocalViewDevice().data(), n_rows*N, n);
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -118,13 +113,11 @@ namespace Bilayer {
         if (inputMVector->getMap()->isSameAs(* vectorSpace->getVecMap()))
         {
             size_t n = inputMVector->getNumVectors();
-            typename TMV::dual_view_type
-                localView = inputMVector->getDualView();
 
             typename TMV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows, N*n); 
+                localViewHost (inputMVector->getLocalViewHost().data(), n_rows, N*n); 
             typename TMV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows, N*n);
+                localViewDev  (inputMVector->getLocalViewDevice().data(), n_rows, N*n);
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -145,13 +138,10 @@ namespace Bilayer {
         {
             size_t n = inputMVector->getNumVectors() / N;
 
-            typename TMV::dual_view_type
-                localView = inputMVector->getDualView();
-
             typename TMV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows*N, n); 
+                localViewHost (inputMVector->getLocalViewHost().data(), n_rows*N, n); 
             typename TMV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows*N, n);
+                localViewDev  (inputMVector->getLocalViewDevice().data(), n_rows*N, n);
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 

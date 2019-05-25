@@ -37,13 +37,10 @@ namespace Bilayer {
         if (inputVector->getNumVectors() == 1 
                 && inputVector->getMap()->isSameAs(* vectorSpace->getVecMap()))
         {
-            typename TMV::dual_view_type
-                localView = inputVector->getDualView();
-
             typename TMV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows, N); 
+                localViewHost (inputVector->getLocalViewHost().data(), n_rows, N); 
             typename TMV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows, N);
+                localViewDev  (inputVector->getLocalViewDevice().data(), n_rows, N);
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -60,13 +57,10 @@ namespace Bilayer {
         else if (inputVector->getNumVectors() == vectorSpace_->getNumOrbitals() 
                 && inputVector->getMap()->isSameAs(* vectorSpace->getOrbVecMap()))
         {
-            typename TMV::dual_view_type
-                localView = inputVector->getDualView();
-
             typename TV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows*N, 1); 
+                localViewHost (inputVector->getLocalViewHost().data(), n_rows*N, 1); 
             typename TV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows*N, 1);
+                localViewDev  (inputVector->getLocalViewDevice().data(), n_rows*N, 1);
             typename TV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -105,13 +99,10 @@ namespace Bilayer {
         if (inputVector->getNumVectors() == 1 
                 && inputVector->getMap()->isSameAs(* vectorSpace->getVecMap()))
         {
-            typename TMV::dual_view_type
-                localView = inputVector->getDualView();
-
             typename TMV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows, N); 
+                localViewHost (inputVector->getLocalViewHost().data(), n_rows, N); 
             typename TMV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows, N);
+                localViewDev  (inputVector->getLocalViewDevice().data(), n_rows, N);
             typename TMV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -129,13 +120,10 @@ namespace Bilayer {
         else if (inputVector->getNumVectors() == vectorSpace_->getNumOrbitals() 
                 && inputVector->getMap()->isSameAs(* vectorSpace->getOrbVecMap()))
         {
-            typename TMV::dual_view_type
-                localView = inputVector->getDualView();
-
             typename TV::dual_view_type::t_host
-                localViewHost (localView.h_view.data(), n_rows*N, 1); 
+                localViewHost (inputVector->getLocalViewHost().data(), n_rows*N, 1); 
             typename TV::dual_view_type::t_dev
-                localViewDev  (localView.d_view.data(), n_rows*N, 1);
+                localViewDev  (inputVector->getLocalViewDevice().data(), n_rows*N, 1);
             typename TV::dual_view_type
                 localDualView (localViewHost, localViewDev);
 
@@ -379,7 +367,10 @@ namespace Bilayer {
     assignMultiVecImpl(const Thyra::MultiVectorBase<Scalar>& mv)
     {
         auto tmv = this->getConstMultiVector(Teuchos::rcpFromRef(mv));
-        if (Teuchos::nonnull(tmv))
+        auto tv = this->getConstVector(Teuchos::rcpFromRef(mv));
+        if (Teuchos::nonnull(tv))
+            vector_.getNonconstObj()->assign(* tv);
+        else if (Teuchos::nonnull(tmv))
             vector_.getNonconstObj()->assign(* tmv);
         else
             throw dealii::ExcInternalError();
@@ -499,7 +490,7 @@ namespace Bilayer {
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<Thyra::TpetraVector<Scalar,types::loc_t,types::glob_t,Node> >
     Vector<dim,degree,Scalar,Node>::
-        getVector(const Teuchos::RCP<Thyra::MultiVectorBase<Scalar> >& v) const
+    getVector(const Teuchos::RCP<Thyra::MultiVectorBase<Scalar> >& v) const
     {
         typedef Vector<dim,degree,Scalar,Node> Vec;
 

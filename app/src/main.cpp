@@ -6,10 +6,7 @@
  */
 
 
-
-#include <Tpetra_DefaultPlatform.hpp>
-#include <Tpetra_Version.hpp>
-#include <Teuchos_GlobalMPISession.hpp>
+#include <Tpetra_Core.hpp>
 
 #include "parameters/multilayer.h"
 #include "bilayer/compute_dos.h"
@@ -29,9 +26,9 @@ int main(int argc, char** argv) {
 		/*********************************************************/
 		/*					Initialize MPI 						 */
 		/*********************************************************/
-		Teuchos::GlobalMPISession mpiSession (&argc, &argv, NULL);
+		Tpetra::ScopeGuard tpetraScope (&argc, &argv);
 		Teuchos::RCP<const Teuchos::Comm<int> > 
-    	comm = Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ();
+    	comm = Tpetra::getDefaultComm ();
 
 		/*********************************************************/
 		/*	 Read input file, and initialize params and vars. 	 */

@@ -20,12 +20,11 @@
 #include <complex>
 #include "RTOpPack_Types.hpp"
 
-
-#include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_Comm.hpp>
 #include <Teuchos_ArrayView.hpp>
+#include <Tpetra_Core.hpp>
 #include <Tpetra_MultiVector_decl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
 #include <Tpetra_Operator.hpp>
@@ -147,32 +146,6 @@ namespace Bilayer {
                 const Scalar z = Teuchos::ScalarTraits<Scalar>::zero (), 
                 const Scalar s = Teuchos::ScalarTraits<Scalar>::one ())
             { return Teuchos::rcp(new LiouvillianOp(Transpose, HamiltonianAction, z, s)); };
-
-
-        // /* Block utilities */
-        // /* Const Views into the data in range block form */
-        //     std::array<const MultiVector, 2>
-        // range_block_view_const(const Vector& A);
-
-        // /* Const Views into the data in domain block form */
-        //     std::array<const MultiVector, 2>
-        // domain_block_view_const(const Vector& A);
-
-        // /* Const Views into the data in fully decomposed block form */
-        //     std::array<std::array<const MultiVector, 2>, 2> 
-        // block_view_const(const Vector& A);
-
-        // /* Views into the data in range block form */
-        //     std::array<MultiVector, 2>
-        // range_block_view(Vector& A);
-
-        // /* Views into the data in domain block form */
-        //     std::array<MultiVector, 2>
-        // domain_block_view(Vector& A);
-
-        // /* Views into the data in fully decomposed block form */
-        //     std::array<std::array<MultiVector, 2>, 2> 
-        // block_view(Vector& A);
 
         /* MPI utilities */
             RCP<const Teuchos::Comm<int> >

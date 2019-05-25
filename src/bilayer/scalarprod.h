@@ -22,7 +22,6 @@
 
 #include <Thyra_TpetraThyraWrappers.hpp>
 
-#include <Tpetra_DefaultPlatform.hpp>
 #include <Kokkos_Core.hpp>
 #include <Teuchos_GlobalMPISession.hpp>
 #include <Teuchos_Comm.hpp>

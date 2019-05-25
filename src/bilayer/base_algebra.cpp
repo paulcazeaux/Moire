@@ -13,7 +13,7 @@ namespace Bilayer {
 template<int dim, int degree, typename Scalar, class Node>
 BaseAlgebra<dim,degree,Scalar,Node>::BaseAlgebra(const Multilayer<dim, 2>& bilayer)
     :
-    mpi_communicator(Tpetra::DefaultPlatform::getDefaultPlatform ().getComm ()),
+    mpi_communicator(Tpetra::getDefaultComm ()),
     dof_handler(bilayer)
 {
     dof_handler.initialize(mpi_communicator);
@@ -329,7 +329,7 @@ BaseAlgebra<dim,degree,Scalar,Node>::diagonal(const Vector& A) const
         Diag.at(b).resize(dof_handler.n_cell_nodes() * dof_handler.n_orbitals(b), 0.0);
 
         typename MultiVector::dual_view_type::t_dev_const 
-        View = A.subView(dof_handler.column_range(b))-> template getLocalView<Kokkos::Serial>();
+        View = A.subView(dof_handler.column_range(b))->getLocalViewDevice();
 
         std::array<types::loc_t, dim> lattice_indices_0;
         for (size_t i=0; i<dim; ++i)
@@ -437,80 +437,6 @@ BaseAlgebra<dim,degree,Scalar,Node>::dot(
         dots[j] = a1 * s1 + a2 * s2;
     }
 }
-
-// /* Const Views into the data in range block form */
-// template<int dim, int degree, typename Scalar, class Node>
-// std::array<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
-// BaseAlgebra<dim,degree,Scalar,Node>::range_block_view_const(const MultiVector& A)
-// {
-//     return {{   * A.subView(dof_handler.column_range(0)), 
-//                 * A.subView(dof_handler.column_range(1)) 
-//             }};
-// }
-
-// /* Const Views into the data in domain block form */
-// template<int dim, int degree, typename Scalar, class Node>
-// std::array<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
-// BaseAlgebra<dim,degree,Scalar,Node>::domain_block_view_const(const MultiVector& A)
-// {
-//     return {{   * A.offsetView(dof_handler.transpose_domain_map(0), 0),
-//                 * A.offsetView(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
-//             }};
-// }
-
-// /* Const Views into the data in fully decomposed block form */
-// template<int dim, int degree, typename Scalar, class Node>
-// std::array<std::array<const typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2>, 2>
-// BaseAlgebra<dim,degree,Scalar,Node>::block_view_const(const MultiVector& A)
-// {
-//     return
-//         {{
-//             {  * A.subView(dof_handler.column_range(0))->offsetView(dof_handler.transpose_domain_map(0), 0),
-//                 * A.subView(dof_handler.column_range(0))->offsetView(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
-//             },
-//             {  * A.subView(dof_handler.column_range(1))->offsetView(dof_handler.transpose_domain_map(0), 0),
-//                 * A.subView(dof_handler.column_range(1))->offsetView(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
-//             }
-//         }};
-// }
-
-//  Views into the data in range block form 
-// template<int dim, int degree, typename Scalar, class Node>
-// std::array<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
-// BaseAlgebra<dim,degree,Scalar,Node>::range_block_view(MultiVector& A)
-// {
-//     return {{   * A.subViewNonConst(dof_handler.column_range(0)), 
-//                 * A.subViewNonConst(dof_handler.column_range(1)) 
-//             }};
-// }
-
-// /* Views into the data in domain block form */
-// template<int dim, int degree, typename Scalar, class Node>
-// std::array<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2> 
-// BaseAlgebra<dim,degree,Scalar,Node>::domain_block_view(MultiVector& A)
-// {
-//     return {{   * A.offsetViewNonConst(dof_handler.transpose_domain_map(0), 0),
-//                 * A.offsetViewNonConst(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
-//             }};
-// }
-
-// /* Views into the data in fully decomposed block form */
-// template<int dim, int degree, typename Scalar, class Node>
-// std::array<std::array<typename BaseAlgebra<dim,degree,Scalar,Node>::MultiVector, 2>, 2>
-// BaseAlgebra<dim,degree,Scalar,Node>::block_view(MultiVector& A)
-// {
-//     return
-//         {{
-//             {  * A.subViewNonConst(dof_handler.column_range(0))->offsetViewNonConst(dof_handler.transpose_domain_map(0), 0),
-//                 * A.subViewNonConst(dof_handler.column_range(0))->offsetViewNonConst(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
-//             },
-//             {  * A.subViewNonConst(dof_handler.column_range(1))->offsetViewNonConst(dof_handler.transpose_domain_map(0), 0),
-//                 * A.subViewNonConst(dof_handler.column_range(1))->offsetViewNonConst(dof_handler.transpose_domain_map(1), dof_handler.transpose_domain_map(0)->getNodeNumElements())   
-//             }
-//         }};
-// }
-
-
 
 
 /**
@@ -658,9 +584,9 @@ BaseAlgebra<dim,degree,Scalar,Node>::dot(
 
                         /* Now we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
                         typename MultiVector::dual_view_type::t_dev 
-                        Y_View = Y_blocks.at(domain_block).at(range_block)->template getLocalView<Kokkos::Serial>();
+                        Y_View = Y_blocks.at(domain_block).at(range_block)->getLocalViewDevice();
                         typename MultiVector::dual_view_type::t_dev_const 
-                        helperView_const = helper.at(range_block).at(domain_block)->template getLocalView<Kokkos::Serial>();
+                        helperView_const = helper.at(range_block).at(domain_block)->getLocalViewDevice();
 
                         if (beta == Teuchos::ScalarTraits<scalar_type>::zero ())
                             Kokkos::parallel_for (
@@ -693,9 +619,9 @@ BaseAlgebra<dim,degree,Scalar,Node>::dot(
                     {
                          /* First we perform the 'transpose' of the inner/outer orbital indices and the complex conjugate */
                         typename MultiVector::dual_view_type::t_dev_const 
-                        X_View_const = X_blocks.at(domain_block).at(range_block)->template getLocalView<Kokkos::Serial>();
+                        X_View_const = X_blocks.at(domain_block).at(range_block)->getLocalViewDevice();
                         typename MultiVector::dual_view_type::t_dev
-                        helperView = helper.at(range_block).at(domain_block)->template getLocalView<Kokkos::Serial>();
+                        helperView = helper.at(range_block).at(domain_block)->getLocalViewDevice();
 
                         /* Here we have a rescaling due to the weighted scalar product behind the transpose */
                         Scalar r = unitCellAreas[domain_block] / unitCellAreas[range_block];
@@ -761,7 +687,7 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::DerivationOp(
         for (types::loc_t j = 0; j < dofHandler->n_cell_nodes(); ++j)
         {
             dealii::Point<dim>
-            nodePosition = vertexPosition + dofHandler->unit_cell(1).get_node_position(i);
+            nodePosition = vertexPosition + dofHandler->unit_cell(1).get_node_position(j);
 
             for (size_t l = 0; l < dim; ++l)
             for (size_t k = 0; k < dofHandler->n_orbitals(1); ++k)
@@ -781,7 +707,7 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::DerivationOp(
         for (types::loc_t j = 0; j < dofHandler->n_cell_nodes(); ++j)
         {
             dealii::Point<dim>
-            nodePosition = vertexPosition + dofHandler->unit_cell(0).get_node_position(i);
+            nodePosition = vertexPosition + dofHandler->unit_cell(0).get_node_position(j);
 
             for (size_t l = 0; l < dim; ++l)
             for (size_t k = 0; k < dofHandler->n_orbitals(0); ++k)
@@ -815,8 +741,8 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::weightedDot(
 {
     std::array<Scalar,dim> local_dot, dot;
     size_t N = nOrbitals_[0] + nOrbitals_[1];
-    auto dataX = X.getDualView().d_view;
-    auto dataY = Y.getDualView().d_view;
+    auto dataX = X.getLocalViewDevice();
+    auto dataY = Y.getLocalViewDevice();
 
     for (size_t l = 0; l < dim; ++l)
     {
@@ -864,8 +790,8 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::weightedDot(
     assert(sizeX % N == 0);
     assert(sizeX / N == static_cast<size_t>(dots.size()));
 
-    auto dataX = X.getDualView().d_view;
-    auto dataY = Y.getDualView().d_view;
+    auto dataX = X.getLocalViewDevice();
+    auto dataY = Y.getLocalViewDevice();
 
     for (size_t col = 0; col < sizeX/N; col++)
     {
@@ -917,8 +843,8 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::apply(
     assert( sizeY == dim * sizeX );
     assert( sizeX % N == 0 );
 
-    auto dataX = X.getDualView().d_view;
-    auto dataY = Y.getDualView().d_view;
+    auto dataX = X.getLocalViewDevice();
+    auto dataY = Y.getLocalViewDevice();
 
     for (size_t l = 0; l < dim; l++)
     for (size_t col = 0; col < sizeX/N; col++)

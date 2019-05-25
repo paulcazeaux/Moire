@@ -15,6 +15,10 @@ SET(PACKAGE_VERSION “1.0” CACHE STRING “package_version” FORCE)
 # set a language for the entire project.
 enable_language(CXX)
 
+# Debug options to catch segfaults
+# add_compile_options(-fsanitize=address -fsanitize-address-use-after-scope)
+# add_link_options(-fsanitize=address -fsanitize-address-use-after-scope)
+
 add_compile_options(-std=c++1z -Wno-unused-variable -Wno-unused-parameter)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
 

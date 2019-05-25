@@ -88,7 +88,7 @@ namespace TMDC {
     }
 
     namespace MSe2 {
-        const double  a = 3.18;
+        const double  a = 3.28;
         const std::array<std::array<double, 2>, 2>
         lattice = {{ {{1. * a, 0.}}, {{-.5 * a, numbers::SQRT3_2 * a}} }};
 

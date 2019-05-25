@@ -158,7 +158,7 @@ namespace Bilayer {
         output_file.write((char*) &M, sizeof(int));
         output_file.write((char*) &N, sizeof(int));           
 
-        auto R_LocalView = R.template getLocalView<Kokkos::Serial>();
+        auto R_LocalView = R.getLocalViewHost();
 
         for (int j = 0; j<N; ++j)
             for (int i = 0; i < M; ++i)

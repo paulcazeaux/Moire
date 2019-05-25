@@ -49,7 +49,7 @@ void	Element<1,1>::get_interpolation_weights(
 	weights.resize(dofs_per_cell);
 
 	double x = jacobian * (quadrature_point[0] - vertices[0](0));
-	weights[0] = -(x-1.);
+	weights[0] = 1.-x;
 	weights[1] = x;
 }
 
