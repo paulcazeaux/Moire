@@ -273,11 +273,11 @@ namespace Bilayer {
          */
 
         transpose_range_maps_.at(0).at(0) = transpose_domain_maps_.at(0);
-        transpose_range_maps_.at(0).at(1) = Tpetra::createContigMapWithNode<typename Map::local_ordinal_type, typename Map::global_ordinal_type, Kokkos::Compat::KokkosSerialWrapperNode>(
+        transpose_range_maps_.at(0).at(1) = Tpetra::createContigMapWithNode<typename Map::local_ordinal_type, typename Map::global_ordinal_type, types::DefaultNode>(
                                                                 (transpose_domain_maps_.at(0)->getGlobalNumElements () / n_orbitals(0)) * n_orbitals(1),
                                                                 (transpose_domain_maps_.at(0)->getNodeNumElements () / n_orbitals(0)) * n_orbitals(1),
                                                                 mpi_communicator);
-        transpose_range_maps_.at(1).at(0) = Tpetra::createContigMapWithNode<typename Map::local_ordinal_type, typename Map::global_ordinal_type, Kokkos::Compat::KokkosSerialWrapperNode>(
+        transpose_range_maps_.at(1).at(0) = Tpetra::createContigMapWithNode<typename Map::local_ordinal_type, typename Map::global_ordinal_type, types::DefaultNode>(
                                                                 (transpose_domain_maps_.at(1)->getGlobalNumElements () / n_orbitals(1)) * n_orbitals(0),
                                                                 (transpose_domain_maps_.at(1)->getNodeNumElements () / n_orbitals(1)) * n_orbitals(0),
                                                                 mpi_communicator);

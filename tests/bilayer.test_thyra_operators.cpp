@@ -20,7 +20,7 @@ using Teuchos::RCP;
 static const int dim = 2;
 static const int degree = 2;
 typedef double Scalar;
-typedef typename Kokkos::Compat::KokkosOpenMPWrapperNode Node;
+typedef typename types::DefaultNode Node;
 
 struct TestAlgebra : public Bilayer::BaseAlgebra<dim,degree,Scalar,Node>
 {

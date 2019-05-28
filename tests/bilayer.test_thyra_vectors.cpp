@@ -15,7 +15,7 @@
 #include "tools/numbers.h"
 
 static const int degree = 1;
-typedef typename Kokkos::Compat::KokkosSerialWrapperNode Node;
+typedef typename types::DefaultNode Node;
 
 struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double,Node>
 {
