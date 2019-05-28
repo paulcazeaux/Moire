@@ -51,7 +51,7 @@ namespace Bilayer {
 
     /** Concrete implementation of an SPMD vector space for Bilayers.
     */
-    template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, typename Scalar, class Node>
     class Operator : public Thyra::LinearOpDefaultBase<Scalar>
     {
     public:

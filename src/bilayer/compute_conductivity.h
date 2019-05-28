@@ -38,7 +38,7 @@ using Teuchos::RCP;
     *       and a complex<double> otherwise, since there is no need
     *       for adjoint calculations (see BaseAlgebra documentation).
     */
-    template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, typename Scalar, class Node>
     class ComputeConductivity : private BaseAlgebra<dim, degree, Scalar, Node>
     {
     public:

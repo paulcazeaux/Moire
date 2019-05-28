@@ -783,11 +783,11 @@ namespace Bilayer {
     /**
      * Explicit instantiations
      */
-     template class DoFHandler<1,1>;
-     template class DoFHandler<1,2>;
-     template class DoFHandler<1,3>;
-     template class DoFHandler<2,1>;
-     template class DoFHandler<2,2>;
-     template class DoFHandler<2,3>;
+     template class DoFHandler<1,1,types::DefaultNode>;
+     template class DoFHandler<1,2,types::DefaultNode>;
+     template class DoFHandler<1,3,types::DefaultNode>;
+     template class DoFHandler<2,1,types::DefaultNode>;
+     template class DoFHandler<2,2,types::DefaultNode>;
+     template class DoFHandler<2,3,types::DefaultNode>;
 
 } /* End namespace Bilayer */

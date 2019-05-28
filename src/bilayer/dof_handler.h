@@ -40,7 +40,7 @@ namespace Bilayer {
     * It is in particular responsible for building a sparsity pattern 
     * and handling partitioning of the degrees of freedom by metis.
     */
-    template <int dim, int degree, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, class Node>
     class DoFHandler : public Multilayer<dim, 2>
     {
     static_assert( (dim == 1 || dim == 2), "UnitCell dimension must be 1 or 2!\n");

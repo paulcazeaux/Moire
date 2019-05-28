@@ -54,7 +54,7 @@ namespace Bilayer {
 
     template <int dim, int degree, typename Scalar, class Node> class VectorSpace;
 
-    template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, typename Scalar, class Node>
     class Vector : virtual public Thyra::SpmdVectorDefaultBase<Scalar>
     {
     public:

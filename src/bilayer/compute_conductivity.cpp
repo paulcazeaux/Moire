@@ -214,10 +214,10 @@ namespace Bilayer {
      * Explicit instantiations
      */
 
-     template class ComputeConductivity<1,1,std::complex<double> >;
-     template class ComputeConductivity<1,2,std::complex<double> >;
-     template class ComputeConductivity<1,3,std::complex<double> >;
-     template class ComputeConductivity<2,1,std::complex<double> >;
-     template class ComputeConductivity<2,2,std::complex<double> >;
-     template class ComputeConductivity<2,3,std::complex<double> >;
+     template class ComputeConductivity<1,1,std::complex<double>,types::DefaultNode>;
+     template class ComputeConductivity<1,2,std::complex<double>,types::DefaultNode>;
+     template class ComputeConductivity<1,3,std::complex<double>,types::DefaultNode>;
+     template class ComputeConductivity<2,1,std::complex<double>,types::DefaultNode>;
+     template class ComputeConductivity<2,2,std::complex<double>,types::DefaultNode>;
+     template class ComputeConductivity<2,3,std::complex<double>,types::DefaultNode>;
 }/* End namespace Bilayer */

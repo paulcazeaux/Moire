@@ -9,25 +9,25 @@
 
 namespace Bilayer {
 
-    template<int dim, int degree, typename Scalar>
-    ComputeResolvent<dim,degree,Scalar>::ComputeResolvent(const Multilayer<dim, 2>& bilayer)
+    template<int dim, int degree, typename Scalar, class Node>
+    ComputeResolvent<dim,degree,Scalar,Node>::ComputeResolvent(const Multilayer<dim, 2>& bilayer)
         :
-        BaseAlgebra<dim,degree,Scalar>(bilayer),
+        BaseAlgebra<dim,degree,Scalar,Node>(bilayer),
         pcout(( this->mpi_communicator->getRank () == 0) ? std::cout : blackHole)
     {
         pcout << bilayer;
     }
     
-    template<int dim, int degree, typename Scalar>
-    ComputeResolvent<dim,degree,Scalar>::~ComputeResolvent()
+    template<int dim, int degree, typename Scalar, class Node>
+    ComputeResolvent<dim,degree,Scalar,Node>::~ComputeResolvent()
     {
         Teuchos::TimeMonitor::summarize (this->mpi_communicator(), pcout);
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeResolvent<dim,degree,Scalar>::run()
+    ComputeResolvent<dim,degree,Scalar,Node>::run()
     {
         pcout   << "Starting setup...\n";
         setup();
@@ -43,9 +43,9 @@ namespace Bilayer {
         pcout   << "\tComplete!\n";
     }
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     types::MemUsage
-    ComputeResolvent<dim,degree,Scalar>::memory_consumption() const
+    ComputeResolvent<dim,degree,Scalar,Node>::memory_consumption() const
     {
         types::MemUsage memory = this->dof_handler.memory_consumption();
         memory.Static += sizeof(this);
@@ -63,9 +63,9 @@ namespace Bilayer {
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeResolvent<dim,degree,Scalar>::setup()
+    ComputeResolvent<dim,degree,Scalar,Node>::setup()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Setup<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
@@ -76,9 +76,9 @@ namespace Bilayer {
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeResolvent<dim,degree,Scalar>::assemble_matrices()
+    ComputeResolvent<dim,degree,Scalar,Node>::assemble_matrices()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Assembly<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
@@ -89,9 +89,9 @@ namespace Bilayer {
     }
 
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeResolvent<dim,degree,Scalar>::solve()
+    ComputeResolvent<dim,degree,Scalar,Node>::solve()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
         "Solve<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
@@ -147,9 +147,9 @@ namespace Bilayer {
         Belos::ReturnType result = solver->solve();
     }
 
-    template<int dim, int degree, typename Scalar>
+    template<int dim, int degree, typename Scalar, class Node>
     void
-    ComputeResolvent<dim,degree,Scalar>::write_to_file()
+    ComputeResolvent<dim,degree,Scalar,Node>::write_to_file()
     {
         std::ofstream output_file(this->dof_handler.output_file + "." + std::to_string(this->dof_handler.my_pid), std::ofstream::binary | std::ofstream::out | std::ofstream::trunc);
         int 
@@ -171,17 +171,17 @@ namespace Bilayer {
     /**
      * Explicit instantiations
      */
-     template class ComputeResolvent<1,1,double>;
-     template class ComputeResolvent<1,2,double>;
-     template class ComputeResolvent<1,3,double>;
-     template class ComputeResolvent<2,1,double>;
-     template class ComputeResolvent<2,2,double>;
-     template class ComputeResolvent<2,3,double>;
+     template class ComputeResolvent<1,1,double,types::DefaultNode>;
+     template class ComputeResolvent<1,2,double,types::DefaultNode>;
+     template class ComputeResolvent<1,3,double,types::DefaultNode>;
+     template class ComputeResolvent<2,1,double,types::DefaultNode>;
+     template class ComputeResolvent<2,2,double,types::DefaultNode>;
+     template class ComputeResolvent<2,3,double,types::DefaultNode>;
 
-     template class ComputeResolvent<1,1,std::complex<double> >;
-     template class ComputeResolvent<1,2,std::complex<double> >;
-     template class ComputeResolvent<1,3,std::complex<double> >;
-     template class ComputeResolvent<2,1,std::complex<double> >;
-     template class ComputeResolvent<2,2,std::complex<double> >;
-     template class ComputeResolvent<2,3,std::complex<double> >;
+     template class ComputeResolvent<1,1,std::complex<double>,types::DefaultNode>;
+     template class ComputeResolvent<1,2,std::complex<double>,types::DefaultNode>;
+     template class ComputeResolvent<1,3,std::complex<double>,types::DefaultNode>;
+     template class ComputeResolvent<2,1,std::complex<double>,types::DefaultNode>;
+     template class ComputeResolvent<2,2,std::complex<double>,types::DefaultNode>;
+     template class ComputeResolvent<2,3,std::complex<double>,types::DefaultNode>;
 }/* End namespace Bilayer */
