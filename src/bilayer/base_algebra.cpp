@@ -932,18 +932,18 @@ BaseAlgebra<dim,degree,Scalar,Node>::LiouvillianOp::apply (
 /**
  * Explicit instantiations
  */
- template class BaseAlgebra<1,1,double>;
- template class BaseAlgebra<1,2,double>;
- template class BaseAlgebra<1,3,double>;
- template class BaseAlgebra<2,1,double>;
- template class BaseAlgebra<2,2,double>;
- template class BaseAlgebra<2,3,double>;
+ template class BaseAlgebra<1,1,double,types::DefaultNode>;
+ template class BaseAlgebra<1,2,double,types::DefaultNode>;
+ template class BaseAlgebra<1,3,double,types::DefaultNode>;
+ template class BaseAlgebra<2,1,double,types::DefaultNode>;
+ template class BaseAlgebra<2,2,double,types::DefaultNode>;
+ template class BaseAlgebra<2,3,double,types::DefaultNode>;
 
- template class BaseAlgebra<1,1,std::complex<double> >;
- template class BaseAlgebra<1,2,std::complex<double> >;
- template class BaseAlgebra<1,3,std::complex<double> >;
- template class BaseAlgebra<2,1,std::complex<double> >;
- template class BaseAlgebra<2,2,std::complex<double> >;
- template class BaseAlgebra<2,3,std::complex<double> >;
+ template class BaseAlgebra<1,1,std::complex<double>,types::DefaultNode>;
+ template class BaseAlgebra<1,2,std::complex<double>,types::DefaultNode>;
+ template class BaseAlgebra<1,3,std::complex<double>,types::DefaultNode>;
+ template class BaseAlgebra<2,1,std::complex<double>,types::DefaultNode>;
+ template class BaseAlgebra<2,2,std::complex<double>,types::DefaultNode>;
+ template class BaseAlgebra<2,3,std::complex<double>,types::DefaultNode>;
 
 } /* End namespace Bilayer */

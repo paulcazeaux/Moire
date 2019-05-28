@@ -46,7 +46,7 @@ namespace Bilayer {
     /** Extends concrete implementation of a Euclidean scalar product for
     * bilayer C* algebra element vectors/multivectors.
     */
-    template <int dim, int degree, typename Scalar, class Node=Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, typename Scalar, class Node>
     class EuclideanScalarProd : public Thyra::EuclideanScalarProd<Scalar> 
     {
     public:

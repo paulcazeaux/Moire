@@ -51,7 +51,7 @@ namespace Bilayer {
     *       (which can take the values 1, 2 or 3),
     * - Scalar: the main number type used in the computation.
     */
-    template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, typename Scalar, class Node>
     class BaseAlgebra
     {
 

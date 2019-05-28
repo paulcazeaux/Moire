@@ -113,17 +113,17 @@ namespace Bilayer {
     /**
      * Explicit instantiations
      */
-     template class Operator<1,1,double>;
-     template class Operator<1,2,double>;
-     template class Operator<1,3,double>;
-     template class Operator<2,1,double>;
-     template class Operator<2,2,double>;
-     template class Operator<2,3,double>;
+     template class Operator<1,1,double,types::DefaultNode>;
+     template class Operator<1,2,double,types::DefaultNode>;
+     template class Operator<1,3,double,types::DefaultNode>;
+     template class Operator<2,1,double,types::DefaultNode>;
+     template class Operator<2,2,double,types::DefaultNode>;
+     template class Operator<2,3,double,types::DefaultNode>;
 
-     template class Operator<1,1,std::complex<double> >;
-     template class Operator<1,2,std::complex<double> >;
-     template class Operator<1,3,std::complex<double> >;
-     template class Operator<2,1,std::complex<double> >;
-     template class Operator<2,2,std::complex<double> >;
-     template class Operator<2,3,std::complex<double> >;
+     template class Operator<1,1,std::complex<double>,types::DefaultNode>;
+     template class Operator<1,2,std::complex<double>,types::DefaultNode>;
+     template class Operator<1,3,std::complex<double>,types::DefaultNode>;
+     template class Operator<2,1,std::complex<double>,types::DefaultNode>;
+     template class Operator<2,2,std::complex<double>,types::DefaultNode>;
+     template class Operator<2,3,std::complex<double>,types::DefaultNode>;
 }

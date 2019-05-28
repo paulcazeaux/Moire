@@ -56,7 +56,7 @@ namespace Bilayer {
 
     /* Concrete implementation of Thyra::MultiVector in terms of Bilayer::MultiVector. */
 
-    template <int dim, int degree, typename Scalar, class Node = Kokkos::Compat::KokkosSerialWrapperNode>
+    template <int dim, int degree, typename Scalar, class Node>
     class MultiVector : virtual public Thyra::SpmdMultiVectorDefaultBase<Scalar>
     {
         public:

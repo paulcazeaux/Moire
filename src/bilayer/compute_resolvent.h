@@ -34,8 +34,8 @@ namespace Bilayer {
     *       This should be a double when no magnetic field is involved
     *       and a complex<double> otherwise.
     */
-    template <int dim, int degree, typename Scalar = double >
-    class ComputeResolvent : private BaseAlgebra<dim, degree, Scalar>
+    template <int dim, int degree, typename Scalar, class Node>
+    class ComputeResolvent : private BaseAlgebra<dim,degree,Scalar,Node>
     {
     public:
         /**
@@ -44,7 +44,7 @@ namespace Bilayer {
          * used in the discretization.
          */
         typedef Scalar                          scalar_type;
-        typedef BaseAlgebra<dim,degree,Scalar>  LA;
+        typedef BaseAlgebra<dim,degree,Scalar,Node>  LA;
         typedef typename LA::MultiVector        MultiVector;
         typedef typename LA::Matrix             Matrix;
         typedef typename LA::Operator           Operator;

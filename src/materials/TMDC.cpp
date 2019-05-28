@@ -1204,7 +1204,6 @@ double Coupling::Interlayer::Se_to_Se(const Orbital orbit_row,  const Orbital or
                                         std::array<double, 3> vector, 
                                         const double theta_row, const double theta_col) 
 {   
-std::array<double, 3> vector2 = vector;
     const double    nu_sigma    =  2.559;   const double    nu_pi       = -1.006;
     const double    R_sigma     =  3.337;   const double    R_pi        =  2.927;
     const double    eta_sigma   =  4.114;   const double    eta_pi      =  5.185;

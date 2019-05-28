@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <Tpetra_Core.hpp>
 
 namespace types 
 {
@@ -31,6 +32,8 @@ namespace types
         size_t InitArrays;
         size_t Static;
     } MemUsage;
+
+    typedef typename Kokkos::Compat::KokkosSerialWrapperNode DefaultNode ;
 }
 
 

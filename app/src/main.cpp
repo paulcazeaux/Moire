@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         /*********************************************************/
         /*   Run the Chebyshev recurrence and output moments.    */
         /*********************************************************/
-        Bilayer::ComputeResolvent<dim, degree, double>  
+        Bilayer::ComputeResolvent<dim,degree,double,types::DefaultNode>  
         compute_resolvent(bilayer);
         compute_resolvent.run();
 

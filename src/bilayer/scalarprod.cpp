@@ -55,17 +55,17 @@ namespace Bilayer {
     /**
      * Explicit instantiations
      */
-     template class EuclideanScalarProd<1,1,double>;
-     template class EuclideanScalarProd<1,2,double>;
-     template class EuclideanScalarProd<1,3,double>;
-     template class EuclideanScalarProd<2,1,double>;
-     template class EuclideanScalarProd<2,2,double>;
-     template class EuclideanScalarProd<2,3,double>;
+     template class EuclideanScalarProd<1,1,double,types::DefaultNode>;
+     template class EuclideanScalarProd<1,2,double,types::DefaultNode>;
+     template class EuclideanScalarProd<1,3,double,types::DefaultNode>;
+     template class EuclideanScalarProd<2,1,double,types::DefaultNode>;
+     template class EuclideanScalarProd<2,2,double,types::DefaultNode>;
+     template class EuclideanScalarProd<2,3,double,types::DefaultNode>;
 
-     template class EuclideanScalarProd<1,1,std::complex<double> >;
-     template class EuclideanScalarProd<1,2,std::complex<double> >;
-     template class EuclideanScalarProd<1,3,std::complex<double> >;
-     template class EuclideanScalarProd<2,1,std::complex<double> >;
-     template class EuclideanScalarProd<2,2,std::complex<double> >;
-     template class EuclideanScalarProd<2,3,std::complex<double> >;
+     template class EuclideanScalarProd<1,1,std::complex<double>,types::DefaultNode>;
+     template class EuclideanScalarProd<1,2,std::complex<double>,types::DefaultNode>;
+     template class EuclideanScalarProd<1,3,std::complex<double>,types::DefaultNode>;
+     template class EuclideanScalarProd<2,1,std::complex<double>,types::DefaultNode>;
+     template class EuclideanScalarProd<2,2,std::complex<double>,types::DefaultNode>;
+     template class EuclideanScalarProd<2,3,std::complex<double>,types::DefaultNode>;
 } // end namespace Bilayer
