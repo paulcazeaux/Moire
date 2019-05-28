@@ -14,7 +14,7 @@
 namespace types 
 {
 
-    typedef int64_t     glob_t;
+    typedef long long   glob_t;
     typedef int32_t     loc_t;
     typedef int8_t      block_t;
 

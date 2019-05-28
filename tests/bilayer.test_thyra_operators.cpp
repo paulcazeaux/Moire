@@ -20,7 +20,7 @@ using Teuchos::RCP;
 static const int dim = 2;
 static const int degree = 2;
 typedef double Scalar;
-typedef typename Kokkos::Compat::KokkosSerialWrapperNode Node;
+typedef typename Kokkos::Compat::KokkosOpenMPWrapperNode Node;
 
 struct TestAlgebra : public Bilayer::BaseAlgebra<dim,degree,Scalar,Node>
 {
@@ -204,8 +204,8 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
 
 
 
-    // test_algebra.LdH ->norms_inf(norms);
-    // std::cout << "Norm of L(dH): " << norms[0] << std::endl;
+    test_algebra.LdH ->norms_inf(norms);
+    std::cout << "Norm of L(dH): " << norms[0] << std::endl;
 
 
     std::cout << "Vector creation and manipulation OK" << std::endl;
@@ -225,11 +225,17 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
         }
         if (dim == 2)
         {
+            std::cout << "\n\n ---------------------\nGraphene:\n---------------------\n\n" << std::endl;
             do_test(Materials::Mat::Graphene);
-            // do_test(Materials::Mat::MoS2);
-            // do_test(Materials::Mat::WS2);
-            // do_test(Materials::Mat::MoSe2);
-            // do_test(Materials::Mat::WSe2);
+            std::cout << "\n\n ---------------------\nMoS2:\n---------------------\n\n" << std::endl;
+            do_test(Materials::Mat::MoS2);
+            std::cout << "\n\n ---------------------\nWS:\n---------------------\n\n" << std::endl;
+            do_test(Materials::Mat::WS2);
+            std::cout << "\n\n ---------------------\nMoS2:\n---------------------\n\n" << std::endl;
+            do_test(Materials::Mat::MoSe2);
+            std::cout << "\n\n ---------------------\nWse2:\n---------------------\n\n" << std::endl;
+            do_test(Materials::Mat::WSe2);
+            std::cout << "\n\n ---------------------\nDone!\n---------------------\n\n" << std::endl;
         }
     }
   catch (std::exception &exc)

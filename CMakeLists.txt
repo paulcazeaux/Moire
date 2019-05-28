@@ -25,18 +25,23 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
 
 find_package(MPI)
 find_package(METIS)
-find_package(Kokkos REQUIRED
-        PATHS /usr/local /pool)
-find_package(Teuchos REQUIRED
-        PATHS /usr/local /pool)
-find_package(Tpetra REQUIRED
-		PATHS /usr/local /pool)
-find_package(Thyra REQUIRED
-        PATHS /usr/local /pool)
-find_package(Belos REQUIRED
-        PATHS /usr/local /pool)
+find_package(Trilinos REQUIRED
+        PATHS /usr/local)
+      
+# find_package(Kokkos REQUIRED
+#        PATHS /usr/local)
+# find_package(Teuchos REQUIRED
+#         PATHS /usr/local)
+# find_package(Tpetra REQUIRED
+# 		PATHS /usr/local)
+# find_package(Thyra REQUIRED
+#         PATHS /usr/local)
+# find_package(Belos REQUIRED
+#         PATHS /usr/local)
+# find_package(Stratimikos REQUIRED
+#         PATHS /usr/local)
 find_package(deal.II 9.0.0 REQUIRED
-		PATHS /usr/local /pool)
+		PATHS /usr/local)
 find_package(METIS REQUIRED)
 
 # Fix dealii.II flags for Clang to avoid warnings
@@ -56,8 +61,18 @@ ENDIF()
 ######################################
 ### include required modules & utilities
 #####################################################################################
-include_directories(${MPI_INCLUDES} ${Metis_INCLUDES} ${Tpetra_INCLUDE_DIRS} ${Tpetra_TPL_INCLUDE_DIRS} ${Belos_INCLUDE_DIRS} ${Belos_TPL_INCLUDE_DIRS} ${Teuchos_INCLUDE_DIRS} ${Teuchos_TPL_INCLUDE_DIRS} ${Kokkos_INCLUDE_DIRS} ${Kokkos_TPL_INCLUDE_DIRS})
-link_directories(${MPI_LIBRARIES} ${Tpetra_LIBRARY_DIRS} ${Tpetra_TPL_LIBRARY_DIRS} ${Thyra_LIBRARY_DIRS} ${Thyra_TPL_LIBRARY_DIRS} ${Belos_LIBRARY_DIRS} ${Belos_TPL_LIBRARY_DIRS} ${Teuchos_LIBRARY_DIRS} ${Teuchos_TPL_LIBRARY_DIRS} ${Kokkos_LIBRARY_DIRS} ${Kokkos_TPL_LIBRARY_DIRS})
+include_directories(${MPI_INCLUDES} ${Metis_INCLUDES} ${Trilinos_INCLUDES})
+#  ${Tpetra_INCLUDE_DIRS} ${Tpetra_TPL_INCLUDE_DIRS} ${Belos_INCLUDE_DIRS}
+#  ${Belos_TPL_INCLUDE_DIRS} ${Teuchos_INCLUDE_DIRS}
+#  ${Teuchos_TPL_INCLUDE_DIRS} ${Kokkos_INCLUDE_DIRS}
+#  ${Kokkos_TPL_INCLUDE_DIRS} ${Stratimikos_TPL_INCLUDE_DIRS})
+link_directories(${MPI_LIBRARIES} ${Trilinos_LIBRARIES})
+#  ${Tpetra_LIBRARY_DIRS}
+#  ${Tpetra_TPL_LIBRARY_DIRS} ${Thyra_LIBRARY_DIRS}
+#  ${Thyra_TPL_LIBRARY_DIRS} ${Belos_LIBRARY_DIRS} ${Belos_TPL_LIBRARY_DIRS}
+#  ${Teuchos_LIBRARY_DIRS} ${Teuchos_TPL_LIBRARY_DIRS}
+#  ${Kokkos_LIBRARY_DIRS} ${Kokkos_TPL_LIBRARY_DIRS}
+#  ${Stratimikos_LIBRARY_DIRS})
 include(CMakeBackwardCompatibilityCXX)
 include(CheckLibraryExists)
 

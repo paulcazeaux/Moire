@@ -1,11 +1,12 @@
-#!/bin/bash
+#!/bin/zsh
 
 # user parameter
 TARGET="Moire"
 
 # cmake parameters
-export CC=mpicc
-export CXX=mpic++
+source /opt/intel/mpi/intel64/bin/mpivars.sh
+export CC=/opt/intel/mpi/intel64/bin/mpigcc
+export CXX=/opt/intel/mpi/intel64/bin/mpigxx
 
 # build directory
 cd ./build
@@ -19,7 +20,7 @@ cmake ..
 echo "====================================================================================="
 echo "                                       MAKE                                          " 
 echo "====================================================================================="
-make ${TARGET} -j 8
+make ${TARGET} -j 16
 make test
 # additional run
 echo "====================================================================================="

@@ -32,7 +32,7 @@ MACRO(make_test test_name mpi_run)
       ${_command} > ${test_name}-OK 2>&1
       ||(echo "${test_name}: RUN failed. Output:"
          && cat ${test_name}-OK
-         && rm ${test_name}-OK
+         #         && rm ${test_name}-OK
          && echo "${CMAKE_CURRENT_BINARY_DIR}"
          && exit 1)
     COMMAND echo "${_target}: PASSED."
@@ -42,7 +42,7 @@ MACRO(make_test test_name mpi_run)
   # this is a hack to make sure the -OK file is deleted
   # even if compilation fails.
   ADD_CUSTOM_TARGET(kill-${test_name}-OK
-        COMMAND rm -f ${test_name}-OK 
+        COMMAND  #rm -f ${test_name}-OK 
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
   ADD_DEPENDENCIES(${test_name} kill-${test_name}-OK)
@@ -68,7 +68,7 @@ MESSAGE(STATUS "Setting up tests")
 # make_test("bilayer.test_thyra_vectors" "")
 
 # Test Bilayer: operator creation and basic manipulation
-make_test("bilayer.test_thyra_operators" "")
+make_test("bilayer.test_thyra_operators" "4")
 
 
 # Test Bilayer: solution of linear systems

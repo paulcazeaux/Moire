@@ -13,7 +13,7 @@ SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 
 FILE( GLOB_RECURSE source_files *.cpp )
 
-ADD_LIBRARY( Calgebra STATIC ${source_files})
+ADD_LIBRARY( Calgebra SHARED ${source_files})
 
 
 ######################################################################################
@@ -21,10 +21,11 @@ ADD_LIBRARY( Calgebra STATIC ${source_files})
 ######################################################################################
 DEAL_II_SETUP_TARGET(Calgebra)
 TARGET_LINK_LIBRARIES( Calgebra ${MPI_LIBRARIES} ${METIS_LIBRARIES}
-                                ${Kokkos_LIBRARIES} ${Kokkos_TPL_LIBRARIES} 
-                                ${Teuchos_LIBRARIES} ${Teuchos_TPL_LIBRARIES} 
-                                ${Tpetra_LIBRARIES} ${Tpetra_TPL_LIBRARIES} 
-                                ${Thyra_LIBRARIES} ${Thyra_TPL_LIBRARIES} 
-                                ${Belos_LIBRARIES} ${Belos_TPL_LIBRARIES} )
+                                ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} )
+#                                ${Kokkos_LIBRARIES} ${Kokkos_TPL_LIBRARIES} 
+#                                ${Teuchos_LIBRARIES} ${Teuchos_TPL_LIBRARIES} 
+#                                ${Tpetra_LIBRARIES} ${Tpetra_TPL_LIBRARIES} 
+#                                ${Thyra_LIBRARIES} ${Thyra_TPL_LIBRARIES} 
+#                                ${Belos_LIBRARIES} ${Belos_TPL_LIBRARIES} )
 
 ######################################################################################
