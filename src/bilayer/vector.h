@@ -211,7 +211,7 @@ namespace Bilayer {
     };
 
 
-    // Nonmember constructor for MultiVector.
+    // Nonmember constructor for Vector.
     template <int dim, int degree, typename Scalar, class Node>
     inline
     Teuchos::RCP<Thyra::VectorBase<Scalar> >
@@ -227,7 +227,7 @@ namespace Bilayer {
     }
 
 
-    //Nonmember const constructor for MultiVector.
+    //Nonmember const constructor for Vector.
     template <int dim, int degree, typename Scalar, class Node>
     inline
     Teuchos::RCP<const Thyra::VectorBase<Scalar> >

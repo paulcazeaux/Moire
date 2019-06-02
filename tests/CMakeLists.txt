@@ -59,29 +59,30 @@ ENDMACRO()
 MESSAGE(STATUS "Setting up tests")
 
 # Test Materials: 1D model coefficients
-# make_test("materials.1d_toy_model" "")
+make_test("materials.1d_toy_model" "")
 
 # Test Materials: Graphene coefficients
-# make_test("materials.graphene" "")
+make_test("materials.graphene" "")
+
+# Test Bilayer Hamiltonian assembly and symmetry
+make_test("bilayer.test_H_sym" "")
+
+# Test Bilayer Hamiltonian rotation invariance
+make_test("bilayer.test_rotation_invariance" "")
+
+# Print sparsity patterns
+# make_test("bilayer.print_sparsity_patterns" "3")
 
 # Test Bilayer: vector creation and basic manipulation
-# make_test("bilayer.test_thyra_vectors" "")
+make_test("bilayer.test_thyra_vectors" "")
 
 # Test Bilayer: operator creation and basic manipulation
 make_test("bilayer.test_thyra_operators" "")
 
-
 # Test Bilayer: solution of linear systems
 
 
-# Test Bilayer Hamiltonian assembly and symmetry
-# make_test("bilayer.test_H_sym" "")
 
-# Test Bilayer Hamiltonian rotation invariance
-# make_test("bilayer.test_rotation_invariance" "")
-
-# Print sparsity patterns
-# make_test("bilayer.print_sparsity_patterns" "3")
 
 ######################################################################################
 ### 4) Wrap up: define a custom test target

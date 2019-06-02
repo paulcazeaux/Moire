@@ -14,26 +14,34 @@
 #include "bilayer/vector.h"
 #include "tools/numbers.h"
 
+using Teuchos::RCP;
+
 static const int degree = 1;
+static const int dim = 2;
+typedef double Scalar;
+typedef typename types::loc_t LO;
+typedef typename types::glob_t GO;
 typedef typename types::DefaultNode Node;
 
-struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double,Node>
+struct TestAlgebra : public Bilayer::BaseAlgebra<dim,degree,Scalar,Node>
 {
     public:
-        typedef typename Bilayer::BaseAlgebra<2,degree,double,Node> LA;
-        typedef typename Bilayer::VectorSpace<2,degree,double,Node> VS;
-        typedef typename Bilayer::Vector<2,degree,double,Node> Vec;
-        typedef typename Bilayer::MultiVector<2,degree,double,Node> MVec;
+        typedef typename Bilayer::BaseAlgebra<dim,degree,Scalar,Node> LA;
+        typedef typename Bilayer::VectorSpace<dim,degree,Scalar,Node> VS;
+        typedef typename Thyra::VectorBase<Scalar> Vec;
+        typedef typename Bilayer::Vector<dim,degree,Scalar,Node> BVec;
+        typedef typename Thyra::MultiVectorBase<Scalar> MVec;
+        typedef typename Bilayer::MultiVector<dim,degree,Scalar,Node> BMVec;
 
-        Teuchos::RCP<VS>    vectorSpace;
+        RCP<VS>    vectorSpace;
 
-        Teuchos::RCP<Vec>   I_1, I_2;
-        Teuchos::RCP<MVec>   M_1, M_2;
+        RCP<Vec>    I_1, I_2;
+        RCP<MVec>   M_1, M_2;
 
-        TestAlgebra(Multilayer<2, 2> bilayer);
+        TestAlgebra(Multilayer<dim, 2> bilayer);
 };
 
-TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer):
+TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     LA(bilayer)
 {
     LA::assemble_base_matrices();
@@ -41,39 +49,45 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer):
     vectorSpace = VS::create();
     vectorSpace->initialize(Teuchos::rcpFromRef(* this));
 
-        Teuchos::RCP<Tpetra::MultiVector<double,types::loc_t,types::glob_t,Node>>
-    mvec_init = Tpetra::createMultiVector<double,types::loc_t,types::glob_t,Node>
+        RCP<Tpetra::MultiVector<Scalar,LO,GO,Node>>
+    mvec_init = Tpetra::createMultiVector<Scalar,LO,GO,Node>
                         ( vectorSpace->getOrbVecMap(), vectorSpace->getNumOrbitals());
 
-
-        Teuchos::RCP<Tpetra::Vector<double,types::loc_t,types::glob_t,Node>>
-    vec_init = Tpetra::createVector<double,types::loc_t,types::glob_t,Node>
+        RCP<Tpetra::Vector<Scalar,LO,GO,Node>>
+    vec_init = Tpetra::createVector<Scalar,LO,GO,Node>
                         ( vectorSpace->getVecMap() );
 
-    I_1 = Bilayer::createVector<2,degree,double,Node>( vectorSpace, mvec_init);
-    I_2 = Bilayer::createVector<2,degree,double,Node>( vectorSpace, vec_init );
+    LA::set_to_identity(* mvec_init);
+    I_1 = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, mvec_init);
+    I_2 = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, vec_init );
+    RCP<BVec> BI_2 = Teuchos::rcp_dynamic_cast<BVec>(I_2);
+    LA::set_to_identity(* BI_2->getThyraOrbVector()->getTpetraMultiVector());
 
-        Teuchos::RCP<Tpetra::MultiVector<double,types::loc_t,types::glob_t,Node>>
-    vec_init2 = Tpetra::createMultiVector<double,types::loc_t,types::glob_t,Node>
+        RCP<Tpetra::MultiVector<Scalar,LO,GO,Node>>
+    vec_init2 = Tpetra::createMultiVector<Scalar,LO,GO,Node>
                         ( vectorSpace->getVecMap(), 3);
-        Teuchos::RCP<Tpetra::MultiVector<double,types::loc_t,types::glob_t,Node>>
-    mvec_init2 = Tpetra::createMultiVector<double,types::loc_t,types::glob_t,Node>
+        RCP<Tpetra::MultiVector<Scalar,LO,GO,Node>>
+    mvec_init2 = Tpetra::createMultiVector<Scalar,LO,GO,Node>
                         ( vectorSpace->getOrbVecMap(), 3*vectorSpace->getNumOrbitals());
 
 
-    M_1 = Bilayer::createMultiVector<2,degree,double,Node>
+    M_1 = Bilayer::createMultiVector<dim,degree,Scalar,Node>
         ( vectorSpace, mvec_init2);
-    M_2 = Bilayer::createMultiVector<2,degree,double,Node>
+    M_2 = Bilayer::createMultiVector<dim,degree,Scalar,Node>
         ( vectorSpace, vec_init2 );
 
 
-    LA::set_to_identity(* I_1->getThyraOrbVector()->getTpetraMultiVector());
-    LA::set_to_identity(* I_2->getThyraOrbVector()->getTpetraMultiVector());
+    M_1->assign(1.0);
+    M_2->assign(1.0);
+    M_1->col(1)->scale(2.0);
+    M_2->col(1)->scale(2.0);
+    M_1->col(2)->assign(3.0);
+    M_2->col(2)->assign(3.0);
 }
 
  void do_test(Materials::Mat mat)
  {
-    Multilayer<2, 2> bilayer (
+    Multilayer<dim, 2> bilayer (
             "test_hamiltonian", 
             "none.jld",
             ObservableType::DoS,
@@ -81,7 +95,7 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer):
             1,   
             1, 0,
             0, 0,
-            10., 2);
+            2.0, 2);
 
     double height;
     switch (mat)
