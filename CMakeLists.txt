@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.8)
 
 # Here define your project name
 project(Moire)
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 
 # Here define the name and the version of your package
 SET(PACKAGE_NAME “Moire” CACHE STRING "package_name" FORCE)
@@ -24,6 +24,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
 
 
 find_package(MPI)
+find_package(OpenMP)
 find_package(METIS)
 find_package(Trilinos REQUIRED
         PATHS /usr/local)

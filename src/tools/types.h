@@ -33,7 +33,7 @@ namespace types
         size_t Static;
     } MemUsage;
 
-    typedef typename Kokkos::Compat::KokkosSerialWrapperNode DefaultNode ;
+    typedef typename Kokkos::Compat::KokkosOpenMPWrapperNode DefaultNode ;
 }
 
 
