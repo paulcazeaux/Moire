@@ -14,14 +14,17 @@
 #include "tools/numbers.h"
 
 static const int degree = 1;
+static const int dim = 2;
+typedef double Scalar;
+typedef typename types::DefaultNode Node;
 
-struct TestAlgebra : public Bilayer::BaseAlgebra<2,degree,double>
+struct TestAlgebra : public Bilayer::BaseAlgebra<dim,degree,Scalar,Node>
 {
     public:
-        typedef Bilayer::BaseAlgebra<2,degree,double>  LA;
+        typedef Bilayer::BaseAlgebra<dim,degree,Scalar,Node>  LA;
 
-        TestAlgebra(Multilayer<2, 2> bilayer);
-        std::array<MultiVector, 2> I, A, B;
+        TestAlgebra(Multilayer<dim, 2> bilayer);
+        std::array<LA::MultiVector, 2> I, A, B;
 };
 
 void print_sp(Teuchos::RCP< const Bilayer::BaseAlgebra<2,degree,double>::Matrix::crs_graph_type > sp, size_t offset_row, size_t offset_col, std::ofstream& out)
@@ -43,7 +46,7 @@ void print_sp(Teuchos::RCP< const Bilayer::BaseAlgebra<2,degree,double>::Matrix:
        }
 }
 
-TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
+TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer) :
     LA(bilayer)
 {
     LA::assemble_hamiltonian_action();
@@ -83,7 +86,7 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
 
  void print_sparsity_patterns(Materials::Mat mat)
  {
-    Multilayer<2, 2> bilayer (
+    Multilayer<dim, 2> bilayer (
             "sparsity_pattern", 
             "none.jld",
             ObservableType::DoS,
@@ -107,8 +110,8 @@ TestAlgebra::TestAlgebra(Multilayer<2, 2> bilayer) :
         default:
             height = 0.;
     }
-    bilayer.layer_data[0] = std::make_unique<LayerData<2>>(mat, 0.,  0.,   1.);
-    bilayer.layer_data[1] = std::make_unique<LayerData<2>>(mat, height, 5.71 * numbers::PI/180, 1.);
+    bilayer.layer_data[0] = std::make_unique<LayerData<dim>>(mat, 0.,  0.,   1.);
+    bilayer.layer_data[1] = std::make_unique<LayerData<dim>>(mat, height, 5.71 * numbers::PI/180, 1.);
 
     TestAlgebra test_algebra (bilayer);
  }

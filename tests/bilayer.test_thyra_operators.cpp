@@ -33,7 +33,7 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<dim,degree,Scalar,Node>
 
         RCP<VS>    vectorSpace;
 
-        RCP<Vec>   I, AI, tHAI, tAtHAI, H, AH, tHAH, tAtHAH, tAH, LH, LI;
+        RCP<Vec>   I, AI, H, AH, LH, LI; // AI, tHAI, tAtHAI, H, AH, tHAH, tAtHAH, tAH, LH, LI;
         RCP<MVec>   dH, LdH;
 
         RCP<const Op> hamiltonianOp, transposeOp, liouvillianOp, derivationOp;
@@ -59,41 +59,27 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     AI = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
         Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
                         ( vectorSpace->getVecMap() ));
-    tHAI = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-        Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-    tAtHAI = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-        Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
     H = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
         Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
                         ( vectorSpace->getVecMap() ));
     AH = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
         Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
                         ( vectorSpace->getVecMap() ));
-    tHAH = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-        Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-    tAtHAH = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-        Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-    tAH = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-        Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
+
     LI = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
         Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
                         ( vectorSpace->getVecMap() ));
     LH = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
         Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
                         ( vectorSpace->getVecMap() ));
-    // dH = Bilayer::createMultiVector<dim,degree,Scalar,Node>
-    //     ( vectorSpace, 
-    //     Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
-    //                     ( vectorSpace->getVecMap(), dim) );
-    // LdH = Bilayer::createMultiVector<dim,degree,Scalar,Node>
-    //     ( vectorSpace, 
-    //     Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
-    //                     ( vectorSpace->getVecMap(), dim) );
+    dH = Bilayer::createMultiVector<dim,degree,Scalar,Node>
+        ( vectorSpace, 
+        Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
+                        ( vectorSpace->getVecMap(), dim) );
+    LdH = Bilayer::createMultiVector<dim,degree,Scalar,Node>
+        ( vectorSpace, 
+        Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
+                        ( vectorSpace->getVecMap(), dim) );
 
     hamiltonianOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
         ( vectorSpace, LA::HamiltonianAction);
@@ -101,24 +87,17 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
         ( vectorSpace, LA::Transpose);
     liouvillianOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
         (vectorSpace, LA::make_liouvillian_operator());
-    // derivationOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
-    //     (vectorSpace, LA::Derivation);
+    derivationOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
+        (vectorSpace, LA::Derivation);
     
-    transposeOp  ->apply(Thyra::NOTRANS, *I, AI.ptr(), 1.0, 0.0);
-    hamiltonianOp->apply(Thyra::TRANS, *AI, tHAI .ptr(), 1.0, 0.0);
-    transposeOp  ->apply(Thyra::TRANS, *tHAI, tAtHAI.ptr(), 1.0, 0.0);
-
     hamiltonianOp->apply(Thyra::NOTRANS, *I, H .ptr(), 1.0, 0.0);
+    transposeOp  ->apply(Thyra::NOTRANS, *I, AI.ptr(), 1.0, 0.0);
     transposeOp  ->apply(Thyra::NOTRANS, *H, AH.ptr(), 1.0, 0.0);
-    hamiltonianOp->apply(Thyra::TRANS, *AH, tHAH .ptr(), 1.0, 0.0);
-    transposeOp  ->apply(Thyra::TRANS, *tHAH, tAtHAH.ptr(), 1.0, 0.0);
 
-
-    transposeOp  ->apply(Thyra::TRANS, *H, tAH.ptr(), 1.0, 0.0);
     liouvillianOp->apply(Thyra::NOTRANS, *I, LI.ptr(), 1.0, 0.0);
     liouvillianOp->apply(Thyra::NOTRANS, *H, LH.ptr(), 1.0, 0.0);
-    // derivationOp ->apply(Thyra::NOTRANS, *H, dH.ptr(), 1.0, 0.0);
-    // liouvillianOp->apply(Thyra::NOTRANS, *dH, LdH.ptr(), 1.0, 0.0);
+    derivationOp ->apply(Thyra::NOTRANS, *H, dH.ptr(), 1.0, 0.0);
+    liouvillianOp->apply(Thyra::NOTRANS, *dH, LdH.ptr(), 1.0, 0.0);
 }
 
  void do_test(Materials::Mat mat)
@@ -131,7 +110,7 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
             1,   
             1, 0,
             0, 0,
-            10., 3);
+            1.0, 1);
 
     bilayer.layer_data[0] = std::make_unique<LayerData<dim>>(mat, 0.,  0.,   1.);
 
@@ -167,24 +146,11 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     }
 
     TestAlgebra test_algebra (bilayer);
-
-    std::cout << "<tAH, H>:\t" << Thyra::dot(*test_algebra.tAH, *test_algebra.H ) 
-              << "\t<H,AH>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.AH) << std::endl
-              << "\t<L(I),H>:\t" << Thyra::dot(*test_algebra.LI,   *test_algebra.H) 
-              << "\t<I,L(H)>:\t" << Thyra::dot(*test_algebra.I,   *test_algebra.LH) 
-              << "\t<H,L(H)>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.LH) << std::endl
-              << "\t<tAH,H>-<H,H>:\t" << Thyra::dot(*test_algebra.tAH,   *test_algebra.H) 
-                                        - Thyra::dot(*test_algebra.H,  *test_algebra.H) << std::endl
-              << "\t<H,AH>-<H,H>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.AH) 
-                                        - Thyra::dot(*test_algebra.H,  *test_algebra.H) << std::endl
-              << "\t<I,tHAH>-<H,H>:\t" << Thyra::dot(*test_algebra.I,   *test_algebra.tHAH) 
-                                        - Thyra::dot(*test_algebra.H,  *test_algebra.H) << std::endl
-              << "\t<I,tAtHAH>-<H,H>:\t" << Thyra::dot(*test_algebra.I,   *test_algebra.tAtHAH) 
-                                        - Thyra::dot(*test_algebra.H,  *test_algebra.H) << std::endl;
-
-    test_algebra.I->update( -1.0, * test_algebra.AI);
     Teuchos::Array<Teuchos::ScalarTraits<Scalar>::magnitudeType> norms (1);
-    test_algebra.I ->norms_2(norms);
+
+
+    test_algebra.AI->update( -1.0, * test_algebra.I);
+    test_algebra.AI ->norms_2(norms);
 
     AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-10,
                         dealii::ExcInternalError() );
@@ -192,20 +158,24 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     
     test_algebra.H ->norms_2(norms);
     std::cout << "Norm of H: " << norms[0] << std::endl;
-    test_algebra.H->update( -1.0, * test_algebra.AH);
+    std::cout << "\t<H,AH>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.AH) << std::endl;
 
-    test_algebra.H ->norms_2(norms);
-    std::cout << "Norm of H - AH: " << norms[0] << std::endl;
+    test_algebra.AH->update( -1.0, * test_algebra.H);
+    test_algebra.AH ->norms_2(norms);
+    std::cout << "Norm of AH - H: " << norms[0] << std::endl << std::endl;
 
     test_algebra.LI ->norms_2(norms);
     std::cout << "Norm of L(I): " << norms[0] << std::endl;
     test_algebra.LH ->norms_2(norms);
     std::cout << "Norm of L(H): " << norms[0] << std::endl;
+    test_algebra.LdH ->norms_2(norms);
 
+    std::cout << "\t<I,L(H)>:\t" << Thyra::dot(*test_algebra.I,   *test_algebra.LH) 
+              << "\t<H,L(H)>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.LH) << std::endl
+              << "\t<H,AH>-<H,H>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.AH) 
+                                        - Thyra::dot(*test_algebra.H,  *test_algebra.H) << std::endl;
 
-
-    test_algebra.LdH ->norms_inf(norms);
-    std::cout << "Norm of L(dH): " << norms[0] << std::endl;
+    std::cout << std::endl << "Norm of L(dH): " << norms[0] << std::endl << std::endl;
 
 
     std::cout << "Vector creation and manipulation OK" << std::endl;
