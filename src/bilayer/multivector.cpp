@@ -247,7 +247,6 @@ namespace Bilayer {
         auto tmv = this->getConstMultiVector(Teuchos::rcpFromRef(mv));
 
         // If the cast succeeded, call Tpetra directly.
-        // Otherwise, fall back to the RTOp implementation.
         if (Teuchos::nonnull(tmv)) 
         {
             multiVector_.getNonconstObj()->update(alpha, *tmv);

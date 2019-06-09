@@ -10,12 +10,12 @@
 
 #include "parameters/multilayer.h"
 #include "bilayer/compute_dos.h"
-#include "bilayer/compute_resolvent.h"
+#include "bilayer/compute_conductivity.h"
 
 #include <iostream>
 #include <fstream>
 
-static const int dim = 2;
+static const int dim = 1;
 static const int degree = 3;
 
 
@@ -38,14 +38,14 @@ int main(int argc, char** argv) {
         /*********************************************************/
         /*   Run the Chebyshev recurrence and output moments.    */
         /*********************************************************/
-        Bilayer::ComputeResolvent<dim,degree,double,types::DefaultNode>  
-        compute_resolvent(bilayer);
-        compute_resolvent.run();
+        Bilayer::ComputeConductivity<dim,degree,types::DefaultNode>  
+        compute_conductivity(bilayer, 0.01, 100);
+        compute_conductivity.run();
 
         /*********************************************************/
         /*                  Output to file                       */
         /*********************************************************/
-        compute_resolvent.write_to_file();
+        compute_conductivity.write_to_file();
 	}
 	catch (std::exception &exc)
     {

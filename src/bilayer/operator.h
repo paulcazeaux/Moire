@@ -49,7 +49,7 @@ namespace Bilayer {
     using Thyra::EOpTransp;
 
 
-    /** Concrete implementation of an SPMD vector space for Bilayers.
+    /** Concrete implementation of a linear Operator for Bilayers.
     */
     template <int dim, int degree, typename Scalar, class Node>
     class Operator : public Thyra::LinearOpDefaultBase<Scalar>
@@ -63,12 +63,13 @@ namespace Bilayer {
         Operator();
 
 
-        /** Initialize a space. */
+        /** Initialize an operator. */
         void initialize(
             const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
             const Teuchos::RCP<op_type> &Op
         );
 
+        /** Initialize a const operator. */
         void constInitialize(
             const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
             const Teuchos::RCP<const op_type> &Op
@@ -92,10 +93,10 @@ namespace Bilayer {
         Teuchos::ConstNonconstObjectContainer<op_type>
             operator_;
 
-    }; // end class VectorSpace
+    }; // end class Operator
 
 
-    /** Nonmember constructor that creates a serial vector space.
+    /** Nonmember constructor that creates a Thyra::LinearOpBase.
     */
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<Thyra::LinearOpBase<Scalar>>
@@ -110,7 +111,7 @@ namespace Bilayer {
         return op;
     }
 
-    /** Nonmember constructor that creates a serial vector space.
+    /** Nonmember constructor that creates a const Thyra::LinearOpBase.
     */
     template <int dim, int degree, typename Scalar, class Node>
     Teuchos::RCP<const Thyra::LinearOpBase<Scalar> >

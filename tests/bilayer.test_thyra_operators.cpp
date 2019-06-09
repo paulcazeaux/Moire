@@ -110,7 +110,7 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
             1,   
             1, 0,
             0, 0,
-            1.0, 1);
+            5.0, 1);
 
     bilayer.layer_data[0] = std::make_unique<LayerData<dim>>(mat, 0.,  0.,   1.);
 
@@ -168,7 +168,7 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     std::cout << "Norm of L(I): " << norms[0] << std::endl;
     test_algebra.LH ->norms_2(norms);
     std::cout << "Norm of L(H): " << norms[0] << std::endl;
-    test_algebra.LdH ->norms_inf(norms);
+    test_algebra.LdH ->norms_2(norms);
 
     std::cout << "\t<I,L(H)>:\t" << Thyra::dot(*test_algebra.I,   *test_algebra.LH) 
               << "\t<H,L(H)>:\t" << Thyra::dot(*test_algebra.H,   *test_algebra.LH) << std::endl

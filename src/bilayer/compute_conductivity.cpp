@@ -10,29 +10,29 @@
 
 namespace Bilayer {
 
-    template<int dim, int degree, typename Scalar, class Node>
-    ComputeConductivity<dim,degree,Scalar,Node>::ComputeConductivity(
+    template<int dim, int degree, class Node>
+    ComputeConductivity<dim,degree,Node>::ComputeConductivity(
             const Multilayer<dim, 2>& bilayer,
             const Scalar tau,
             const Scalar beta)
         :
-        BaseAlgebra<dim,degree,Scalar,Node>(bilayer),
+        BaseAlgebra<dim,degree,Scalar, Node>(bilayer),
         pcout(( this->mpi_communicator->getRank () == 0) ? std::cout : blackHole),
         tau(tau), beta(beta)
     {
         pcout << bilayer;
     }
 
-    template<int dim, int degree, typename Scalar, class Node>
-    ComputeConductivity<dim,degree,Scalar,Node>::~ComputeConductivity()
+    template<int dim, int degree, class Node>
+    ComputeConductivity<dim,degree,Node>::~ComputeConductivity()
     {
         Teuchos::TimeMonitor::summarize (this->mpi_communicator(), pcout);
     }
 
 
-    template<int dim, int degree, typename Scalar, class Node>
+    template<int dim, int degree, class Node>
     void
-    ComputeConductivity<dim,degree,Scalar,Node>::run()
+    ComputeConductivity<dim,degree,Node>::run()
     {
         pcout   << "Starting setup...\n";
         setup();
@@ -44,9 +44,9 @@ namespace Bilayer {
         pcout   << "\tComplete!\n";
     }
 
-    template<int dim, int degree, typename Scalar, class Node>
+    template<int dim, int degree, class Node>
     void 
-    ComputeConductivity<dim,degree,Scalar,Node>::write_Conductivity_to_file()
+    ComputeConductivity<dim,degree,Node>::write_to_file()
     {
         if (this->mpi_communicator->getRank () == 0)
         {
@@ -62,24 +62,34 @@ namespace Bilayer {
     }
 
     
-    template<int dim, int degree, typename Scalar, class Node>
-    std::vector<std::array<Scalar,dim>>
-    ComputeConductivity<dim,degree,Scalar,Node>::output_Conductivity()
+    template<int dim, int degree, class Node>
+    std::vector<std::array<typename ComputeConductivity<dim,degree,Node>::Scalar,dim*dim>>
+    ComputeConductivity<dim,degree,Node>::output()
     {
         return chebyshev_moments;
     }
 
 
 
-    template<int dim, int degree, typename Scalar, class Node>
+    template<int dim, int degree, class Node>
     void
-    ComputeConductivity<dim,degree,Scalar,Node>::setup()
+    ComputeConductivity<dim,degree,Node>::setup()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Setup<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
             );
 
+        chebyshev_moments.resize(this->dof_handler.poly_degree);
+
         this->assemble_base_matrices();
+        Tp = Teuchos::rcp(new Vec());
+        T = Teuchos::rcp(new Vec());
+        Tn = Teuchos::rcp(new Vec());
+        dH = Teuchos::rcp(new MVec());
+        LinvdH = Teuchos::rcp(new MVec());
+        hamiltonianOp = Teuchos::rcp(new Op());
+        liouvillianOp = Teuchos::rcp(new Op());
+        derivationOp = Teuchos::rcp(new Op());
 
         Teuchos::RCP<VS> vs = VectorSpace<dim,degree,Scalar,Node>::create();
         vs->initialize(Teuchos::rcpFromRef<BaseAlgebra<dim,degree,Scalar,Node>>(* this));
@@ -95,51 +105,43 @@ namespace Bilayer {
             I_tpetra = Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
                         ( vectorSpace->getOrbVecMap(), vectorSpace->getNumOrbitals() );
         LA::set_to_identity(* I_tpetra);
+
         
-        I = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-            I_tpetra);
-        H = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-        Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-        Tp = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
+        Tp->initialize( vectorSpace, I_tpetra);
+        
+        
+        T->initialize( vectorSpace, 
             Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-        T  = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
+                                            ( vectorSpace->getVecMap() ));
+        
+        Tn->initialize( vectorSpace, 
             Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-        Tn = Bilayer::createVector<dim,degree,Scalar,Node>( vectorSpace, 
-            Tpetra::createVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap() ));
-
-        dH = Bilayer::createMultiVector<dim,degree,Scalar,Node>
-        ( vectorSpace, 
-        Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap(), dim) );
-        LinvdH = Bilayer::createMultiVector<dim,degree,Scalar,Node>
-        ( vectorSpace, 
-        Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
-                        ( vectorSpace->getVecMap(), dim) );
+                                            ( vectorSpace->getVecMap() ));
+        
+        Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar>> 
+        domainSpace = vectorSpace->createDomainVectorSpace(dim) ;
+        dH->initialize( vectorSpace, domainSpace,
+            Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
+                        ( vectorSpace->getVecMap(), dim));
+        
+        LinvdH->initialize( vectorSpace, domainSpace,
+            Tpetra::createMultiVector<Scalar,types::loc_t,types::glob_t,Node>
+                        ( vectorSpace->getVecMap(), dim));
 
 
-        std::complex<double> z (0, 1.);
-        hamiltonianOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
-            ( vectorSpace, this->HamiltonianAction);
-        transposeOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
-            ( vectorSpace, this->Transpose);
-        liouvillianOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
-            (vectorSpace, this->make_liouvillian_operator(tau, z));
-        derivationOp = Bilayer::createConstOperator<dim,degree,Scalar,Node>
-            (vectorSpace, this->Derivation);
+        Scalar z (0, 1.);
+        hamiltonianOp->constInitialize( vectorSpace, this->HamiltonianAction);
+        liouvillianOp->constInitialize(vectorSpace, this->make_liouvillian_operator(tau, z));
+        derivationOp->constInitialize(vectorSpace, this->Derivation);
 
-
-        hamiltonianOp->apply(Thyra::NOTRANS, *I, H .ptr(), 1.0, 0.0);
-        derivationOp ->apply(Thyra::NOTRANS, *H, dH.ptr(), 1.0, 0.0);
+        hamiltonianOp->apply(Thyra::NOTRANS, *Tp, T .ptr(), 1.0, 0.0);
+        derivationOp->apply(Thyra::NOTRANS, *T, dH.ptr(), 1.0, 0.0);
     }
 
 
-    template<int dim, int degree, typename Scalar, class Node>
+    template<int dim, int degree, class Node>
     void
-    ComputeConductivity<dim,degree,Scalar,Node>::solve()
+    ComputeConductivity<dim,degree,Node>::solve()
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Solve<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
@@ -175,49 +177,58 @@ namespace Bilayer {
 
         Thyra::initializeOp<Scalar>( * belosFactory, liouvillianOp, bA.ptr() );
         Thyra::SolveStatus<Scalar> solveStatus;
-        solveStatus = Thyra::solve( *bA, Thyra::NOTRANS, *dH, LinvdH.ptr() );
+        solveStatus = Thyra::solve( *bA, 
+                                    Thyra::NOTRANS, 
+                                    *dH, 
+                                    Teuchos::ptr_implicit_cast<Thyra::MultiVectorBase<Scalar>>(LinvdH.ptr()) 
+                                        );
 
         pcout << "\nBelos Solve Status: "<< solveStatus << std::endl;
 
+        Scalar
+        one = static_cast<Scalar>(1.0),
+        alpha = this->dof_handler.energy_shift / this->dof_handler.energy_rescale,
+        beta = one / this->dof_handler.energy_rescale;
 
-        // Scalar 
-        // alpha = this->dof_handler.energy_shift / this->dof_handler.energy_rescale,
-        // beta = 1. / this->dof_handler.energy_rescale;
+        T->linear_combination(Teuchos::tuple(alpha), 
+                             Teuchos::tuple(Teuchos::ptr_implicit_cast<const Thyra::VectorBase<Scalar>>(Tp.ptr())), 
+                             beta); // T := alpha * I + beta * H
 
-        // T.update(alpha, Tp, beta); // T := alpha * Tp + beta * T
+        this->storeMoments(Tp, 0);
+        this->storeMoments(T, 1);
 
-        // std::array<std::vector<Scalar>,2> 
-        // m0 = LA::diagonal(Tp), 
-        // m = LA::diagonal(T);
+        for (int i=2; i <= this->dof_handler.poly_degree; ++i)
+        {
+            hamiltonianOp->apply(Thyra::NOTRANS, *T, Tn.ptr(), 1.0, 0.0 );
+            Tn->linear_combination(  Teuchos::tuple(-one, 2.*alpha), 
+                Teuchos::tuple( Teuchos::ptr_implicit_cast<const Thyra::VectorBase<Scalar>>(Tp.ptr()), 
+                                Teuchos::ptr_implicit_cast<const Thyra::VectorBase<Scalar>>(T.ptr()) ), 
+                2.*beta); // Tn :=  - Tp + 2*alpha*T + 2*beta*Tn
 
-        // if (this->dof_handler.my_pid == 0)
-        // {
-        //   chebyshev_moments.push_back(m0);
-        //   chebyshev_moments.push_back(m);
-        // }
+            this->storeMoments(Tn, i);
+            std::swap(Tn, Tp);
+            std::swap(T, Tp);
+        }
+    }
 
-        // for (int i=2; i <= this->dof_handler.poly_degree; ++i)
-        // {
-        //     LA::HamiltonianAction->apply(T, Tn);
-        //     Tn.update(-1, Tp, 2.*alpha, T, 2.*beta); // Tn := 2*alpha*T - Tp + 2*beta*Tn
-
-        //     std::swap(Tn, Tp);
-        //     std::swap(T, Tp);
-
-        //     m = LA::diagonal(T);
-        //     if (this->dof_handler.my_pid == 0)
-        //         chebyshev_moments.push_back(m);
-        // }
+    template<int dim, int degree, class Node>
+    void
+    ComputeConductivity<dim,degree,Node>::storeMoments(RCP<Vec> A, int i)
+    {
+        Teuchos::ArrayView<Scalar> m_view (chebyshev_moments[i].data(), dim*dim);
+        LA::Derivation->weightedDot(  * LinvdH->getConstThyraOrbMultiVector()->getConstTpetraMultiVector(), 
+                                      * A->getConstThyraOrbVector()->getConstTpetraMultiVector(), 
+                                        m_view );
     }
 
     /**
      * Explicit instantiations
      */
 
-     template class ComputeConductivity<1,1,std::complex<double>,types::DefaultNode>;
-     template class ComputeConductivity<1,2,std::complex<double>,types::DefaultNode>;
-     template class ComputeConductivity<1,3,std::complex<double>,types::DefaultNode>;
-     template class ComputeConductivity<2,1,std::complex<double>,types::DefaultNode>;
-     template class ComputeConductivity<2,2,std::complex<double>,types::DefaultNode>;
-     template class ComputeConductivity<2,3,std::complex<double>,types::DefaultNode>;
+     template class ComputeConductivity<1,1,types::DefaultNode>;
+     template class ComputeConductivity<1,2,types::DefaultNode>;
+     template class ComputeConductivity<1,3,types::DefaultNode>;
+     template class ComputeConductivity<2,1,types::DefaultNode>;
+     template class ComputeConductivity<2,2,types::DefaultNode>;
+     template class ComputeConductivity<2,3,types::DefaultNode>;
 }/* End namespace Bilayer */

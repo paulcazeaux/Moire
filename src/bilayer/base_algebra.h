@@ -387,17 +387,11 @@ namespace Bilayer {
                 bool 
             hasTransposeApply()                         const { return true; }
 
-                std::array<Scalar,dim>
-            weightedDot(
-                const Vector& X,
-                const Vector& Y
-                        ) const;
-
                 void
             weightedDot(
                 const MultiVector& X,
                 const MultiVector& Y,
-                Teuchos::ArrayView<std::array<Scalar,dim>>& dots
+                Teuchos::ArrayView<Scalar>& dots
                         ) const;
 
             // Compute Y := alpha mode(Op) X + beta Y.

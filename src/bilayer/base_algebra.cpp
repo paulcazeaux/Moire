@@ -731,99 +731,129 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::DerivationOp(
     }
 }
 
- 
-template<int dim, int degree, typename Scalar, class Node>
-std::array<Scalar,dim>
-BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::weightedDot(
-                const Vector& X,
-                const Vector& Y
-                        ) const
-{
-    std::array<Scalar,dim> local_dot, dot;
-    size_t N = nOrbitals_[0] + nOrbitals_[1];
-    auto dataX = X.getLocalViewDevice();
-    auto dataY = Y.getLocalViewDevice();
-
-    for (size_t l = 0; l < dim; ++l)
-    {
-        Scalar 
-        s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
-        s2 = Teuchos::ScalarTraits<Scalar>::zero();
-
-        for (size_t k = 0; k < nOrbitals_[0]; ++k)
-        for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
-        {
-            s1 += static_cast<Scalar>(nodalPositions_ (i,0,l) 
-                                    * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k) )
-                                    * dataY (i,k)) ;
-        }
-
-        for (size_t k = nOrbitals_[0]; k < N; ++k)
-        for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
-        {
-            s2 += static_cast<Scalar>(nodalPositions_ (i,1,l) 
-                                    * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k) )
-                                    * dataY (i,k)) ;
-        }
-        local_dot[l] = normalizationFactor_[0] * s1 + normalizationFactor_[1] * s2;
-    }
-
-    Teuchos::reduceAll<int,Scalar>(* map_->getComm(), Teuchos::REDUCE_SUM, dim, local_dot.data(), dot.data());
-    return dot;
-}
-
-
 template<int dim, int degree, typename Scalar, class Node>
 void
 BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::weightedDot(
                 const MultiVector& X,
                 const MultiVector& Y,
-                Teuchos::ArrayView<std::array<Scalar,dim>>& dots
+                Teuchos::ArrayView<Scalar>& dots
                         ) const
 {
     size_t 
     N = nOrbitals_[0] + nOrbitals_[1],
     sizeX = X.getNumVectors(),
     sizeY = Y.getNumVectors();
-
-    assert(sizeX == sizeY);
     assert(sizeX % N == 0);
-    assert(sizeX / N == static_cast<size_t>(dots.size()));
+    assert(sizeY % N == 0);
 
     auto dataX = X.getLocalViewDevice();
     auto dataY = Y.getLocalViewDevice();
-
-    for (size_t col = 0; col < sizeX/N; col++)
+    if (sizeX == sizeY)
     {
+        assert(sizeX / N == static_cast<size_t>(dots.size()));
 
-        std::array<Scalar,dim> local_dot, dot;
-        for (size_t l = 0; l < dim; ++l)
+        for (size_t col = 0; col < sizeX/N; col++)
         {
-            Scalar 
-            s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
-            s2 = Teuchos::ScalarTraits<Scalar>::zero();
-
-            for (size_t k = 0; k < nOrbitals_[0]; ++k)
-            for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+            std::array<Scalar,dim> local_dot;
+            for (size_t l = 0; l < dim; ++l)
             {
-                s1 += static_cast<Scalar>(nodalPositions_ (i,0,l) 
-                            * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k)) 
-                            * dataY (i,k)) ;
-            }
+                Scalar 
+                s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
+                s2 = Teuchos::ScalarTraits<Scalar>::zero();
 
-            for (size_t k = nOrbitals_[0]; k < nOrbitals_[0]+nOrbitals_[1]; ++k)
-            for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
-            {
-                s2 += static_cast<Scalar>(nodalPositions_ (i,1,l)
-                            * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k))
-                            * dataY (i,k)) ;
+                for (size_t k = 0; k < nOrbitals_[0]; ++k)
+                for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+                {
+                    s1 += static_cast<Scalar>(nodalPositions_ (i,0,l) 
+                                * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k+N*col)) 
+                                * dataY (i,k+N*col)) ;
+                }
+
+                for (size_t k = nOrbitals_[0]; k < N; ++k)
+                for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+                {
+                    s2 += static_cast<Scalar>(nodalPositions_ (i,1,l)
+                                * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k+N*col))
+                                * dataY (i,k+N*col)) ;
+                }
+                local_dot[l] = normalizationFactor_[0] * s1 + normalizationFactor_[1] * s2;
             }
-            local_dot[l] = normalizationFactor_[0] * s1 + normalizationFactor_[1] * s2;
+            
+            Teuchos::reduceAll<int,Scalar>(* map_->getComm(), Teuchos::REDUCE_SUM, dim, local_dot.data(), dots.data()+col*dim);
+        }    
+    }
+    else if (sizeX == N)
+    {
+        assert(sizeY / N == static_cast<size_t>(dots.size()));
+
+        for (size_t col = 0; col < sizeY/N; col++)
+        {
+            std::array<Scalar,dim> local_dot;
+            for (size_t l = 0; l < dim; ++l)
+            {
+                Scalar 
+                s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
+                s2 = Teuchos::ScalarTraits<Scalar>::zero();
+
+                for (size_t k = 0; k < nOrbitals_[0]; ++k)
+                for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+                {
+                    s1 += static_cast<Scalar>(nodalPositions_ (i,0,l) 
+                                * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k)) 
+                                * dataY (i,k+N*col)) ;
+                }
+
+                for (size_t k = nOrbitals_[0]; k < N; ++k)
+                for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+                {
+                    s2 += static_cast<Scalar>(nodalPositions_ (i,1,l)
+                                * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k))
+                                * dataY (i,k+N*col)) ;
+                }
+                local_dot[l] = normalizationFactor_[0] * s1 + normalizationFactor_[1] * s2;
+            }
+            
+            Teuchos::reduceAll<int,Scalar>(* map_->getComm(), Teuchos::REDUCE_SUM, dim, local_dot.data(), dots.data()+col*dim);
         }
-        
-        Teuchos::reduceAll<int,Scalar>(* map_->getComm(), Teuchos::REDUCE_SUM, dim, local_dot.data(), dot.data());
-        dots[col] = dot;
-    }      
+    }
+    else if (sizeY == N)
+    {
+        assert(sizeX / N == static_cast<size_t>(dots.size()));
+
+        for (size_t col = 0; col < sizeX/N; col++)
+        {
+            std::array<Scalar,dim> local_dot;
+            for (size_t l = 0; l < dim; ++l)
+            {
+                Scalar 
+                s1 = Teuchos::ScalarTraits<Scalar>::zero(), 
+                s2 = Teuchos::ScalarTraits<Scalar>::zero();
+
+                for (size_t k = 0; k < nOrbitals_[0]; ++k)
+                for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+                {
+                    s1 += static_cast<Scalar>(nodalPositions_ (i,0,l) 
+                                * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k+N*col)) 
+                                * dataY (i,k)) ;
+                }
+
+                for (size_t k = nOrbitals_[0]; k < N; ++k)
+                for (size_t i = 0; i < nodalPositions_.extent(0); ++i)
+                {
+                    s2 += static_cast<Scalar>(nodalPositions_ (i,1,l)
+                                * Teuchos::ScalarTraits<scalar_type>::conjugate(dataX (i,k+N*col))
+                                * dataY (i,k)) ;
+                }
+                local_dot[l] = normalizationFactor_[0] * s1 + normalizationFactor_[1] * s2;
+            }
+            
+            Teuchos::reduceAll<int,Scalar>(* map_->getComm(), Teuchos::REDUCE_SUM, dim, local_dot.data(), dots.data()+col*dim);
+        }
+    }
+    else
+    {
+        throw dealii::ExcInternalError();  
+    }  
 }
 
 template<int dim, int degree, typename Scalar, class Node>

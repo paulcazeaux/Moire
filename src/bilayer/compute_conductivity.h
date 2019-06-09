@@ -27,19 +27,15 @@ using Teuchos::RCP;
     * A class which encapsulates the Conductivity computation of a discretized 
     * Tight-Binding bilayer Hamiltonian encoded by a C* algebra.
     *
-    * Its three template parameters are respectively 
+    * Its two template parameters are respectively 
     * - dim: the dimension of the problem at hand 
     *       (required to be 1 or 2 at the moment),
     * - degree: the degree of the finite elements used to discretize
     *       and interpolate the functions over the unit cell,
     *       (which can take the values 1, 2 or 3),
-    * - Scalar: the main number type used in the computation.
-    *       This should be a double when no magnetic field is involved
-    *       and a complex<double> otherwise, since there is no need
-    *       for adjoint calculations (see BaseAlgebra documentation).
     */
-    template <int dim, int degree, typename Scalar, class Node>
-    class ComputeConductivity : private BaseAlgebra<dim, degree, Scalar, Node>
+    template <int dim, int degree, class Node>
+    class ComputeConductivity : private BaseAlgebra<dim, degree, std::complex<double>, Node>
     {
     public:
         /**
@@ -47,12 +43,13 @@ using Teuchos::RCP;
          * These types correspond to the main Trilinos containers
          * used in the discretization.
          */
-        typedef Scalar                          scalar_type;
+        typedef std::complex<double>                                  scalar_type;
+        typedef std::complex<double>                                  Scalar;
         typedef typename Bilayer::BaseAlgebra<dim,degree,Scalar,Node> LA;
         typedef typename Bilayer::VectorSpace<dim,degree,Scalar,Node> VS;
-        typedef typename Thyra::VectorBase<Scalar> Vec;
-        typedef typename Thyra::MultiVectorBase<Scalar> MVec;
-        typedef typename Thyra::LinearOpBase<Scalar> Op;
+        typedef typename Bilayer::Vector<dim,degree,Scalar,Node>      Vec;
+        typedef typename Bilayer::MultiVector<dim,degree,Scalar,Node> MVec;
+        typedef typename Bilayer::Operator<dim,degree,Scalar,Node>    Op;
 
         /**
          *  Default constructor. 
@@ -85,14 +82,14 @@ using Teuchos::RCP;
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
-        void write_Conductivity_to_file();
+        void write_to_file();
 
         /**
          *  Output the Chebyshev moments of the Density of States
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
-        std::vector<std::array<Scalar,dim>> output_Conductivity();
+        std::vector<std::array<Scalar,dim*dim>> output();
 
     private:
         /**
@@ -112,6 +109,13 @@ using Teuchos::RCP;
          * States.
          */
         void solve();
+
+
+        /**
+         *  A utility function: compute the moments of a vector of the Chebyshev 
+         *  recurrence and append the result to the chebyshev_moments vector.
+         */
+         void storeMoments(RCP<Vec> A, int i);
 
         /**
          *  Blackhole stream that does nothing but discard output.
@@ -133,15 +137,16 @@ using Teuchos::RCP;
          */
         const Scalar tau, beta;
         RCP<const VS> vectorSpace;
-        RCP<Vec> I, H, Tp, T, Tn;
+        RCP<Vec> Tp, T, Tn;
         RCP<MVec> dH, LinvdH;
-        RCP<const Op> hamiltonianOp, transposeOp, liouvillianOp, derivationOp;
+        RCP<Op> hamiltonianOp, liouvillianOp, derivationOp;
+
         /**
          * Array of Scalars holding the Chebyshev moments of the 
          * conductivity of the Hamiltonian, computed 
          * using the Kernel Polynomial Method in the solve() method above.
          */
-        std::vector<std::array<Scalar,dim>> chebyshev_moments;
+        std::vector<std::array<Scalar,dim*dim>> chebyshev_moments;
     };
 
 }/* End namespace Bilayer */

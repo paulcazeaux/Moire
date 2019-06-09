@@ -95,7 +95,7 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
             1,   
             1, 0,
             0, 0,
-            2.0, 2);
+            5.0, 1);
 
     double height;
     switch (mat)

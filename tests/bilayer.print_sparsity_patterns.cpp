@@ -27,7 +27,7 @@ struct TestAlgebra : public Bilayer::BaseAlgebra<dim,degree,Scalar,Node>
         std::array<LA::MultiVector, 2> I, A, B;
 };
 
-void print_sp(Teuchos::RCP< const Bilayer::BaseAlgebra<2,degree,double>::Matrix::crs_graph_type > sp, size_t offset_row, size_t offset_col, std::ofstream& out)
+void print_sp(Teuchos::RCP< const Bilayer::BaseAlgebra<dim,degree,Scalar,Node>::Matrix::crs_graph_type > sp, size_t offset_row, size_t offset_col, std::ofstream& out)
 {
     Teuchos::Array<types::glob_t> line(sp->getNodeNumCols ());
     for (size_t row=0; row< sp->getGlobalNumRows (); ++row)
