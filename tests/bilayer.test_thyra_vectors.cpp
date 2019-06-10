@@ -120,15 +120,15 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     Teuchos::Array<double> norms (1);
     test_algebra.I_2 ->norms_inf(norms);
 
-    AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-10,
-                        std::logic_error("The identity vector is not the same depending on initialization mode (Tpetra Vector or MultiVector)!") );
+    if ( std::accumulate(norms.begin(), norms.end(), 0.) > 1e-10)
+        throw std::logic_error("The identity vector is not the same depending on initialization mode (Tpetra Vector or MultiVector)!");
 
     test_algebra.M_2->update( -1.0, * test_algebra.M_1);
     norms .resize(3);
     test_algebra.M_2 ->norms_inf(norms);
 
-    AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-10,
-                        std::logic_error("A basic manipulation of Bilayer::Vector objects fails!") );
+    if ( std::accumulate(norms.begin(), norms.end(), 0.) > 1e-10 )
+        throw std::logic_error("A basic manipulation of Bilayer::Vector objects fails!");
     std::cout << "Vector creation and manipulation OK" << std::endl;
  }
 

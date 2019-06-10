@@ -81,8 +81,8 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer) :
     test_algebra.A .update( -1., test_algebra.B , 1.);
     Teuchos::Array<double> norms (test_algebra.A .getNumVectors());
     test_algebra.A .normInf(norms);
-    AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
-                        std::logic_error("The Hamiltonian action matrix is not symmetric!") );
+    if (std::accumulate(norms.begin(), norms.end(), 0.) > 1e-13)
+        throw std::logic_error("The Hamiltonian action matrix is not symmetric!");
 
     std::cout << "Symmetry test OK" << std::endl;
  }

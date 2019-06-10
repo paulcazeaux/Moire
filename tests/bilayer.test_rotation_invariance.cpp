@@ -82,8 +82,8 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer) :
     test_algebra.H .update( -1., test_algebra2.H, 1.);
     Teuchos::Array<double> norms (test_algebra.H .getNumVectors());
     test_algebra.H .normInf(norms);
-    AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-13,
-                        std::logic_error("Rotating both layers simultaneously changes the Hamiltonian action matrix. It should not!") );
+    if ( std::accumulate(norms.begin(), norms.end(), 0.) > 1e-13)
+        throw std::logic_error("Rotating both layers simultaneously changes the Hamiltonian action matrix. It should not!");
     std::cout << "Rotation invariance test OK" << std::endl;
  }
 

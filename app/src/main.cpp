@@ -40,7 +40,7 @@ bool verbose = true;
         /*   Run the Chebyshev recurrence and output moments.    */
         /*********************************************************/
         Bilayer::ComputeConductivity<dim,degree,types::DefaultNode>  
-        compute_conductivity(bilayer, 10);
+        compute_conductivity(bilayer, 250);
         bool success = compute_conductivity.run(verbose);
 
         /*********************************************************/

@@ -414,9 +414,9 @@ namespace Bilayer {
         {
             tmv = this->getConstMultiVector(Teuchos::rcpFromPtr(mv[i]));
             tv = this->getConstVector(Teuchos::rcpFromPtr(mv[i]));
-            if (nonnull(tv))
+            if (Teuchos::nonnull(tv))
                 tmvs[i] = tv.ptr();
-            else if (nonnull(tmv))
+            else if (Teuchos::nonnull(tmv))
                 tmvs[i] = tmv.ptr();
             else 
             {
@@ -436,11 +436,14 @@ namespace Bilayer {
         const Teuchos::ArrayView<Scalar>& prods
     ) const
     {
+        auto tv = this->getConstVector(Teuchos::rcpFromRef(mv));
         auto tmv = this->getConstMultiVector(Teuchos::rcpFromRef(mv));
-        if (Teuchos::nonnull(tmv))
+        if (Teuchos::nonnull(tv))
+            vector_->dots(*tv, prods);
+        else if (Teuchos::nonnull(tmv))
             vector_->dots(*tmv, prods);
         else
-            throw std::logic_error("Failed to cast Thyra::MultiVectorBase argument as const Bilayer::MultiVector in Bilayer::Vector::dotsImpl!");
+            throw std::logic_error("Failed to cast Thyra::MultiVectorBase argument as const Bilayer::Vector or Bilayer::MultiVector in Bilayer::Vector::dotsImpl!");
     }
 
 

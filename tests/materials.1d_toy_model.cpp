@@ -17,10 +17,10 @@ void do_test_intralayer()
 
     for (size_t i=0; i < n; ++i)
     {
-        AssertThrow(Coupling::Intralayer::one_d_model( v.at(i) ) ==   t.at(i),
-                        std::logic_error("Error setting up intralayer elements of 1D toy model") );
-        AssertThrow(IsNonZero::Intralayer::one_d_model( v.at(i) ) ==  s.at(i),
-                        std::logic_error("Error setting up intralayer elements of 1D toy model") );
+        if ( Coupling::Intralayer::one_d_model( v.at(i) ) !=   t.at(i) )
+            throw std::logic_error("Error setting up intralayer elements of 1D toy model");
+        if ( IsNonZero::Intralayer::one_d_model( v.at(i) ) !=  s.at(i) )
+            throw std::logic_error("Error setting up intralayer elements of 1D toy model");
     }
 
     std::cout << "Intralayer OK" << std::endl;
@@ -35,10 +35,10 @@ void do_test_interlayer()
 
     for (size_t i=0; i < n; ++i)
     {
-        AssertThrow( std::fabs( Coupling::Interlayer::one_d_model( v.at(i) ) - t.at(i) ) < 1e-5, 
-                        std::logic_error("Error setting up interlayer elements of 1D toy model") );
-        AssertThrow( IsNonZero::Interlayer::one_d_model(v.at(i) ) == t_b.at(i), 
-                        std::logic_error("Error setting up interlayer elements of 1D toy model") );
+        if ( std::fabs( Coupling::Interlayer::one_d_model( v.at(i) ) - t.at(i) ) > 1e-5 ) 
+            throw std::logic_error("Error setting up interlayer elements of 1D toy model");
+        if ( IsNonZero::Interlayer::one_d_model(v.at(i) ) != t_b.at(i) )
+            throw std::logic_error("Error setting up interlayer elements of 1D toy model");
     }
 
 

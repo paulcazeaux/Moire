@@ -147,10 +147,10 @@ namespace Bilayer {
             );
 
         /* Solve the superoperator linear system */
-        int frequency = 50;       // frequency of status test output.
+        int frequency = 10;       // frequency of status test output.
         int blocksize = 1;         // blocksize
         int numrhs = 1;          // number of right-hand sides to solve for
-        int maxiters = 10000;        // maximum number of iterations allowed per linear system
+        int maxiters = 100000;        // maximum number of iterations allowed per linear system
         int maxsubspace = 50;      // maximum number of blocks the solver can use for the subspace
         int maxrestarts = 200;      // number of restarts allowed
         Teuchos::ScalarTraits<Scalar>::magnitudeType
