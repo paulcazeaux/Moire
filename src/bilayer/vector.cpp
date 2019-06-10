@@ -74,7 +74,7 @@ namespace Bilayer {
                             );
         }
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to initialize Bilayer::Vector!");
         this->updateSpmdSpace();
     }
 
@@ -137,7 +137,7 @@ namespace Bilayer {
                             );
         }
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to constInitialize Bilayer::Vector!");
 
         vector_.initialize(vector);
         orbVector_.initialize(orbVector);
@@ -237,7 +237,7 @@ namespace Bilayer {
         if (Teuchos::nonnull(tx))
             vector_.getNonconstObj()->abs(* tx);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast Thyra::VectorBase argument as const Bilayer::Vector in Bilayer::Vector::absImpl!");
         
     }
 
@@ -251,7 +251,7 @@ namespace Bilayer {
         if (Teuchos::nonnull(tx))
             vector_.getNonconstObj()->reciprocal(* tx);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast Thyra::VectorBase argument as const Bilayer::Vector in Bilayer::Vector::reciprocalImpl!");
     }
 
 
@@ -264,7 +264,7 @@ namespace Bilayer {
         if (Teuchos::nonnull(tx))
             vector_.getNonconstObj()->ele_wise_scale(* tx);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast Thyra::VectorBase argument as const Bilayer::Vector in Bilayer::Vector::eleWiseScaleImpl!");
     }
 
 
@@ -278,8 +278,7 @@ namespace Bilayer {
         if (Teuchos::nonnull(tx))
             return vector_->norm_2(*tx);
         else
-            throw dealii::ExcInternalError();
-        
+            throw std::logic_error("Failed to cast Thyra::VectorBase argument as const Bilayer::Vector in Bilayer::Vector::norm2WeightedImpl!");
     }
 
 
@@ -303,7 +302,7 @@ namespace Bilayer {
             if (nonnull(tv))
                 tvecs[i] = tv.ptr();
             else 
-                throw dealii::ExcInternalError();
+                throw std::logic_error("Failed to cast one or more Thyra::VectorBase arguments as const Bilayer::Vector in Bilayer::Vector::applyOpImpl!");
         }
 
         for (int i = 0; i < vecs.size(); ++i) 
@@ -313,7 +312,7 @@ namespace Bilayer {
             if (nonnull(tv))
                 ttarg_vecs[i] = tv.ptr();
             else 
-                throw dealii::ExcInternalError();
+                throw std::logic_error("Failed to cast one or more Thyra::VectorBase target arguments as Bilayer::Vector in Bilayer::Vector::applyOpImpl!");
         }
 
         vector_->applyOp(op, tvecs, ttarg_vecs, reduct_obj, global_offset);
@@ -373,7 +372,7 @@ namespace Bilayer {
         else if (Teuchos::nonnull(tmv))
             vector_.getNonconstObj()->assign(* tmv);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast Thyra::MultiVectorBase argument as const Bilayer::Vector or const Bilayer::MultiVector in Bilayer::Vector::assignMultiVecImpl!");
     }
 
 
@@ -397,7 +396,7 @@ namespace Bilayer {
         else if (Teuchos::nonnull(tmv))
             vector_.getNonconstObj()->update(alpha, * tmv);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast Thyra::MultiVectorBase argument as const Bilayer::Vector or const Bilayer::MultiVector in Bilayer::Vector::updateImpl!");
     }
 
 
@@ -409,16 +408,24 @@ namespace Bilayer {
     )
     {
         Teuchos::Array<Teuchos::Ptr<const Thyra::MultiVectorBase<Scalar> > > tmvs (mv.size());
-        Teuchos::RCP<const Thyra::MultiVectorBase<Scalar> > tmv;
+        Teuchos::RCP<const Thyra::MultiVectorBase<Scalar> > tmv, tv;
+        bool allCastsSuccessful = true;
         for (int i = 0; i < mv.size(); ++i) 
         {
             tmv = this->getConstMultiVector(Teuchos::rcpFromPtr(mv[i]));
-            if (nonnull(tmv))
+            tv = this->getConstVector(Teuchos::rcpFromPtr(mv[i]));
+            if (nonnull(tv))
+                tmvs[i] = tv.ptr();
+            else if (nonnull(tmv))
                 tmvs[i] = tmv.ptr();
             else 
-                throw dealii::ExcInternalError();
+            {
+                allCastsSuccessful = false; 
+                break;
+            }
         }
-
+        if (! allCastsSuccessful)
+            throw std::logic_error("Failed to cast one or more Thyra::MultiVectorBase arguments as const Bilayer::MultiVector in Bilayer::Vector::linearCombinationImpl!");
         vector_.getNonconstObj()->linear_combination(alpha, tmvs, beta);
     }
 
@@ -429,11 +436,11 @@ namespace Bilayer {
         const Teuchos::ArrayView<Scalar>& prods
     ) const
     {
-        auto tmv = this->getConstVector(Teuchos::rcpFromRef(mv));
+        auto tmv = this->getConstMultiVector(Teuchos::rcpFromRef(mv));
         if (Teuchos::nonnull(tmv))
             vector_->dots(*tmv, prods);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast Thyra::MultiVectorBase argument as const Bilayer::MultiVector in Bilayer::Vector::dotsImpl!");
     }
 
 
@@ -481,7 +488,7 @@ namespace Bilayer {
         if (Teuchos::nonnull(tX) && Teuchos::nonnull(tY))
             vector_.getConstObj()->apply(M_trans, * tX, tY.ptr(), alpha, beta);
         else
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to cast one or more Thyra::MultiVectorBase arguments as Bilayer::MultiVector in Bilayer::Vector::applyImpl!");
     }
 
 

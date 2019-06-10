@@ -1,11 +1,11 @@
 HSTRUCT INPUTFILE
 
 JOB_NAME = toy_model_1d
-OUTPUT_FILE = toy_model_1d_DoS.jld
+OUTPUT_FILE = toy_model_1d_Cond.jld
 
 ===STRUCTURE INFORMATION===
 
-CUTOFF = 5
+CUTOFF = 5000
 REFINEMENT_LEVEL = 4
 
 NUM_LAYERS = 2

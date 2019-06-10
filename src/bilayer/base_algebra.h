@@ -14,6 +14,7 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <cassert>
 #include <algorithm>
 #include <fstream>
 

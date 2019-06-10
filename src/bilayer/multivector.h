@@ -15,6 +15,7 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <cassert>
 #include <algorithm>
 #include <fstream>
 
@@ -214,6 +215,19 @@ namespace Bilayer {
             // ////////////////////////////////////
             // Private member functions
 
+            // Private constructor to initialized without checking, for the purpose of creating noncontiguous subViews.
+            MultiVector(
+                const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
+                const Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar> > &domainSpace,
+                const Teuchos::RCP<tTMV> &multiVector,
+                const Teuchos::RCP<tTMV> &orbMultiVector);
+
+            MultiVector(
+                const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
+                const Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar> > &domainSpace,
+                const Teuchos::RCP<const tTMV> &multiVector,
+                const Teuchos::RCP<const tTMV> &orbMultiVector);
+
             // Non-throwing TpetraMultiVector extraction methods.
             // Return null if casting failed.
             Teuchos::RCP<tTMV>
@@ -246,7 +260,7 @@ namespace Bilayer {
         else if (tpetraMultiVector->getGlobalLength() == vectorSpace->getOrbVecMap()->getGlobalNumElements())
             nVectors = tpetraMultiVector->getNumVectors() / vectorSpace->getNumOrbitals();
         else 
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to match global length of vectors with total dof number in Bilayer::createMultiVector!");
 
         Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar>> 
         domainSpace = vectorSpace->createDomainVectorSpace(nVectors);
@@ -274,7 +288,7 @@ namespace Bilayer {
         else if (tpetraMultiVector->getGlobalLength() == vectorSpace->getOrbVecMap()->getGlobalNumElements())
             nVectors = tpetraMultiVector->getNumVectors() / vectorSpace->getNumOrbitals();
         else 
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to match global length of vectors with total dof number in Bilayer::createConstMultiVector!");
 
         Teuchos::RCP<const Thyra::ScalarProdVectorSpaceBase<Scalar>> 
         domainSpace = vectorSpace->createDomainVectorSpace(nVectors) ;

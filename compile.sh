@@ -20,13 +20,13 @@ echo "==========================================================================
 echo "                                       MAKE                                          " 
 echo "====================================================================================="
 make ${TARGET} -j 8
-make test
+# make test
 # additional run
 echo "====================================================================================="
 echo "                                     EXECUTION                                       "
 echo "====================================================================================="
 
-InputFile=../app/cfg/twisted_blg.in
+InputFile=../app/cfg/1d_toymodel.in
 ExportFile=../output
 
-# mpirun -n 2 ./app/${TARGET} -i ${InputFile}
+mpirun -n 8 --use-hwthread-cpus ./app/${TARGET} -i ${InputFile}

@@ -69,11 +69,12 @@ namespace Bilayer {
     Teuchos::RCP< Thyra::MultiVectorBase<Scalar> >
     VectorSpace<dim,degree,Scalar,Node>::createMembers(int numMembers) const
     {
-        return createMultiVector<dim,degree,Scalar,Node>(
+        auto vecs = createMultiVector<dim,degree,Scalar,Node>(
             weakSelfPtr_.create_strong().getConst(),
             Teuchos::rcp(new 
                 Tpetra::MultiVector<Scalar,types::loc_t,types::glob_t,Node>
                     (vecMap_, numMembers)));
+        return vecs;
     }
 
 

@@ -15,9 +15,11 @@
 #include "tools/types.h"
 #include "bilayer/base_algebra.h"
 #include "bilayer/operator.h"
-#include <Thyra_BelosLinearOpWithSolveFactory_decl.hpp>
-#include <Thyra_BelosLinearOpWithSolve_decl.hpp>
-#include <Thyra_LinearOpWithSolveFactoryHelpers.hpp>
+
+#include "BelosThyraAdapter.hpp"
+#include "BelosConfigDefs.hpp"
+#include "BelosLinearProblem.hpp"
+#include "BelosPseudoBlockGmresSolMgr.hpp"
 
 
 namespace Bilayer {
@@ -60,8 +62,7 @@ using Teuchos::RCP;
          * - the computing timer.
          */
         ComputeConductivity(const Multilayer<dim, 2>& bilayer, 
-                            const Scalar tau,
-                            const Scalar beta);
+                            const double tau);
 
         /**
          *  Default destructor. 
@@ -71,21 +72,24 @@ using Teuchos::RCP;
 
         /**
          *  Set up all the necessary objects, vectors, matrices,
-         * then runs the computation of the Density of States 
-         * of the Tight-Binding bilayer Hamiltonian using the
-         * Kernel Polynomial Method.
+         * then runs the computation of the Conductivity 
+         * of the Tight-Binding bilayer Hamiltonian by inverting
+         * the Liouvillian and computing the moments of the 
+         * conductivity w.r.t the function defining the density matrix
+         * using the Kernel Polynomial Method.
+         * Returns true if the solve was successful.
          */
-        void run();
+        bool run(bool verbose);
 
         /**
-         *  Write to file the Chebyshev moments of the Density of States
+         *  Write to file the Chebyshev moments of the Conductivity
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
         void write_to_file();
 
         /**
-         *  Output the Chebyshev moments of the Density of States
+         *  Output the Chebyshev moments of the Conductivity
          * of the Tight-Binding bilayer Hamiltonian after it is
          * computed by the above run() call.
          */
@@ -105,14 +109,14 @@ using Teuchos::RCP;
         /**
          *  Initialize and run the Chebyshev recurrence of the
          * Kernel Polynomial method, and stores the relevant
-         * traces as the Chebyshev moments of the Density of
-         * States.
+         * traces as the Chebyshev moments of the Conductivity.
+         * Returns true if the solve was successful.
          */
-        void solve();
+        bool solve(bool verbose);
 
 
         /**
-         *  A utility function: compute the moments of a vector of the Chebyshev 
+         *   A utility function: compute the moments of a vector of the Chebyshev 
          *  recurrence and append the result to the chebyshev_moments vector.
          */
          void storeMoments(RCP<Vec> A, int i);
@@ -135,7 +139,7 @@ using Teuchos::RCP;
          * applied to the Hamiltonian operator.
          *
          */
-        const Scalar tau, beta;
+        const double tau;
         RCP<const VS> vectorSpace;
         RCP<Vec> Tp, T, Tn;
         RCP<MVec> dH, LinvdH;

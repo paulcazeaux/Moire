@@ -24,9 +24,9 @@ void do_test_intralayer()
     {
         //std::cout << Coupling::Intralayer::graphene( o1.at(i), o2.at(i), v.at(i) ) << std::endl;
         AssertThrow(Coupling::Intralayer::graphene( o1.at(i), o2.at(i), v.at(i) ) ==   t.at(i),
-                        dealii::ExcInternalError() );
+                        std::logic_error("Setup of intralayer elements of graphene material model is invalid!") );
         AssertThrow(IsNonZero::Intralayer::graphene(o1.at(i), o2.at(i),  v.at(i) ) ==  s.at(i),
-                        dealii::ExcInternalError() );
+                        std::logic_error("Setup of intralayer elements of graphene material model is invalid!") );
     }
 
     std::cout << "Intralayer OK" << std::endl;
@@ -48,9 +48,9 @@ void do_test_interlayer()
     for (size_t i=0; i<n; ++i)
     {
         AssertThrow(std::fabs(Coupling::Interlayer::C_to_C( o1[i], o2[i], v[i], theta1[i], theta2[i]) - t[i]) < 1e-5,
-                         dealii::ExcInternalError() );
+                         std::logic_error("Setup of interlayer elements of graphene material model is invalid!") );
         AssertThrow(IsNonZero::Interlayer::C_to_C(o1[i], o2[i], v[i], theta1[i], theta2[i]) ==  s[i],
-                        dealii::ExcInternalError() );
+                        std::logic_error("Setup of interlayer elements of graphene material model is invalid!") );
     }
 
     std::cout << "Interlayer OK" << std::endl;

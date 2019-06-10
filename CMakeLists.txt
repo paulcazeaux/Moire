@@ -25,15 +25,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/module")
 
 find_package(MPI)
 find_package(METIS)
-find_package(Kokkos REQUIRED
-        PATHS /usr/local /pool)
-find_package(Teuchos REQUIRED
-        PATHS /usr/local /pool)
-find_package(Tpetra REQUIRED
-		PATHS /usr/local /pool)
-find_package(Thyra REQUIRED
-        PATHS /usr/local /pool)
-find_package(Belos REQUIRED
+find_package(Trilinos REQUIRED
         PATHS /usr/local /pool)
 find_package(deal.II 9.0.0 REQUIRED
 		PATHS /usr/local /pool)
@@ -45,7 +37,7 @@ IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     STRING (REPLACE "-Wno-placement-new"    "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
     STRING (REPLACE "-Wno-literal-suffix"   "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
     STRING (REPLACE "-Wno-long-double"      "" DEAL_II_CXX_FLAGS ${DEAL_II_CXX_FLAGS})
-    add_compile_options(-Wno-c++1z-extensions)
+    add_compile_options(-Wno-c++1z-extensions -Wno-deprecated-declarations -Wno-unused-parameter)
 ENDIF()
 
 # Avoid warnings with GCC 7

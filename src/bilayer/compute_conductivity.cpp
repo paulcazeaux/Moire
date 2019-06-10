@@ -13,26 +13,23 @@ namespace Bilayer {
     template<int dim, int degree, class Node>
     ComputeConductivity<dim,degree,Node>::ComputeConductivity(
             const Multilayer<dim, 2>& bilayer,
-            const Scalar tau,
-            const Scalar beta)
+            const double tau)
         :
         BaseAlgebra<dim,degree,Scalar, Node>(bilayer),
         pcout(( this->mpi_communicator->getRank () == 0) ? std::cout : blackHole),
-        tau(tau), beta(beta)
+        tau(tau)
     {
         pcout << bilayer;
     }
 
     template<int dim, int degree, class Node>
     ComputeConductivity<dim,degree,Node>::~ComputeConductivity()
-    {
-        Teuchos::TimeMonitor::summarize (this->mpi_communicator(), pcout);
-    }
+    {}
 
 
     template<int dim, int degree, class Node>
-    void
-    ComputeConductivity<dim,degree,Node>::run()
+    bool
+    ComputeConductivity<dim,degree,Node>::run(bool verbose)
     {
         pcout   << "Starting setup...\n";
         setup();
@@ -40,8 +37,10 @@ namespace Bilayer {
 
 
         pcout   << "Starting solve...\n";
-        solve();
+        bool success = solve(verbose);
         pcout   << "\tComplete!\n";
+
+        return success;
     }
 
     template<int dim, int degree, class Node>
@@ -131,7 +130,7 @@ namespace Bilayer {
 
         Scalar z (0, 1.);
         hamiltonianOp->constInitialize( vectorSpace, this->HamiltonianAction);
-        liouvillianOp->constInitialize(vectorSpace, this->make_liouvillian_operator(tau, z));
+        liouvillianOp->constInitialize(vectorSpace, this->make_liouvillian_operator(static_cast<Scalar>(1./tau), z));
         derivationOp->constInitialize(vectorSpace, this->Derivation);
 
         hamiltonianOp->apply(Thyra::NOTRANS, *Tp, T .ptr(), 1.0, 0.0);
@@ -140,59 +139,97 @@ namespace Bilayer {
 
 
     template<int dim, int degree, class Node>
-    void
-    ComputeConductivity<dim,degree,Node>::solve()
+    bool
+    ComputeConductivity<dim,degree,Node>::solve(bool verbose)
     {
         TEUCHOS_FUNC_TIME_MONITOR(
             "Solve<" << Teuchos::ScalarTraits<Scalar>::name () << ">()"
             );
 
-
         /* Solve the superoperator linear system */
+        int frequency = 50;       // frequency of status test output.
+        int blocksize = 1;         // blocksize
+        int numrhs = 1;          // number of right-hand sides to solve for
+        int maxiters = 10000;        // maximum number of iterations allowed per linear system
+        int maxsubspace = 50;      // maximum number of blocks the solver can use for the subspace
+        int maxrestarts = 200;      // number of restarts allowed
+        Teuchos::ScalarTraits<Scalar>::magnitudeType
+        tol = 1.0e-6;              // relative residual tolerance
 
-        Teuchos::RCP<Teuchos::ParameterList> 
-            solverParams = Teuchos::parameterList();
-            solverParams->set ("Solver Type","GMRES");
+        if (!verbose)
+            frequency = -1;  // reset frequency if run is not verbose
 
-        Teuchos::ParameterList& 
-            solverParams_solver = solverParams->sublist("Solver Types");
+        /********Other information used by block solver***********/
+        const int NumGlobalElements = this->dof_handler.n_dofs() 
+                * (this->dof_handler.n_orbitals(0) + this->dof_handler.n_orbitals(1));
+        if (maxiters == -1)
+            maxiters = NumGlobalElements - 1; // maximum number of iterations to run
 
-        Teuchos::ParameterList& 
-            solverParams_gmres = solverParams_solver.sublist("GMRES");
+        Teuchos::ParameterList belosList;
+        belosList.set( "Num Blocks", maxsubspace);             // Maximum number of blocks in Krylov factorization
+        belosList.set( "Block Size", blocksize );              // Blocksize to be used by iterative solver
+        belosList.set( "Maximum Iterations", maxiters );       // Maximum number of iterations allowed
+        belosList.set( "Maximum Restarts", maxrestarts );      // Maximum number of restarts allowed
+        belosList.set( "Convergence Tolerance", tol );         // Relative convergence tolerance requested
+        if (verbose) 
+        {
+            belosList.set( "Verbosity", Belos::Errors + Belos::Warnings +
+            Belos::TimingDetails + Belos::StatusTestDetails );
+            if (frequency > 0)
+                belosList.set( "Output Frequency", frequency );
+        }
+        else
+            belosList.set( "Verbosity", Belos::Errors + Belos::Warnings );
+        /* Construct an unpreconditioned linear problem instance. */
+        Belos::LinearProblem<Scalar,Thyra::MultiVectorBase<Scalar>,Thyra::LinearOpBase<Scalar>> 
+        problem( liouvillianOp, LinvdH, dH );
+        bool set = problem.setProblem();
+        if (set == false)
+            throw std::logic_error("ERROR:  Belos::LinearProblem failed to set up correctly!");
+        /************* Create an iterative solver manager. *********************/ 
+        Teuchos::RCP< Belos::SolverManager<Scalar,Thyra::MultiVectorBase<Scalar>,Thyra::LinearOpBase<Scalar>> > newSolver
+        = Teuchos::rcp( new Belos::PseudoBlockGmresSolMgr<Scalar,Thyra::MultiVectorBase<Scalar>,Thyra::LinearOpBase<Scalar>>(
+                                Teuchos::rcp(&problem,false), 
+                                Teuchos::rcp(&belosList,false)) );
 
-        solverParams_gmres.set("Maximum Iterations", 400);
-        solverParams_gmres.set("Convergence Tolerance", 1.0e-6);
-        solverParams_gmres.set("Maximum Restarts", 15);
-        solverParams_gmres.set("Num Blocks", 40);
-        solverParams_gmres.set("Output Frequency", 100);
-        solverParams_gmres.set("Show Maximum Residual Norm Only", true);
+        /************ Print out information about problem. **********************/
+        if (verbose) 
+        {
+            pcout << std::endl << std::endl;
+            pcout << "Dimension of matrix: " << NumGlobalElements << std::endl;
+            pcout << "Number of right-hand sides: " << numrhs << std::endl;
+            pcout << "Block size used by solver: " << blocksize << std::endl;
+            pcout << "Max number of restarts allowed: " << maxrestarts << std::endl;
+            pcout << "Max number of Gmres iterations per restart cycle: " << maxiters << std::endl;
+            pcout << "Relative residual tolerance: " << tol << std::endl;
+            pcout << std::endl;
+        }
+        /*************************** Perform solve. *****************************/
+        Belos::ReturnType ret = newSolver->solve();
 
-        Teuchos::RCP<Thyra::LinearOpWithSolveFactoryBase<Scalar> >
-            belosFactory = Teuchos::rcp(new Thyra::BelosLinearOpWithSolveFactory<Scalar>());
-        belosFactory->setParameterList( solverParams );
-        belosFactory->setVerbLevel(Teuchos::VERB_LOW);
+        /************** Output information about solve status. ******************/
+        bool success;
+        if (ret!=Belos::Converged) 
+        {
+            success = false;
+            if (verbose)
+                pcout << std::endl << "ERROR:  Belos did not converge!" << std::endl;
+        }
+        else 
+        {
+            success = true;
+            if (verbose)
+                pcout << std::endl << "SUCCESS:  Belos converged!" << std::endl;
+        }
 
-        Teuchos::RCP<Thyra::LinearOpWithSolveBase<Scalar> >
-            bA = belosFactory->createOp();
-
-        Thyra::initializeOp<Scalar>( * belosFactory, liouvillianOp, bA.ptr() );
-        Thyra::SolveStatus<Scalar> solveStatus;
-        solveStatus = Thyra::solve( *bA, 
-                                    Thyra::NOTRANS, 
-                                    *dH, 
-                                    Teuchos::ptr_implicit_cast<Thyra::MultiVectorBase<Scalar>>(LinvdH.ptr()) 
-                                        );
-
-        pcout << "\nBelos Solve Status: "<< solveStatus << std::endl;
-
+        /* Perform Chebyshev iteration and compute moments of the conductivity. */
         Scalar
         one = static_cast<Scalar>(1.0),
         alpha = this->dof_handler.energy_shift / this->dof_handler.energy_rescale,
         beta = one / this->dof_handler.energy_rescale;
 
-        T->linear_combination(Teuchos::tuple(alpha), 
-                             Teuchos::tuple(Teuchos::ptr_implicit_cast<const Thyra::VectorBase<Scalar>>(Tp.ptr())), 
-                             beta); // T := alpha * I + beta * H
+        T->linear_combination(Teuchos::tuple(alpha),  
+                              Teuchos::tuple<Teuchos::Ptr<const Thyra::VectorBase<Scalar>>>(Tp.ptr()), beta); // T := alpha * I + beta * H
 
         this->storeMoments(Tp, 0);
         this->storeMoments(T, 1);
@@ -201,14 +238,16 @@ namespace Bilayer {
         {
             hamiltonianOp->apply(Thyra::NOTRANS, *T, Tn.ptr(), 1.0, 0.0 );
             Tn->linear_combination(  Teuchos::tuple(-one, 2.*alpha), 
-                Teuchos::tuple( Teuchos::ptr_implicit_cast<const Thyra::VectorBase<Scalar>>(Tp.ptr()), 
-                                Teuchos::ptr_implicit_cast<const Thyra::VectorBase<Scalar>>(T.ptr()) ), 
+                Teuchos::tuple<Teuchos::Ptr<const Thyra::VectorBase<Scalar>>>(Tp.ptr(), T.ptr()), 
                 2.*beta); // Tn :=  - Tp + 2*alpha*T + 2*beta*Tn
 
             this->storeMoments(Tn, i);
             std::swap(Tn, Tp);
             std::swap(T, Tp);
         }
+
+
+        return success;
     }
 
     template<int dim, int degree, class Node>

@@ -17,7 +17,8 @@ BaseAlgebra<dim,degree,Scalar,Node>::BaseAlgebra(const Multilayer<dim, 2>& bilay
     dof_handler(bilayer)
 {
     dof_handler.initialize(mpi_communicator);
-    Assert(dof_handler.locally_owned_dofs()->isContiguous(), dealii::ExcNotImplemented());
+    Assert(dof_handler.locally_owned_dofs()->isContiguous(), 
+        std::logic_error("Error! Map is not contiguous, this case is not implemented."));
 }
 
 
@@ -852,7 +853,7 @@ BaseAlgebra<dim,degree,Scalar,Node>::DerivationOp::weightedDot(
     }
     else
     {
-        throw dealii::ExcInternalError();  
+        throw std::logic_error("Multivectors have the wrong number of columns for calling WeightedDot");  
     }  
 }
 

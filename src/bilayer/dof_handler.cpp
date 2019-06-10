@@ -585,7 +585,7 @@ namespace Bilayer {
             case 1:
                 return Teuchos::Range1D(layer(0).n_orbitals, layer(0).n_orbitals+layer(1).n_orbitals-1);
             default: 
-                throw dealii::ExcInternalError();
+                throw std::logic_error("Looking for block number " + std::to_string(block) + "in Bilayer::DofHandler::column_range!");
             }
         }
 

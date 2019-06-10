@@ -28,7 +28,7 @@ namespace Bilayer {
         if (Teuchos::nonnull(tX) && Teuchos::nonnull(tY)) 
             baseAlgebra->dot(* tX->getConstTpetraMultiVector(), * tY->getConstTpetraMultiVector(), scalarProds_out );
         else // Throw an internal error
-            throw dealii::ExcInternalError();
+            throw std::logic_error("Failed to obtain Thyra::TpetraMultiVector component from one or more Thyra::MultiVectorBase arguments in Bilayer::EuclideanScalarProd::scalarProdsImpl!");
     }
 
 

@@ -153,7 +153,7 @@ TestAlgebra::TestAlgebra(Multilayer<dim, 2> bilayer):
     test_algebra.AI ->norms_2(norms);
 
     AssertThrow( std::accumulate(norms.begin(), norms.end(), 0.) < 1e-10,
-                        dealii::ExcInternalError() );
+                        std::logic_error("The identity is not invariant by the adjoint action!") );
 
     
     test_algebra.H ->norms_2(norms);

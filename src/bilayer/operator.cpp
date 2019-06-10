@@ -107,7 +107,7 @@ namespace Bilayer {
                         mode,
                         alpha, beta);
         else
-            throw dealii::ExcInternalError();    
+            throw std::logic_error("Failed to cast one or more Thyra::MultiVectorBase arguments to either Bilayer::Vector or Bilayer::MultiVector in Bilayer::Operator::applyImpl!");
     }
 
     /**

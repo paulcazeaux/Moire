@@ -359,7 +359,7 @@ std::string obs_to_string(ObservableType obs)
         case ObservableType::Invalid:
             return "Invalid observable!";
         default:
-            throw std::runtime_error("Failed to find material. \n");
+            throw std::runtime_error("Failed to find observable type. \n");
     }
 }
 

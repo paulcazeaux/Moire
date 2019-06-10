@@ -73,13 +73,13 @@ namespace Bilayer {
         /** Initialize. */
         void initialize(
             const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
-            const Teuchos::RCP<TMV>  &orbVector
+            const Teuchos::RCP<TMV>  &vector
         );
 
         /** Initialize. */
         void constInitialize(
             const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
-            const Teuchos::RCP<const TMV> &orbVector
+            const Teuchos::RCP<const TMV> &vector
         );
 
         /** Get the embedded non-const Thyra::TpetraVector. */
@@ -217,12 +217,12 @@ namespace Bilayer {
     Teuchos::RCP<Thyra::VectorBase<Scalar> >
     createVector(
         const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
-        const Teuchos::RCP<typename Vector<dim,degree,Scalar,Node>::TMV> &orbVector
+        const Teuchos::RCP<typename Vector<dim,degree,Scalar,Node>::TMV> &vector
     )
     {
         Teuchos::RCP<Vector<dim,degree,Scalar,Node> > v =
         Teuchos::rcp(new Vector<dim,degree,Scalar,Node>);
-        v->initialize(vectorSpace, orbVector);
+        v->initialize(vectorSpace, vector);
         return v;
     }
 
@@ -233,12 +233,12 @@ namespace Bilayer {
     Teuchos::RCP<const Thyra::VectorBase<Scalar> >
     createConstVector(
         const Teuchos::RCP<const VectorSpace<dim,degree,Scalar,Node> > &vectorSpace,
-        const Teuchos::RCP<const typename Vector<dim,degree,Scalar,Node>::TMV> &orbVector
+        const Teuchos::RCP<const typename Vector<dim,degree,Scalar,Node>::TMV> &vector
     )
     {
         Teuchos::RCP<Vector<dim,degree,Scalar,Node> > v =
         Teuchos::rcp(new Vector<dim,degree,Scalar,Node>);
-        v->constInitialize(vectorSpace, orbVector);
+        v->constInitialize(vectorSpace, vector);
         return v;
     }
 

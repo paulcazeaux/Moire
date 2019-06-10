@@ -17,6 +17,7 @@
 #include <utility>
 #include <algorithm>
 #include <numeric>
+#include <cassert>
 #include <metis.h>
 
 #include <Teuchos_GlobalMPISession.hpp>

@@ -21,6 +21,7 @@ static const int degree = 3;
 
 int main(int argc, char** argv) {
 
+bool verbose = true;
 	try
 	{
 		/*********************************************************/
@@ -39,8 +40,8 @@ int main(int argc, char** argv) {
         /*   Run the Chebyshev recurrence and output moments.    */
         /*********************************************************/
         Bilayer::ComputeConductivity<dim,degree,types::DefaultNode>  
-        compute_conductivity(bilayer, 0.01, 100);
-        compute_conductivity.run();
+        compute_conductivity(bilayer, 10);
+        bool success = compute_conductivity.run(verbose);
 
         /*********************************************************/
         /*                  Output to file                       */
